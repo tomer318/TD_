@@ -279,18 +279,7 @@ class PlayScreen(
 
         // KHỞI TẠO 7 LÍNH CANH (IMPERIAL GUARDS) CHO MÀN 6
         if (currentLevel.levelNumber == 6) {
-            val centerGuardsPos = listOf(
-                Vector2(620f, 595f), Vector2(640f, 595f), Vector2(660f, 595f)
-            )
-            val leftGuardsPos = listOf(
-                Vector2(300f, 430f), Vector2(330f, 430f)
-            )
-            val rightGuardsPos = listOf(
-                Vector2(920f, 430f), Vector2(950f, 430f)
-            )
-
-            val allGuardPositions = centerGuardsPos + leftGuardsPos + rightGuardsPos
-
+            val allGuardPositions = Level6Citadel.imperialGuardPositions
             for (pos in allGuardPositions) {
                 val guard = Entity().apply {
                     add(TransformComponent(position = Vector2(pos)))
@@ -770,16 +759,18 @@ class PlayScreen(
             isSettingRallyPoint = false
         }
 
-        // 11. CLICK NÚT TRÊN CỌC ĐẤT ĐANG CHỌN (BUILD MENU)
+        // 11. CLICK NÚT TRÊN CỌC ĐẤT ĐANG CHỌN (BUILD MENU - XÁC NHẬN 2 BƯỚC)
         if (selectedSpot != null) {
             val spot = selectedSpot!!
             val spotPos = spot.getComponent(TransformComponent::class.java).position
             val isHigh = spotPos.y > 540f
 
+            var clickedAnyBuildBtn = false
             for (opt in buildOptions) {
                 val offset = if (isHigh) Vector2(opt.second.x, -opt.second.y) else opt.second
                 val btnPos = Vector2(spotPos).add(offset)
                 if (btnPos.dst(x, y) <= 36f) {
+                    clickedAnyBuildBtn = true
                     val clickedType = opt.first
                     if (!allowedTowers.contains(clickedType)) return
 
@@ -790,33 +781,40 @@ class PlayScreen(
                         finalCost = (finalCost * 0.9f).toInt()
                     }
 
-                    if (EconomyManager.spendGold(finalCost)) {
-                        spot.getComponent(TowerSpotComponent::class.java).isOccupied = true
-                        if (clickedType == TowerType.BARRACKS) {
-                            val rally = getNearestRoadPoint(spotPos)
-                            buildBarracks(spotPos, rally, finalCost)
-                        } else {
-                            buildTower(spotPos, clickedType, finalCost)
+                    // BƯỚC 2: NẾU ĐÃ CHỌN TRƯỚC ĐÓ THÌ CHẠM LẦN NỮA ĐỂ XÁC NHẬN XÂY
+                    if (previewBuildType == clickedType) {
+                        if (EconomyManager.spendGold(finalCost)) {
+                            spot.getComponent(TowerSpotComponent::class.java).isOccupied = true
+                            if (clickedType == TowerType.BARRACKS) {
+                                val rally = getNearestRoadPoint(spotPos)
+                                buildBarracks(spotPos, rally, finalCost)
+                            } else {
+                                buildTower(spotPos, clickedType, finalCost)
+                            }
+                            clearSelections()
+                            return
                         }
-                        clearSelections()
-                        return
                     } else {
+                        // BƯỚC 1: CHỌN ĐỂ XEM THÔNG TIN (PREVIEW TOOLTIP)
                         previewBuildType = clickedType
                     }
                     return
                 }
             }
-            selectedSpot = null
-            previewBuildType = null
+            if (!clickedAnyBuildBtn) {
+                selectedSpot = null
+                previewBuildType = null
+            }
         }
 
-        // 12. CLICK NÚT TRÊN THÁP ĐANG CHỌN (NÂNG CẤP, BÁN, KỸ NĂNG, RALLY)
+        // 12. CLICK NÚT TRÊN THÁP ĐANG CHỌN (XÁC NHẬN 2 BƯỚC: UPGRADE, BRANCH, SKILL, SELL)
         if (selectedTower != null) {
             val tower = selectedTower!!
             val tPos = tower.getComponent(TransformComponent::class.java).position
             val tComp = tower.getComponent(TowerComponent::class.java)
             val isHigh = tPos.y > 540f
 
+            // A. THÁP SUNRAY TOWER
             if (tComp.specialization == TowerSpecialization.SUNRAY_TOWER) {
                 val upgradeBtnX = if (tComp.isSunrayReady && tComp.sunraySorcerers > 0) tPos.x - 55f else tPos.x
                 val upgradeBtnY = tPos.y + 60f
@@ -824,59 +822,71 @@ class PlayScreen(
                 val fireBtnY = tPos.y + 60f
 
                 if (tComp.sunraySorcerers < 4 && Vector2(upgradeBtnX, upgradeBtnY).dst(x, y) <= 32f) {
-                    if (EconomyManager.spendGold(100)) {
-                        tComp.sunraySorcerers++
-                        tComp.isSunrayReady = false
-                        tComp.sunrayChargeTimer = when (tComp.sunraySorcerers) {
-                            1 -> 19.0f; 2 -> 16.0f; 3 -> 13.0f; else -> 10.0f
+                    if (previewTowerAction == "UPGRADE_SUNRAY") {
+                        if (EconomyManager.spendGold(100)) {
+                            tComp.sunraySorcerers++
+                            tComp.isSunrayReady = false
+                            tComp.sunrayChargeTimer = when (tComp.sunraySorcerers) {
+                                1 -> 19.0f; 2 -> 16.0f; 3 -> 13.0f; else -> 10.0f
+                            }
+                            clearSelections()
                         }
-                        clearSelections()
+                    } else {
+                        previewTowerAction = "UPGRADE_SUNRAY"
                     }
                     return
                 }
 
                 if (tComp.isSunrayReady && tComp.sunraySorcerers > 0 && Vector2(fireBtnX, fireBtnY).dst(x, y) <= 32f) {
-                    isAimingSunrayTarget = true
-                    selectedTower = null
-                    previewTowerAction = null
+                    if (previewTowerAction == "FIRE_SUNRAY") {
+                        isAimingSunrayTarget = true
+                        selectedTower = null
+                        previewTowerAction = null
+                    } else {
+                        previewTowerAction = "FIRE_SUNRAY"
+                    }
                     return
                 }
             } else if (tComp.specialization == TowerSpecialization.SYLVAN_ELF_HALL) {
+                // B. NHÀ SYLVAN ELF HALL
                 val bComp = tower.getComponent(BarracksComponent::class.java)
                 val currentElves = bComp?.soldiers?.size ?: 0
 
                 if (tComp.isRuined) {
                     if (Vector2(tPos.x, tPos.y - 60f).dst(x, y) <= 32f) {
-                        if (EconomyManager.spendGold(100)) {
-                            tComp.isRuined = false
-                            bComp?.respawnTimer = 2.0f
+                        if (previewTowerAction == "REPAIR") {
+                            if (EconomyManager.spendGold(100)) {
+                                tComp.isRuined = false
+                                bComp?.respawnTimer = 2.0f
+                                clearSelections()
+                            }
+                        } else {
+                            previewTowerAction = "REPAIR"
                         }
-                        clearSelections()
                         return
                     }
                 } else {
                     if (currentElves < 4 && Vector2(tPos.x + 55f, tPos.y).dst(x, y) <= 32f) {
-                        if (EconomyManager.spendGold(100)) {
-                            val sPos = getNearestRoadPoint(tPos)
-                            val elf = Entity().apply {
-                                add(TransformComponent(position = Vector2(sPos)))
-                                add(HealthComponent(maxHealth = 180f, currentHealth = 180f))
-                                add(ArmorComponent(armorType = ArmorType.MEDIUM_ARMOR))
-                                add(SoldierComponent(
-                                    attackDamageMin = 15f,
-                                    attackDamageMax = 25f,
-                                    attackRate = 1.0f,
-                                    regenPerSec = 10f,
-                                    targetPosition = Vector2(sPos),
-                                    parentTower = tower,
-                                    soldierRankName = "Sylvan Elf",
-                                    moveSpeed = 65f
-                                ))
+                        if (previewTowerAction == "HIRE_ELF") {
+                            if (EconomyManager.spendGold(100)) {
+                                val sPos = getNearestRoadPoint(tPos)
+                                val elf = Entity().apply {
+                                    add(TransformComponent(position = Vector2(sPos)))
+                                    add(HealthComponent(maxHealth = 180f, currentHealth = 180f))
+                                    add(ArmorComponent(armorType = ArmorType.MEDIUM_ARMOR))
+                                    add(SoldierComponent(
+                                        attackDamageMin = 15f, attackDamageMax = 25f, attackRate = 1.0f,
+                                        regenPerSec = 10f, targetPosition = Vector2(sPos), parentTower = tower,
+                                        soldierRankName = "Sylvan Elf", moveSpeed = 65f
+                                    ))
+                                }
+                                bComp?.soldiers?.add(elf)
+                                engine.addEntity(elf)
+                                clearSelections()
                             }
-                            bComp?.soldiers?.add(elf)
-                            engine.addEntity(elf)
+                        } else {
+                            previewTowerAction = "HIRE_ELF"
                         }
-                        clearSelections()
                         return
                     }
 
@@ -887,6 +897,7 @@ class PlayScreen(
                     }
                 }
             } else {
+                // C. CÁC THÁP THƯỜNG (LEVEL 1 -> 4)
                 val upgradeY = if (isHigh) tPos.y - 65f else tPos.y + 65f
                 val sellY = if (isHigh) tPos.y + 65f else tPos.y - 65f
                 val branchY = if (isHigh) tPos.y - 60f else tPos.y + 60f
@@ -898,13 +909,20 @@ class PlayScreen(
                     else -> currentLevel.maxTowerLevel
                 }
 
+                // 1. NÂNG CẤP CẤP ĐỘ 1 -> 2, 2 -> 3
                 if (tComp.level < 3 && tComp.level < maxLevel && Vector2(tPos.x, upgradeY).dst(x, y) <= 32f) {
                     var upCost = tComp.upgradeCost
                     if (tComp.towerType == TowerType.MAGE && UpgradeManager.getEffectiveMageLevel() >= 3) upCost = (upCost * 0.9f).toInt()
                     if (tComp.towerType == TowerType.ARTILLERY && UpgradeManager.getEffectiveArtilleryLevel() >= 3) upCost = (upCost * 0.9f).toInt()
 
-                    if (EconomyManager.spendGold(upCost)) upgradeTower(tower, 0)
-                    clearSelections()
+                    if (previewTowerAction == "UPGRADE") {
+                        if (EconomyManager.spendGold(upCost)) {
+                            upgradeTower(tower, 0)
+                            clearSelections()
+                        }
+                    } else {
+                        previewTowerAction = "UPGRADE"
+                    }
                     return
                 }
 
@@ -919,30 +937,50 @@ class PlayScreen(
                     }
                 } else false
 
+                // 2. NÂNG CẤP CHUYÊN HÓA NHÁNH (LEVEL 3 -> LEVEL 4)
                 if (canUpgradeToSpec) {
                     val (spec1, spec2) = getBranchSpecs(tComp.towerType)
                     val isSingleBranch = (currentLevel.levelNumber in listOf(5, 6))
 
                     if (isSingleBranch) {
                         if (Vector2(tPos.x, branchY).dst(x, y) <= 34f) {
-                            if (EconomyManager.spendGold(spec1.branchCost)) upgradeTower(tower, 1)
-                            clearSelections()
+                            if (previewTowerAction == "SPEC_1") {
+                                if (EconomyManager.spendGold(spec1.branchCost)) {
+                                    upgradeTower(tower, 1)
+                                    clearSelections()
+                                }
+                            } else {
+                                previewTowerAction = "SPEC_1"
+                            }
                             return
                         }
                     } else {
                         if (Vector2(tPos.x - 45f, branchY).dst(x, y) <= 34f) {
-                            if (EconomyManager.spendGold(spec1.branchCost)) upgradeTower(tower, 1)
-                            clearSelections()
+                            if (previewTowerAction == "SPEC_1") {
+                                if (EconomyManager.spendGold(spec1.branchCost)) {
+                                    upgradeTower(tower, 1)
+                                    clearSelections()
+                                }
+                            } else {
+                                previewTowerAction = "SPEC_1"
+                            }
                             return
                         }
                         if (Vector2(tPos.x + 45f, branchY).dst(x, y) <= 34f) {
-                            if (EconomyManager.spendGold(spec2.branchCost)) upgradeTower(tower, 2)
-                            clearSelections()
+                            if (previewTowerAction == "SPEC_2") {
+                                if (EconomyManager.spendGold(spec2.branchCost)) {
+                                    upgradeTower(tower, 2)
+                                    clearSelections()
+                                }
+                            } else {
+                                previewTowerAction = "SPEC_2"
+                            }
                             return
                         }
                     }
                 }
 
+                // 3. NÂNG CẤP KỸ NĂNG CHO THÁP CẤP 4 (SKILLS 1, 2, 3)
                 if (tComp.level == 4) {
                     val spec = tComp.specialization
                     val has3Skills = (tComp.towerType == TowerType.BARRACKS)
@@ -954,63 +992,84 @@ class PlayScreen(
                         if (Vector2(tPos.x - 65f, skillCenterY).dst(x, y) <= 32f) {
                             if (tComp.skill1Level < 3) {
                                 val cost = (spec.skill1Costs.getOrElse(tComp.skill1Level) { 0 } * costDiscount).toInt()
-                                if (EconomyManager.spendGold(cost)) {
-                                    tComp.skill1Level++
-                                    applySkillUpgrade(tower, 1)
+                                if (previewTowerAction == "SKILL_1") {
+                                    if (EconomyManager.spendGold(cost)) {
+                                        tComp.skill1Level++
+                                        applySkillUpgrade(tower, 1)
+                                        clearSelections()
+                                    }
+                                } else {
+                                    previewTowerAction = "SKILL_1"
                                 }
                             }
-                            clearSelections()
                             return
                         }
                         val maxSkill2 = if (spec == TowerSpecialization.HOLY_ORDER) 1 else 3
                         if (Vector2(tPos.x, skillMiddleY).dst(x, y) <= 32f) {
                             if (tComp.skill2Level < maxSkill2) {
                                 val cost = (spec.skill2Costs.getOrElse(tComp.skill2Level) { 0 } * costDiscount).toInt()
-                                if (EconomyManager.spendGold(cost)) {
-                                    tComp.skill2Level++
-                                    applySkillUpgrade(tower, 2)
+                                if (previewTowerAction == "SKILL_2") {
+                                    if (EconomyManager.spendGold(cost)) {
+                                        tComp.skill2Level++
+                                        applySkillUpgrade(tower, 2)
+                                        clearSelections()
+                                    }
+                                } else {
+                                    previewTowerAction = "SKILL_2"
                                 }
                             }
-                            clearSelections()
                             return
                         }
                         if (Vector2(tPos.x + 65f, skillCenterY).dst(x, y) <= 32f) {
                             if (tComp.skill3Level < 3 && spec.skill3Costs.isNotEmpty()) {
                                 val cost = (spec.skill3Costs.getOrElse(tComp.skill3Level) { 0 } * costDiscount).toInt()
-                                if (EconomyManager.spendGold(cost)) {
-                                    tComp.skill3Level++
-                                    applySkillUpgrade(tower, 3)
+                                if (previewTowerAction == "SKILL_3") {
+                                    if (EconomyManager.spendGold(cost)) {
+                                        tComp.skill3Level++
+                                        applySkillUpgrade(tower, 3)
+                                        clearSelections()
+                                    }
+                                } else {
+                                    previewTowerAction = "SKILL_3"
                                 }
                             }
-                            clearSelections()
                             return
                         }
                     } else {
                         if (Vector2(tPos.x - 55f, skillCenterY).dst(x, y) <= 32f) {
                             if (tComp.skill1Level < 3) {
                                 val cost = (spec.skill1Costs.getOrElse(tComp.skill1Level) { 0 } * costDiscount).toInt()
-                                if (EconomyManager.spendGold(cost)) {
-                                    tComp.skill1Level++
-                                    applySkillUpgrade(tower, 1)
+                                if (previewTowerAction == "SKILL_1") {
+                                    if (EconomyManager.spendGold(cost)) {
+                                        tComp.skill1Level++
+                                        applySkillUpgrade(tower, 1)
+                                        clearSelections()
+                                    }
+                                } else {
+                                    previewTowerAction = "SKILL_1"
                                 }
                             }
-                            clearSelections()
                             return
                         }
                         if (Vector2(tPos.x + 55f, skillCenterY).dst(x, y) <= 32f) {
                             if (tComp.skill2Level < 3) {
                                 val cost = (spec.skill2Costs.getOrElse(tComp.skill2Level) { 0 } * costDiscount).toInt()
-                                if (EconomyManager.spendGold(cost)) {
-                                    tComp.skill2Level++
-                                    applySkillUpgrade(tower, 2)
+                                if (previewTowerAction == "SKILL_2") {
+                                    if (EconomyManager.spendGold(cost)) {
+                                        tComp.skill2Level++
+                                        applySkillUpgrade(tower, 2)
+                                        clearSelections()
+                                    }
+                                } else {
+                                    previewTowerAction = "SKILL_2"
                                 }
                             }
-                            clearSelections()
                             return
                         }
                     }
                 }
 
+                // 4. BÁN THÁP (SELL TOWER - 2 BƯỚC)
                 if (Vector2(tPos.x, sellY).dst(x, y) <= 30f) {
                     val isPreGame = (waveManager.currentWaveIndex == -1)
                     val refundRatio = when {
@@ -1020,16 +1079,21 @@ class PlayScreen(
                     }
                     val refundAmount = (tComp.totalInvestedGold * refundRatio).toInt()
 
-                    EconomyManager.addGold(refundAmount)
-                    freeSpotAt(tPos)
-                    val bComp = tower.getComponent(BarracksComponent::class.java)
-                    bComp?.soldiers?.forEach { engine.removeEntity(it) }
-                    tComp.summonedGolem?.let { engine.removeEntity(it) }
-                    engine.removeEntity(tower)
-                    clearSelections()
+                    if (previewTowerAction == "SELL") {
+                        EconomyManager.addGold(refundAmount)
+                        freeSpotAt(tPos)
+                        val bComp = tower.getComponent(BarracksComponent::class.java)
+                        bComp?.soldiers?.forEach { engine.removeEntity(it) }
+                        tComp.summonedGolem?.let { engine.removeEntity(it) }
+                        engine.removeEntity(tower)
+                        clearSelections()
+                    } else {
+                        previewTowerAction = "SELL"
+                    }
                     return
                 }
 
+                // 5. ĐẶT ĐIỂM TẬP KẾT RALLY
                 val canRally = tComp.towerType == TowerType.BARRACKS ||
                     (tComp.specialization == TowerSpecialization.SORCERER_MAGE && tComp.skill2Level > 0)
                 if (canRally && Vector2(tPos.x - 65f, tPos.y).dst(x, y) <= 30f) {

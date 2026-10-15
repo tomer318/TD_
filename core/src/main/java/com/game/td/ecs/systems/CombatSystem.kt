@@ -68,13 +68,8 @@ class CombatSystem(
             if (move?.isInsideTunnel == true) continue
 
             val enemyComp = enemy.getComponent(EnemyComponent::class.java)
-            if (isArtilleryGroundOnly && enemyComp?.enemyType?.isFlying == true) {
-                continue
-            }
-
-            if (isRangerPoisonActive && enemyComp?.enemyType?.isImmuneToPoison == true) {
-                continue
-            }
+            if (isArtilleryGroundOnly && enemyComp?.enemyType?.isFlying == true) continue
+            if (isRangerPoisonActive && enemyComp?.enemyType?.isImmuneToPoison == true) continue
 
             val enemyPos = transformMapper.get(enemy)?.position ?: continue
             val dist = towerTransform.position.dst(enemyPos)
@@ -166,9 +161,7 @@ class CombatSystem(
                     ) { explodePos ->
                         val currentEnemies = engine.getEntitiesFor(enemyFamily)
                         val snapshot = mutableListOf<Entity>()
-                        for (idx in 0 until currentEnemies.size()) {
-                            snapshot.add(currentEnemies.get(idx))
-                        }
+                        for (idx in 0 until currentEnemies.size()) snapshot.add(currentEnemies.get(idx))
 
                         for (nearE in snapshot) {
                             val nHp = healthMapper.get(nearE)
@@ -384,18 +377,56 @@ class CombatSystem(
             }
         }
 
-        // 6. TẤN CÔNG BÌNH THƯỜNG
+        // 6. KỸ NĂNG SORCERER MAGE: HÓA CỪU (POLYMORPH)
+        if (towerComp.level == 4 && towerComp.specialization == TowerSpecialization.SORCERER_MAGE) {
+            if (towerComp.skill1Level > 0 && towerComp.skill1Cooldown <= 0f) {
+                val candidate = inRangeEnemies.firstOrNull {
+                    val ec = it.getComponent(EnemyComponent::class.java)
+                    val m = it.getComponent(MovementComponent::class.java)
+                    val vHp = healthMapper.get(it)
+                    ec != null && !ec.isSheep && m?.isInsideTunnel != true && vHp != null && !vHp.isDead &&
+                        ec.enemyType !in listOf(
+                        EnemyType.JUGGERNAUT,
+                        EnemyType.JT,
+                        EnemyType.VEZNAN,
+                        EnemyType.VEZNAN_DEMON
+                    )
+                }
+                candidate?.let { victim ->
+                    val ec = victim.getComponent(EnemyComponent::class.java)
+                    val vTrans = transformMapper.get(victim)
+                    val vMove = victim.getComponent(MovementComponent::class.java)
+                    val vHp = healthMapper.get(victim)
+                    if (ec != null && vTrans != null) {
+                        ec.isSheep = true
+                        onTeleportTriggered(Vector2(vTrans.position))
+                        if (vHp != null) {
+                            vHp.maxHealth = 25f
+                            vHp.currentHealth = 25f.coerceAtMost(vHp.currentHealth)
+                        }
+                        if (vMove != null) {
+                            vMove.speed = 26f
+                        }
+                        towerComp.skill1Cooldown = when (towerComp.skill1Level) {
+                            1 -> 20.0f
+                            2 -> 16.0f
+                            else -> 12.0f
+                        }
+                    }
+                }
+            }
+        }
+
+        // 7. TẤN CÔNG BÌNH THƯỜNG
         targetEnemy?.let { enemy ->
             if (towerComp.attackCooldown <= 0f) {
                 val eTrans = transformMapper.get(enemy) ?: return
                 var calculatedDamage = if (CheatManager.isHighDamageEnabled) 300f else MathUtils.random(towerComp.damageMin, towerComp.damageMax)
 
-                // Archer Tier 5: Precision (10% cơ hội chí mạng gấp đôi sát thương)
                 if (towerComp.towerType == TowerType.ARCHER && UpgradeManager.getEffectiveArcherLevel() >= 5) {
                     if (MathUtils.randomBoolean(0.10f)) calculatedDamage *= 2f
                 }
 
-                // Mage Tier 5: Slow Curse (Làm chậm 50% trong 0.5s)
                 if (towerComp.towerType == TowerType.MAGE && UpgradeManager.getEffectiveMageLevel() >= 5) {
                     val moveComp = enemy.getComponent(MovementComponent::class.java)
                     val eComp = enemy.getComponent(EnemyComponent::class.java)

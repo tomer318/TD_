@@ -27,7 +27,6 @@ object MapRenderer {
             12 -> Level12MapRenderer.render(shapeRenderer)
         }
 
-        // Bổ sung số 11 và 12 vào đây để ngăn không cho vẽ đường cát vàng đè lên màn 11 và 12
         if (levelData.levelNumber !in listOf(6, 7, 8, 9, 10, 11, 12)) {
             val allPaths = levelData.allPaths
 

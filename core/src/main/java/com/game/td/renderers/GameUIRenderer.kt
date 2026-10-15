@@ -38,7 +38,6 @@ object GameUIRenderer {
     ) {
         val backBtnX = 35f
         val backBtnY = Config.WORLD_HEIGHT - 35f
-
         val pauseBtnX = Config.WORLD_WIDTH - 50f
         val pauseBtnY = Config.WORLD_HEIGHT - 35f
 
@@ -213,32 +212,25 @@ object GameUIRenderer {
         shapeRenderer.color = Color(0f, 0f, 0f, 0.60f)
         shapeRenderer.rect(0f, 0f, Config.WORLD_WIDTH, Config.WORLD_HEIGHT)
 
-        // Khung nền bảng Cheat
         shapeRenderer.color = Color(0.16f, 0.14f, 0.18f, 0.98f)
         shapeRenderer.rect(pX - 150f, pY - 150f, 300f, 300f)
 
-        // Header
         shapeRenderer.color = Color(0.55f, 0.18f, 0.75f, 1f)
         shapeRenderer.rect(pX - 130f, pY + 98f, 260f, 36f)
 
-        // Nút 1: +1000 GOLD
         shapeRenderer.color = Color(0.85f, 0.65f, 0.12f, 1f)
         shapeRenderer.rect(pX - 120f, pY + 50f, 240f, 36f)
 
-        // Nút 2: 300 DMG ON/OFF
         val dmgBtnColor = if (CheatManager.isHighDamageEnabled) Color(0.20f, 0.65f, 0.25f, 1f) else Color(0.75f, 0.25f, 0.20f, 1f)
         shapeRenderer.color = dmgBtnColor
         shapeRenderer.rect(pX - 120f, pY + 5f, 240f, 36f)
 
-        // Nút 3: KILL ALL MOBS
         shapeRenderer.color = Color(0.80f, 0.30f, 0.15f, 1f)
         shapeRenderer.rect(pX - 120f, pY - 40f, 240f, 36f)
 
-        // Nút 4: WIN LEVEL (3★) - MÀU XANH LỤC RỰC RỠ
         shapeRenderer.color = Color(0.15f, 0.65f, 0.40f, 1f)
         shapeRenderer.rect(pX - 120f, pY - 85f, 240f, 36f)
 
-        // Nút 5: CLOSE
         shapeRenderer.color = Color(0.35f, 0.35f, 0.38f, 1f)
         shapeRenderer.rect(pX - 60f, pY - 135f, 120f, 30f)
         shapeRenderer.end()
@@ -474,6 +466,9 @@ object GameUIRenderer {
         batch.end()
     }
 
+    // =========================================================================
+    // HÀM VẼ WHEEL MENU & TOOLTIP CHUẨN NGUYÊN BẢN KINGDOM RUSH
+    // =========================================================================
     fun renderWheelMenu(
         shapeRenderer: ShapeRenderer,
         batch: SpriteBatch,
@@ -491,6 +486,7 @@ object GameUIRenderer {
         currentLevelNumber: Int = 0,
         isPreGame: Boolean = false
     ) {
+        // 1. TRƯỜNG HỢP CHỌN CỌC ĐẤT TRỐNG (XÂY THÁP MỚI)
         selectedSpot?.let { spot ->
             val p = spot.getComponent(TransformComponent::class.java).position
             val isHigh = p.y > 540f
@@ -508,8 +504,10 @@ object GameUIRenderer {
                 val btn = Vector2(p).add(offset)
 
                 if (isAllowed) {
-                    shapeRenderer.color = if (previewBuildType == type) Color.WHITE else Color.DARK_GRAY
-                    shapeRenderer.circle(btn.x, btn.y, 26f)
+                    val isSelected = (previewBuildType == type)
+                    shapeRenderer.color = if (isSelected) Color(1f, 0.95f, 0.45f, 1f) else Color(0.25f, 0.25f, 0.28f, 1f)
+                    shapeRenderer.circle(btn.x, btn.y, if (isSelected) 28f else 25f)
+
                     shapeRenderer.color = type.color
                     shapeRenderer.circle(btn.x, btn.y, 20f)
                 } else {
@@ -534,118 +532,33 @@ object GameUIRenderer {
                     if (type == TowerType.ARCHER && UpgradeManager.getEffectiveArcherLevel() >= 3) cost = 60
                     if (type == TowerType.BARRACKS && UpgradeManager.getEffectiveBarracksLevel() >= 2) cost = 60
                     if (type == TowerType.MAGE && UpgradeManager.getEffectiveMageLevel() >= 3) cost = 90
-                    if (type == TowerType.ARTILLERY && UpgradeManager.getEffectiveArtilleryLevel() >= 1) cost = 110
+                    if (type == TowerType.ARTILLERY && UpgradeManager.getEffectiveArtilleryLevel() >= 3) cost = (cost * 0.9f).toInt()
 
+                    val canAfford = EconomyManager.gold >= cost
                     drawOutlinedText(batch, smallFont, type.title, btn.x - 24f, btn.y + 40f, Color.WHITE)
-                    drawOutlinedText(batch, smallFont, "${cost}G", btn.x - 14f, btn.y - 28f, Color.GOLD)
+                    drawOutlinedText(batch, smallFont, "${cost}G", btn.x - 14f, btn.y - 28f, if (canAfford) Color.GOLD else Color.RED)
                 } else {
                     drawOutlinedText(batch, smallFont, "LOCKED", btn.x - 24f, btn.y + 35f, Color.GRAY)
                 }
             }
             batch.end()
 
+            // VẼ TOOLTIP RA NGOÀI VÒNG TRÒN, KHÔNG CHE KHUẤT CÁC NÚT KHÁC
             previewBuildType?.let { type ->
                 if (allowedTowers.contains(type)) {
-                    renderBuildTooltip(shapeRenderer, batch, smallFont, p, type)
+                    val opt = buildOptions.first { it.first == type }
+                    val offset = if (isHigh) Vector2(opt.second.x, -opt.second.y) else opt.second
+                    val btn = Vector2(p).add(offset)
+                    renderKingdomRushBuildTooltip(shapeRenderer, batch, smallFont, btn, p, type)
                 }
             }
         }
 
+        // 2. TRƯỜNG HỢP CHỌN THÁP ĐÃ XÂY
         selectedTower?.let { tower ->
             val tPos = tower.getComponent(TransformComponent::class.java).position
             val tComp = tower.getComponent(TowerComponent::class.java)
             val isHigh = tPos.y > 540f
-
-            if (tComp.specialization == TowerSpecialization.SUNRAY_TOWER) {
-                shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-
-                if (tComp.sunraySorcerers < 4) {
-                    val upgradeBtnX = if (tComp.isSunrayReady && tComp.sunraySorcerers > 0) tPos.x - 55f else tPos.x
-                    val upgradeBtnY = tPos.y + 60f
-                    shapeRenderer.color = if (previewTowerAction == "UPGRADE_SUNRAY") Color.WHITE else Color.DARK_GRAY
-                    shapeRenderer.circle(upgradeBtnX, upgradeBtnY, 26f)
-                    shapeRenderer.color = Color(0.2f, 0.75f, 0.35f, 1f)
-                    shapeRenderer.circle(upgradeBtnX, upgradeBtnY, 20f)
-                }
-
-                if (tComp.isSunrayReady && tComp.sunraySorcerers > 0) {
-                    val fireBtnX = if (tComp.sunraySorcerers < 4) tPos.x + 55f else tPos.x
-                    val fireBtnY = tPos.y + 60f
-                    shapeRenderer.color = if (previewTowerAction == "FIRE_SUNRAY") Color.WHITE else Color.DARK_GRAY
-                    shapeRenderer.circle(fireBtnX, fireBtnY, 26f)
-                    shapeRenderer.color = Color(1f, 0.85f, 0.15f, 1f)
-                    shapeRenderer.circle(fireBtnX, fireBtnY, 20f)
-                }
-                shapeRenderer.end()
-
-                batch.begin()
-                if (tComp.sunraySorcerers < 4) {
-                    val upgradeBtnX = if (tComp.isSunrayReady && tComp.sunraySorcerers > 0) tPos.x - 55f else tPos.x
-                    val upgradeBtnY = tPos.y + 60f
-                    val hireText = if (tComp.sunraySorcerers == 0) "HIRE" else "UPGRADE"
-                    drawOutlinedText(batch, smallFont, hireText, upgradeBtnX - 20f, upgradeBtnY + 40f, Color.WHITE)
-                    drawOutlinedText(batch, smallFont, "100G", upgradeBtnX - 14f, upgradeBtnY - 28f, Color.GOLD)
-                }
-
-                if (tComp.isSunrayReady && tComp.sunraySorcerers > 0) {
-                    val fireBtnX = if (tComp.sunraySorcerers < 4) tPos.x + 55f else tPos.x
-                    val fireBtnY = tPos.y + 60f
-                    drawOutlinedText(batch, smallFont, "FIRE", fireBtnX - 16f, fireBtnY + 40f, Color.WHITE)
-                    drawOutlinedText(batch, smallFont, "READY", fireBtnX - 22f, fireBtnY - 28f, Color.YELLOW)
-                }
-
-                if (tComp.sunraySorcerers > 0 && !tComp.isSunrayReady) {
-                    drawOutlinedText(batch, smallFont, "CHARGING: ${tComp.sunrayChargeTimer.toInt()}s", tPos.x - 42f, tPos.y - 55f, Color.ORANGE)
-                }
-                batch.end()
-                return
-            }
-
-            if (tComp.specialization == TowerSpecialization.SYLVAN_ELF_HALL) {
-                val bComp = tower.getComponent(BarracksComponent::class.java)
-                val currentElves = bComp?.soldiers?.size ?: 0
-
-                if (isSettingRallyPoint) {
-                    shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-                    shapeRenderer.color = Color(1f, 0.85f, 0.2f, 0.85f)
-                    shapeRenderer.circle(tPos.x, tPos.y, maxRallyRadius)
-                    shapeRenderer.end()
-                }
-
-                shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-                if (tComp.isRuined) {
-                    shapeRenderer.color = if (previewTowerAction == "REPAIR") Color.WHITE else Color.DARK_GRAY
-                    shapeRenderer.circle(tPos.x, tPos.y - 60f, 26f)
-                    shapeRenderer.color = Color(0.2f, 0.75f, 0.3f, 1f)
-                    shapeRenderer.circle(tPos.x, tPos.y - 60f, 20f)
-                } else {
-                    if (currentElves < 4) {
-                        shapeRenderer.color = if (previewTowerAction == "HIRE_ELF") Color.WHITE else Color.DARK_GRAY
-                        shapeRenderer.circle(tPos.x + 55f, tPos.y, 25f)
-                        shapeRenderer.color = Color(0.2f, 0.65f, 0.9f, 1f)
-                        shapeRenderer.circle(tPos.x + 55f, tPos.y, 19f)
-                    }
-
-                    shapeRenderer.color = Color.CYAN
-                    shapeRenderer.circle(tPos.x - 55f, tPos.y, 23f)
-                }
-                shapeRenderer.end()
-
-                batch.begin()
-                if (tComp.isRuined) {
-                    drawOutlinedText(batch, smallFont, "REPAIR", tPos.x - 22f, tPos.y - 28f, Color.WHITE)
-                    drawOutlinedText(batch, smallFont, "100G", tPos.x - 14f, tPos.y - 90f, Color.GOLD)
-                } else {
-                    if (currentElves < 4) {
-                        drawOutlinedText(batch, smallFont, "HIRE", tPos.x + 38f, tPos.y + 35f, Color.WHITE)
-                        drawOutlinedText(batch, smallFont, "100G", tPos.x + 42f, tPos.y - 28f, Color.GOLD)
-                    }
-                    drawOutlinedText(batch, smallFont, "RALLY", tPos.x - 85f, tPos.y + 8f, Color.WHITE)
-                    drawOutlinedText(batch, smallFont, "Elves: $currentElves/4", tPos.x - 30f, tPos.y + 55f, Color.YELLOW)
-                }
-                batch.end()
-                return
-            }
 
             val upgradeY = if (isHigh) tPos.y - 65f else tPos.y + 65f
             val sellY = if (isHigh) tPos.y + 65f else tPos.y - 65f
@@ -678,80 +591,83 @@ object GameUIRenderer {
             } else false
 
             shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+
+            // Nút nâng cấp Level 1 -> 2 -> 3
             if (tComp.level < 3 && canUpgrade) {
-                shapeRenderer.color = if (previewTowerAction == "UPGRADE") Color.WHITE else Color.DARK_GRAY
-                shapeRenderer.circle(tPos.x, upgradeY, 26f)
+                val isSelected = (previewTowerAction == "UPGRADE")
+                shapeRenderer.color = if (isSelected) Color(1f, 0.95f, 0.45f, 1f) else Color.DARK_GRAY
+                shapeRenderer.circle(tPos.x, upgradeY, if (isSelected) 28f else 25f)
                 shapeRenderer.color = Color.GREEN
                 shapeRenderer.circle(tPos.x, upgradeY, 20f)
             }
 
+            // Nút chuyên hóa nhánh cấp 4
             if (canUpgradeToSpec) {
-                val (spec1, spec2) = getBranchSpecs(tComp.towerType)
-
-                val isSingleBranchOnly = when (currentLevelNumber) {
-                    0 -> false
-                    5 -> true
-                    6 -> true
-                    7 -> tComp.towerType != TowerType.ARCHER
-                    8 -> (tComp.towerType == TowerType.MAGE || tComp.towerType == TowerType.ARTILLERY)
-                    9 -> (tComp.towerType == TowerType.ARTILLERY)
-                    else -> false
-                }
-
+                val isSingleBranchOnly = (currentLevelNumber in listOf(5, 6))
                 if (isSingleBranchOnly) {
-                    shapeRenderer.color = if (previewTowerAction == "SPEC_1") Color.WHITE else Color.DARK_GRAY
-                    shapeRenderer.circle(tPos.x, branchY, 26f)
+                    val isSelected = (previewTowerAction == "SPEC_1")
+                    shapeRenderer.color = if (isSelected) Color(1f, 0.95f, 0.45f, 1f) else Color.DARK_GRAY
+                    shapeRenderer.circle(tPos.x, branchY, if (isSelected) 28f else 25f)
                     shapeRenderer.color = Color.GOLD
                     shapeRenderer.circle(tPos.x, branchY, 20f)
                 } else {
-                    shapeRenderer.color = if (previewTowerAction == "SPEC_1") Color.WHITE else Color.DARK_GRAY
-                    shapeRenderer.circle(tPos.x - 45f, branchY, 24f)
+                    val isSel1 = (previewTowerAction == "SPEC_1")
+                    shapeRenderer.color = if (isSel1) Color(1f, 0.95f, 0.45f, 1f) else Color.DARK_GRAY
+                    shapeRenderer.circle(tPos.x - 45f, branchY, if (isSel1) 27f else 24f)
                     shapeRenderer.color = Color.GOLD
                     shapeRenderer.circle(tPos.x - 45f, branchY, 18f)
 
-                    shapeRenderer.color = if (previewTowerAction == "SPEC_2") Color.WHITE else Color.DARK_GRAY
-                    shapeRenderer.circle(tPos.x + 45f, branchY, 24f)
+                    val isSel2 = (previewTowerAction == "SPEC_2")
+                    shapeRenderer.color = if (isSel2) Color(1f, 0.95f, 0.45f, 1f) else Color.DARK_GRAY
+                    shapeRenderer.circle(tPos.x + 45f, branchY, if (isSel2) 27f else 24f)
                     shapeRenderer.color = Color.ORANGE
                     shapeRenderer.circle(tPos.x + 45f, branchY, 18f)
                 }
             }
 
+            // Nút kỹ năng cấp 4
             if (tComp.level == 4) {
-                val spec = tComp.specialization
                 val has3Skills = tComp.towerType == TowerType.BARRACKS
                 val skillCenterY = if (isHigh) tPos.y - 55f else tPos.y + 55f
                 val skillMiddleY = if (isHigh) tPos.y - 75f else tPos.y + 75f
 
                 if (has3Skills) {
-                    shapeRenderer.color = Color.DARK_GRAY
-                    shapeRenderer.circle(tPos.x - 65f, skillCenterY, 24f)
+                    val isSel1 = (previewTowerAction == "SKILL_1")
+                    shapeRenderer.color = if (isSel1) Color(1f, 0.95f, 0.45f, 1f) else Color.DARK_GRAY
+                    shapeRenderer.circle(tPos.x - 65f, skillCenterY, if (isSel1) 27f else 24f)
                     shapeRenderer.color = Color.CYAN
                     shapeRenderer.circle(tPos.x - 65f, skillCenterY, 18f)
 
-                    shapeRenderer.color = Color.DARK_GRAY
-                    shapeRenderer.circle(tPos.x, skillMiddleY, 24f)
+                    val isSel2 = (previewTowerAction == "SKILL_2")
+                    shapeRenderer.color = if (isSel2) Color(1f, 0.95f, 0.45f, 1f) else Color.DARK_GRAY
+                    shapeRenderer.circle(tPos.x, skillMiddleY, if (isSel2) 27f else 24f)
                     shapeRenderer.color = Color.GOLD
                     shapeRenderer.circle(tPos.x, skillMiddleY, 18f)
 
-                    shapeRenderer.color = Color.DARK_GRAY
-                    shapeRenderer.circle(tPos.x + 65f, skillCenterY, 24f)
+                    val isSel3 = (previewTowerAction == "SKILL_3")
+                    shapeRenderer.color = if (isSel3) Color(1f, 0.95f, 0.45f, 1f) else Color.DARK_GRAY
+                    shapeRenderer.circle(tPos.x + 65f, skillCenterY, if (isSel3) 27f else 24f)
                     shapeRenderer.color = Color.MAGENTA
                     shapeRenderer.circle(tPos.x + 65f, skillCenterY, 18f)
                 } else {
-                    shapeRenderer.color = Color.DARK_GRAY
-                    shapeRenderer.circle(tPos.x - 55f, skillCenterY, 24f)
+                    val isSel1 = (previewTowerAction == "SKILL_1")
+                    shapeRenderer.color = if (isSel1) Color(1f, 0.95f, 0.45f, 1f) else Color.DARK_GRAY
+                    shapeRenderer.circle(tPos.x - 55f, skillCenterY, if (isSel1) 27f else 24f)
                     shapeRenderer.color = Color.CYAN
                     shapeRenderer.circle(tPos.x - 55f, skillCenterY, 18f)
 
-                    shapeRenderer.color = Color.DARK_GRAY
-                    shapeRenderer.circle(tPos.x + 55f, skillCenterY, 24f)
+                    val isSel2 = (previewTowerAction == "SKILL_2")
+                    shapeRenderer.color = if (isSel2) Color(1f, 0.95f, 0.45f, 1f) else Color.DARK_GRAY
+                    shapeRenderer.circle(tPos.x + 55f, skillCenterY, if (isSel2) 27f else 24f)
                     shapeRenderer.color = Color.MAGENTA
                     shapeRenderer.circle(tPos.x + 55f, skillCenterY, 18f)
                 }
             }
 
-            shapeRenderer.color = if (previewTowerAction == "SELL") Color.WHITE else Color.DARK_GRAY
-            shapeRenderer.circle(tPos.x, sellY, 26f)
+            // Nút bán tháp
+            val isSellSelected = (previewTowerAction == "SELL")
+            shapeRenderer.color = if (isSellSelected) Color(1f, 0.95f, 0.45f, 1f) else Color.DARK_GRAY
+            shapeRenderer.circle(tPos.x, sellY, if (isSellSelected) 28f else 25f)
             shapeRenderer.color = Color.FIREBRICK
             shapeRenderer.circle(tPos.x, sellY, 20f)
 
@@ -776,23 +692,13 @@ object GameUIRenderer {
                 val labelY = if (isHigh) branchY - 24f else branchY + 40f
                 val costY = if (isHigh) branchY + 30f else branchY - 8f
 
-                val isSingleBranchOnly = when (currentLevelNumber) {
-                    0 -> false
-                    5 -> true
-                    6 -> true
-                    7 -> tComp.towerType != TowerType.ARCHER
-                    8 -> (tComp.towerType == TowerType.MAGE || tComp.towerType == TowerType.ARTILLERY)
-                    9 -> (tComp.towerType == TowerType.ARTILLERY)
-                    else -> false
-                }
-
+                val isSingleBranchOnly = (currentLevelNumber in listOf(5, 6))
                 if (isSingleBranchOnly) {
                     drawOutlinedText(batch, smallFont, spec1.displayName, tPos.x - 30f, labelY, Color.GOLD)
                     drawOutlinedText(batch, smallFont, "${spec1.branchCost}G", tPos.x - 14f, costY, Color.YELLOW)
                 } else {
                     drawOutlinedText(batch, smallFont, spec1.displayName, tPos.x - 75f, labelY, Color.GOLD)
                     drawOutlinedText(batch, smallFont, "${spec1.branchCost}G", tPos.x - 58f, costY, Color.YELLOW)
-
                     drawOutlinedText(batch, smallFont, spec2.displayName, tPos.x + 18f, labelY, Color.ORANGE)
                     drawOutlinedText(batch, smallFont, "${spec2.branchCost}G", tPos.x + 35f, costY, Color.YELLOW)
                 }
@@ -800,39 +706,15 @@ object GameUIRenderer {
                 val spec = tComp.specialization
                 val has3Skills = tComp.towerType == TowerType.BARRACKS
                 val textBaseY = if (isHigh) tPos.y - 75f else tPos.y + 92f
-                val costDiscount = if (tComp.towerType == TowerType.ARTILLERY && UpgradeManager.getEffectiveArtilleryLevel() >= 4) 0.75f else 1.0f
 
                 if (has3Skills) {
                     drawOutlinedText(batch, smallFont, "S1:${tComp.skill1Level}/3", tPos.x - 105f, textBaseY, Color.CYAN)
-                    if (tComp.skill1Level < 3) {
-                        val s1Cost = (spec.skill1Costs[tComp.skill1Level] * costDiscount).toInt()
-                        drawOutlinedText(batch, smallFont, "${s1Cost}G", tPos.x - 80f, textBaseY - 45f, Color.GOLD)
-                    }
-
                     val maxSkill2 = if (spec == TowerSpecialization.HOLY_ORDER) 1 else 3
                     drawOutlinedText(batch, smallFont, "S2:${tComp.skill2Level}/$maxSkill2", tPos.x - 20f, textBaseY + 20f, Color.YELLOW)
-                    if (tComp.skill2Level < maxSkill2) {
-                        val s2Cost = (spec.skill2Costs[tComp.skill2Level] * costDiscount).toInt()
-                        drawOutlinedText(batch, smallFont, "${s2Cost}G", tPos.x - 15f, textBaseY - 25f, Color.GOLD)
-                    }
-
                     drawOutlinedText(batch, smallFont, "S3:${tComp.skill3Level}/3", tPos.x + 40f, textBaseY, Color.MAGENTA)
-                    if (tComp.skill3Level < 3 && spec.skill3Costs.isNotEmpty()) {
-                        val s3Cost = (spec.skill3Costs[tComp.skill3Level] * costDiscount).toInt()
-                        drawOutlinedText(batch, smallFont, "${s3Cost}G", tPos.x + 50f, textBaseY - 45f, Color.GOLD)
-                    }
                 } else {
                     drawOutlinedText(batch, smallFont, "${spec.skill1Name} (${tComp.skill1Level}/3)", tPos.x - 110f, textBaseY, Color.CYAN)
-                    if (tComp.skill1Level < 3) {
-                        val s1Cost = (spec.skill1Costs[tComp.skill1Level] * costDiscount).toInt()
-                        drawOutlinedText(batch, smallFont, "${s1Cost}G", tPos.x - 65f, textBaseY - 44f, Color.GOLD)
-                    }
-
                     drawOutlinedText(batch, smallFont, "${spec.skill2Name} (${tComp.skill2Level}/3)", tPos.x + 25f, textBaseY, Color.MAGENTA)
-                    if (tComp.skill2Level < 3) {
-                        val s2Cost = (spec.skill2Costs[tComp.skill2Level] * costDiscount).toInt()
-                        drawOutlinedText(batch, smallFont, "${s2Cost}G", tPos.x + 45f, textBaseY - 44f, Color.GOLD)
-                    }
                 }
             }
 
@@ -853,61 +735,464 @@ object GameUIRenderer {
                 drawOutlinedText(batch, smallFont, "RALLY", tPos.x - 94f, tPos.y + 8f, Color.WHITE)
             }
             batch.end()
+
+            // VẼ BẢNG TOOLTIP RA NGOÀI VÒNG TRÒN
+            previewTowerAction?.let { action ->
+                val has3Skills = tComp.towerType == TowerType.BARRACKS
+                val skillCenterY = if (isHigh) tPos.y - 55f else tPos.y + 55f
+                val skillMiddleY = if (isHigh) tPos.y - 75f else tPos.y + 75f
+
+                val btn = when (action) {
+                    "UPGRADE" -> Vector2(tPos.x, upgradeY)
+                    "SPEC_1" -> Vector2(tPos.x - 45f, branchY)
+                    "SPEC_2" -> Vector2(tPos.x + 45f, branchY)
+                    "SKILL_1" -> Vector2(if (has3Skills) tPos.x - 65f else tPos.x - 55f, skillCenterY)
+                    "SKILL_2" -> Vector2(if (has3Skills) tPos.x else tPos.x + 55f, if (has3Skills) skillMiddleY else skillCenterY)
+                    "SKILL_3" -> Vector2(tPos.x + 65f, skillCenterY)
+                    "SELL" -> Vector2(tPos.x, sellY)
+                    else -> tPos
+                }
+                renderKingdomRushActionTooltip(shapeRenderer, batch, smallFont, btn, tPos, tComp, action)
+            }
         }
     }
 
-    private fun renderBuildTooltip(
+    // HÀM TỰ ĐỘNG XUỐNG DÒNG (NGĂN CHẶN TRIỆT ĐỂ CHỮ TRÀN KHUNG)
+    private fun wrapText(text: String, maxCharsPerLine: Int = 26): List<String> {
+        val words = text.split(" ")
+        val lines = mutableListOf<String>()
+        var currentLine = ""
+        for (word in words) {
+            if (currentLine.isEmpty()) {
+                currentLine = word
+            } else if (currentLine.length + 1 + word.length <= maxCharsPerLine) {
+                currentLine += " $word"
+            } else {
+                lines.add(currentLine)
+                currentLine = word
+            }
+        }
+        if (currentLine.isNotEmpty()) lines.add(currentLine)
+        return lines
+    }
+
+    // =========================================================================
+    // HỘP TOOLTIP XÂY THÁP MỚI CHUẨN NGUYÊN BẢN KINGDOM RUSH
+    // =========================================================================
+    private fun renderKingdomRushBuildTooltip(
         shapeRenderer: ShapeRenderer,
         batch: SpriteBatch,
         smallFont: BitmapFont,
-        pos: Vector2,
+        btnPos: Vector2,
+        spotCenter: Vector2,
         type: TowerType
     ) {
-        val isHigh = pos.y > 540f
-        val boxX = pos.x + 95f
-        val boxY = if (isHigh) pos.y - 120f else pos.y - 45f
+        val (title, desc, stats) = when (type) {
+            TowerType.ARCHER -> Triple(
+                "Archer Tower",
+                "Archers ready to strike at your enemies from a distance.",
+                listOf("Damage:" to "4-6", "Reload:" to "Average")
+            )
+            TowerType.BARRACKS -> Triple(
+                "Barracks",
+                "Trains militia, tough soldiers that block and damage your enemies.",
+                listOf("Life:" to "50", "Damage:" to "1-3", "Physical Armor:" to "None", "Respawn:" to "10 secs")
+            )
+            TowerType.MAGE -> Triple(
+                "Mages",
+                "Mages cast armor piercing bolts at your enemies, ignoring any physical protection.",
+                listOf("Damage:" to "9-17", "Reload:" to "Slow")
+            )
+            TowerType.ARTILLERY -> Triple(
+                "Dwarven Bombard",
+                "Bombards ground enemies dealing area damage.",
+                listOf("Damage:" to "8-15", "Reload:" to "Very Slow")
+            )
+            else -> Triple("Special Tower", "Strategic structure.", emptyList())
+        }
+
+        var cost = type.cost
+        if (type == TowerType.ARCHER && UpgradeManager.getEffectiveArcherLevel() >= 3) cost = 60
+        if (type == TowerType.BARRACKS && UpgradeManager.getEffectiveBarracksLevel() >= 2) cost = 60
+        if (type == TowerType.MAGE && UpgradeManager.getEffectiveMageLevel() >= 3) cost = 90
+        if (type == TowerType.ARTILLERY && UpgradeManager.getEffectiveArtilleryLevel() >= 3) cost = (cost * 0.9f).toInt()
+        val canAfford = EconomyManager.gold >= cost
+
+        val prompt = if (canAfford) "[ Cost: ${cost}G - Tap to confirm ]" else "[ Cost: ${cost}G - Not enough gold ]"
+        drawKingdomRushTooltipBox(shapeRenderer, batch, smallFont, btnPos, spotCenter, title, desc, stats, prompt, canAfford)
+    }
+
+    // =========================================================================
+    // HỘP TOOLTIP NÂNG CẤP, NHÁNH, KỸ NĂNG, BÁN THÁP CHUẨN NGUYÊN BẢN
+    // =========================================================================
+    private fun renderKingdomRushActionTooltip(
+        shapeRenderer: ShapeRenderer,
+        batch: SpriteBatch,
+        smallFont: BitmapFont,
+        btnPos: Vector2,
+        spotCenter: Vector2,
+        tComp: TowerComponent,
+        action: String
+    ) {
+        when (action) {
+            "UPGRADE" -> {
+                var upCost = tComp.upgradeCost
+                if (tComp.towerType == TowerType.MAGE && UpgradeManager.getEffectiveMageLevel() >= 3) upCost = (upCost * 0.9f).toInt()
+                if (tComp.towerType == TowerType.ARTILLERY && UpgradeManager.getEffectiveArtilleryLevel() >= 3) upCost = (upCost * 0.9f).toInt()
+                val canAfford = EconomyManager.gold >= upCost
+
+                val title = when (tComp.towerType) {
+                    TowerType.ARCHER -> if (tComp.level == 1) "Marksman Tower" else "Sharpshooter Tower"
+                    TowerType.BARRACKS -> if (tComp.level == 1) "Footmen Barracks" else "Knights Barracks"
+                    TowerType.MAGE -> if (tComp.level == 1) "Adept Tower" else "Wizard Tower"
+                    TowerType.ARTILLERY -> if (tComp.level == 1) "Dwarven Artillery" else "Dwarven Howitzer"
+                    else -> "Upgraded Tower"
+                }
+
+                val desc = "Reinforces defensive structures with enhanced combat capabilities."
+                val stats = when (tComp.towerType) {
+                    TowerType.ARCHER -> listOf("Damage:" to if (tComp.level == 1) "7-11" else "10-16", "Reload:" to "Fast")
+                    TowerType.BARRACKS -> listOf("Life:" to if (tComp.level == 1) "100" else "150", "Damage:" to if (tComp.level == 1) "3-4" else "6-10", "Armor:" to if (tComp.level == 1) "Light" else "Medium", "Respawn:" to "10 secs")
+                    TowerType.MAGE -> listOf("Damage:" to if (tComp.level == 1) "23-43" else "40-74", "Reload:" to "Slow")
+                    TowerType.ARTILLERY -> listOf("Damage:" to if (tComp.level == 1) "20-40" else "30-60", "Reload:" to "Very Slow")
+                    else -> emptyList()
+                }
+
+                val prompt = if (canAfford) "[ Cost: ${upCost}G - Tap to upgrade ]" else "[ Cost: ${upCost}G - Not enough gold ]"
+                drawKingdomRushTooltipBox(shapeRenderer, batch, smallFont, btnPos, spotCenter, title, desc, stats, prompt, canAfford)
+            }
+
+            "SPEC_1", "SPEC_2" -> {
+                val spec = if (action == "SPEC_1") {
+                    when (tComp.towerType) {
+                        TowerType.ARCHER -> TowerSpecialization.RANGERS_HIDEOUT
+                        TowerType.BARRACKS -> TowerSpecialization.HOLY_ORDER
+                        TowerType.MAGE -> TowerSpecialization.ARCANE_WIZARD
+                        TowerType.ARTILLERY -> TowerSpecialization.BIG_BERTHA
+                        else -> TowerSpecialization.NONE
+                    }
+                } else {
+                    when (tComp.towerType) {
+                        TowerType.ARCHER -> TowerSpecialization.MUSKETEER_GARRISON
+                        TowerType.BARRACKS -> TowerSpecialization.BARBARIAN_MEAD_HALL
+                        TowerType.MAGE -> TowerSpecialization.SORCERER_MAGE
+                        TowerType.ARTILLERY -> TowerSpecialization.TESLA_X104
+                        else -> TowerSpecialization.NONE
+                    }
+                }
+                val canAfford = EconomyManager.gold >= spec.branchCost
+
+                val desc = when (spec) {
+                    TowerSpecialization.RANGERS_HIDEOUT -> "Expert rangers firing rapid longbows with poison and root magic."
+                    TowerSpecialization.MUSKETEER_GARRISON -> "Dwarven sharpshooters with long range sniper shots and shrapnel."
+                    TowerSpecialization.HOLY_ORDER -> "Paladins blessed with heavy plate armor, divine healing, and holy smite."
+                    TowerSpecialization.BARBARIAN_MEAD_HALL -> "Berserkers wielding dual throwing axes and devastating whirlwind slashes."
+                    TowerSpecialization.ARCANE_WIZARD -> "Masters of arcane magic with instant disintegration and teleportation."
+                    TowerSpecialization.SORCERER_MAGE -> "Powerful sorcerers that summon Earth Golems and curse enemies into sheep."
+                    TowerSpecialization.BIG_BERTHA -> "The ultimate dwarven artillery firing dragon missiles and cluster bombs."
+                    TowerSpecialization.TESLA_X104 -> "Electrified marvel chaining supercharged bolts through multiple foes."
+                    else -> "Specialized Level 4 tower branch."
+                }
+
+                val stats = when (spec) {
+                    TowerSpecialization.RANGERS_HIDEOUT -> listOf("Damage:" to "13-19", "Reload:" to "Very Fast", "Range:" to "Extreme")
+                    TowerSpecialization.MUSKETEER_GARRISON -> listOf("Damage:" to "35-65", "Reload:" to "Slow", "Range:" to "Extreme")
+                    TowerSpecialization.HOLY_ORDER -> listOf("Life:" to "200", "Damage:" to "12-18", "Armor:" to "Heavy")
+                    TowerSpecialization.BARBARIAN_MEAD_HALL -> listOf("Life:" to "250", "Damage:" to "16-24", "Armor:" to "None")
+                    TowerSpecialization.ARCANE_WIZARD -> listOf("Damage:" to "76-140", "Reload:" to "Slow", "Range:" to "Far")
+                    TowerSpecialization.SORCERER_MAGE -> listOf("Damage:" to "42-78", "Reload:" to "Average", "Range:" to "Far")
+                    TowerSpecialization.BIG_BERTHA -> listOf("Damage:" to "50-100", "Reload:" to "Very Slow", "Range:" to "Far")
+                    TowerSpecialization.TESLA_X104 -> listOf("Damage:" to "60-110", "Reload:" to "Very Slow", "Range:" to "Average")
+                    else -> emptyList()
+                }
+
+                val prompt = if (canAfford) "[ Cost: ${spec.branchCost}G - Tap to choose branch ]" else "[ Cost: ${spec.branchCost}G - Not enough gold ]"
+                drawKingdomRushTooltipBox(shapeRenderer, batch, smallFont, btnPos, spotCenter, spec.displayName, desc, stats, prompt, canAfford)
+            }
+
+            "SKILL_1", "SKILL_2", "SKILL_3" -> {
+                val spec = tComp.specialization
+                val costDiscount = if (tComp.towerType == TowerType.ARTILLERY && UpgradeManager.getEffectiveArtilleryLevel() >= 4) 0.75f else 1.0f
+
+                val (sName, sLvl, sMax, sCost) = when (action) {
+                    "SKILL_1" -> Quadruple(spec.skill1Name, tComp.skill1Level, 3, (spec.skill1Costs.getOrElse(tComp.skill1Level) { 0 } * costDiscount).toInt())
+                    "SKILL_2" -> {
+                        val maxS2 = if (spec == TowerSpecialization.HOLY_ORDER) 1 else 3
+                        Quadruple(spec.skill2Name, tComp.skill2Level, maxS2, (spec.skill2Costs.getOrElse(tComp.skill2Level) { 0 } * costDiscount).toInt())
+                    }
+                    else -> Quadruple(spec.skill3Name, tComp.skill3Level, 3, (spec.skill3Costs.getOrElse(tComp.skill3Level) { 0 } * costDiscount).toInt())
+                }
+
+                val desc = when (sName) {
+                    "Polymorph" -> "Curses enemies, transforming them into harmless sheep with no armor."
+                    "Elemental" -> "Summons a mighty Earth Golem with heavy armor and massive health."
+                    "Death Ray" -> "Concentrates arcane power to instantly disintegrate the target."
+                    "Teleport" -> "Warps groups of advancing enemies back along the road."
+                    "Sniper Shot" -> "Fires a deadly sniper bullet with a chance to instantly kill the foe."
+                    "Shrapnel Shot" -> "Fires explosive shrapnel shells causing massive area damage."
+                    "Poison Arrows" -> "Coats arrows with deadly poison dealing heavy damage over time."
+                    "Forest Wrath" -> "Calls upon thorn vines that entangle and crush groups of enemies."
+                    "Healing Light" -> "Blesses paladins with holy light, rapidly restoring health in battle."
+                    "Shield Valor" -> "Reinforces paladin shields, upgrading their armor to Heavy."
+                    "Holy Strike" -> "Paladin attacks strike with radiant holy damage in an area."
+                    "Throwing Axes" -> "Barbarians hurl heavy throwing axes at airborne and distant foes."
+                    "Whirlwind" -> "Barbarians spin violently, slicing through all nearby enemies."
+                    "More Axes" -> "Sharpens barbarian axes, greatly increasing base attack damage."
+                    "Dragon Missile" -> "Fires long-range heat-seeking missiles with colossal blast area."
+                    "Cluster Bombs" -> "Scatters secondary explosive cluster bomblets across the path."
+                    "Chain Bolt" -> "Empowers lightning bolts to jump across additional targets."
+                    "Overcharge" -> "Electrifies the surrounding area with a pulse damage aura."
+                    else -> "Special tactical upgrade skill."
+                }
+
+                val stats = listOf(
+                    "Skill Level:" to "$sLvl / $sMax",
+                    "Cooldown:" to if (sName == "Polymorph") "16s - 12s" else "Standard"
+                )
+
+                val isMax = sLvl >= sMax
+                val canAfford = !isMax && EconomyManager.gold >= sCost
+                val prompt = when {
+                    isMax -> "[ MAX LEVEL REACHED ]"
+                    canAfford -> "[ Cost: ${sCost}G - Tap to learn skill ]"
+                    else -> "[ Cost: ${sCost}G - Not enough gold ]"
+                }
+
+                drawKingdomRushTooltipBox(shapeRenderer, batch, smallFont, btnPos, spotCenter, sName, desc, stats, prompt, canAfford || isMax)
+            }
+
+            "SELL" -> {
+                val refundRatio = if (UpgradeManager.getEffectiveArcherLevel() >= 1 && tComp.towerType == TowerType.ARCHER) 0.90f else 0.70f
+                val refund = (tComp.totalInvestedGold * refundRatio).toInt()
+
+                val title = "Sell Tower"
+                val desc = "Dismantles this tower and refunds 70% of invested gold."
+                val stats = listOf("Refund:" to "+${refund}G")
+                val prompt = "[ Tap to confirm sell ]"
+                drawKingdomRushTooltipBox(shapeRenderer, batch, smallFont, btnPos, spotCenter, title, desc, stats, prompt, true)
+            }
+        }
+    }
+
+    // =========================================================================
+    // HỘP VẼ KHUNG CHUẨN GỐC - ĐẢM BẢO KHÔNG BAO GIỜ CHE CÁC NÚT KHÁC CỦA WHEEL
+    // =========================================================================
+    private fun drawKingdomRushTooltipBox(
+        shapeRenderer: ShapeRenderer,
+        batch: SpriteBatch,
+        smallFont: BitmapFont,
+        btnPos: Vector2,
+        spotCenter: Vector2,
+        title: String,
+        desc: String,
+        stats: List<Pair<String, String>>,
+        promptText: String,
+        isPositive: Boolean
+    ) {
+        val boxWidth = 245f
+        val descLines = wrapText(desc, 27) // Chia dòng tối đa 27 ký tự
+        val boxHeight = 22f + (descLines.size * 14.5f) + (stats.size * 15f) + (if (stats.isNotEmpty()) 10f else 0f) + 24f
+
+        var boxX = 0f
+        var boxY = 0f
+        var beakEdge = "NONE"
+
+        // 1. Nếu nút nằm ở nửa trên so với tâm wheel:
+        if (btnPos.y > spotCenter.y + 15f) {
+            val fitsAbove = (btnPos.y + 30f + boxHeight <= Config.WORLD_HEIGHT - 8f)
+            if (fitsAbove) {
+                boxY = btnPos.y + 30f
+                boxX = (btnPos.x - boxWidth / 2f).coerceIn(12f, Config.WORLD_WIDTH - boxWidth - 12f)
+                beakEdge = "BOTTOM"
+            } else {
+                // Không đủ chỗ phía trên -> Đẩy ra ngoài cánh trái hoặc phải của wheel
+                if (spotCenter.x <= Config.WORLD_WIDTH / 2f) {
+                    boxX = (spotCenter.x + 95f).coerceAtMost(Config.WORLD_WIDTH - boxWidth - 12f)
+                    beakEdge = "LEFT"
+                } else {
+                    boxX = (spotCenter.x - 95f - boxWidth).coerceAtLeast(12f)
+                    beakEdge = "RIGHT"
+                }
+                boxY = (btnPos.y - boxHeight / 2f).coerceIn(65f, Config.WORLD_HEIGHT - boxHeight - 12f)
+            }
+        }
+        // 2. Nếu nút nằm ở nửa dưới so với tâm wheel:
+        else if (btnPos.y < spotCenter.y - 15f) {
+            val fitsBelow = (btnPos.y - 30f - boxHeight >= 65f)
+            if (fitsBelow) {
+                boxY = btnPos.y - 30f - boxHeight
+                boxX = (btnPos.x - boxWidth / 2f).coerceIn(12f, Config.WORLD_WIDTH - boxWidth - 12f)
+                beakEdge = "TOP"
+            } else {
+                if (spotCenter.x <= Config.WORLD_WIDTH / 2f) {
+                    boxX = (spotCenter.x + 95f).coerceAtMost(Config.WORLD_WIDTH - boxWidth - 12f)
+                    beakEdge = "LEFT"
+                } else {
+                    boxX = (spotCenter.x - 95f - boxWidth).coerceAtLeast(12f)
+                    beakEdge = "RIGHT"
+                }
+                boxY = (btnPos.y - boxHeight / 2f).coerceIn(65f, Config.WORLD_HEIGHT - boxHeight - 12f)
+            }
+        }
+        // 3. Nếu nút nằm bên phải:
+        else if (btnPos.x > spotCenter.x + 15f) {
+            val fitsRight = (btnPos.x + 30f + boxWidth <= Config.WORLD_WIDTH - 12f)
+            if (fitsRight) {
+                boxX = btnPos.x + 30f
+                boxY = (btnPos.y - boxHeight / 2f).coerceIn(65f, Config.WORLD_HEIGHT - boxHeight - 12f)
+                beakEdge = "LEFT"
+            } else {
+                boxX = (spotCenter.x - 95f - boxWidth).coerceAtLeast(12f)
+                boxY = (btnPos.y - boxHeight / 2f).coerceIn(65f, Config.WORLD_HEIGHT - boxHeight - 12f)
+                beakEdge = "RIGHT"
+            }
+        }
+        // 4. Nếu nút nằm bên trái:
+        else {
+            val fitsLeft = (btnPos.x - 30f - boxWidth >= 12f)
+            if (fitsLeft) {
+                boxX = btnPos.x - 30f - boxWidth
+                boxY = (btnPos.y - boxHeight / 2f).coerceIn(65f, Config.WORLD_HEIGHT - boxHeight - 12f)
+                beakEdge = "RIGHT"
+            } else {
+                boxX = (spotCenter.x + 95f).coerceAtMost(Config.WORLD_WIDTH - boxWidth - 12f)
+                boxY = (btnPos.y - boxHeight / 2f).coerceIn(65f, Config.WORLD_HEIGHT - boxHeight - 12f)
+                beakEdge = "LEFT"
+            }
+        }
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        shapeRenderer.color = Color(0.1f, 0.1f, 0.1f, 0.92f)
-        shapeRenderer.rect(boxX, boxY, 220f, 95f)
+        // Nền gỗ than sẫm chuẩn Kingdom Rush
+        shapeRenderer.color = Color(0.14f, 0.13f, 0.11f, 0.96f)
+        shapeRenderer.rect(boxX, boxY, boxWidth, boxHeight)
+
+        // Vẽ mũi tên nhô ra chỉ vào nút
+        when (beakEdge) {
+            "BOTTOM" -> {
+                val clampX = btnPos.x.coerceIn(boxX + 16f, boxX + boxWidth - 16f)
+                shapeRenderer.triangle(clampX - 8f, boxY, clampX + 8f, boxY, clampX, btnPos.y + 24f)
+            }
+            "TOP" -> {
+                val clampX = btnPos.x.coerceIn(boxX + 16f, boxX + boxWidth - 16f)
+                shapeRenderer.triangle(clampX - 8f, boxY + boxHeight, clampX + 8f, boxY + boxHeight, clampX, btnPos.y - 24f)
+            }
+            "LEFT" -> {
+                val clampY = btnPos.y.coerceIn(boxY + 14f, boxY + boxHeight - 14f)
+                shapeRenderer.triangle(boxX, clampY - 7f, boxX, clampY + 7f, btnPos.x + 22f, clampY)
+            }
+            "RIGHT" -> {
+                val clampY = btnPos.y.coerceIn(boxY + 14f, boxY + boxHeight - 14f)
+                shapeRenderer.triangle(boxX + boxWidth, clampY - 7f, boxX + boxWidth, clampY + 7f, btnPos.x - 22f, clampY)
+            }
+        }
+        shapeRenderer.end()
+
+        // Viền vàng đồng mỏng tinh tế
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+        shapeRenderer.color = Color(0.50f, 0.44f, 0.32f, 1f)
+        shapeRenderer.rect(boxX, boxY, boxWidth, boxHeight)
+        when (beakEdge) {
+            "BOTTOM" -> {
+                val clampX = btnPos.x.coerceIn(boxX + 16f, boxX + boxWidth - 16f)
+                shapeRenderer.line(clampX - 8f, boxY, clampX, btnPos.y + 24f)
+                shapeRenderer.line(clampX + 8f, boxY, clampX, btnPos.y + 24f)
+            }
+            "TOP" -> {
+                val clampX = btnPos.x.coerceIn(boxX + 16f, boxX + boxWidth - 16f)
+                shapeRenderer.line(clampX - 8f, boxY + boxHeight, clampX, btnPos.y - 24f)
+                shapeRenderer.line(clampX + 8f, boxY + boxHeight, clampX, btnPos.y - 24f)
+            }
+            "LEFT" -> {
+                val clampY = btnPos.y.coerceIn(boxY + 14f, boxY + boxHeight - 14f)
+                shapeRenderer.line(boxX, clampY - 7f, btnPos.x + 22f, clampY)
+                shapeRenderer.line(boxX, clampY + 7f, btnPos.x + 22f, clampY)
+            }
+            "RIGHT" -> {
+                val clampY = btnPos.y.coerceIn(boxY + 14f, boxY + boxHeight - 14f)
+                shapeRenderer.line(boxX + boxWidth, clampY - 7f, btnPos.x - 22f, clampY)
+                shapeRenderer.line(boxX + boxWidth, clampY + 7f, btnPos.x - 22f, clampY)
+            }
+        }
+        shapeRenderer.end()
+
+        // Vẽ nội dung với font thu gọn nhẹ
+        val oldScale = smallFont.data.scaleX
+        smallFont.data.setScale(0.82f)
+
+        batch.begin()
+        var curY = boxY + boxHeight - 12f
+
+        // 1. Tên tháp / Kỹ năng (Trắng ngà nổi bật)
+        drawOutlinedText(batch, smallFont, title, boxX + 10f, curY, Color(0.98f, 0.98f, 0.94f, 1f))
+        curY -= 17f
+
+        // 2. Mô tả (Vàng cát ấm áp như game gốc)
+        for (line in descLines) {
+            drawOutlinedText(batch, smallFont, line, boxX + 10f, curY, Color(0.88f, 0.80f, 0.55f, 1f))
+            curY -= 14f
+        }
+        if (stats.isNotEmpty()) curY -= 4f
+
+        // 3. Các dòng chỉ số: Tên chỉ số (Vàng cam) | Giá trị (Trắng)
+        for (st in stats) {
+            drawOutlinedText(batch, smallFont, st.first, boxX + 10f, curY, Color(0.92f, 0.72f, 0.32f, 1f))
+            drawOutlinedText(batch, smallFont, st.second, boxX + 115f, curY, Color.WHITE)
+            curY -= 14f
+        }
+
+        // 4. Dòng trạng thái / xác nhận 2 bước ở đáy hộp
+        val promptColor = if (isPositive) Color(1f, 0.90f, 0.30f, 1f) else Color(1f, 0.35f, 0.30f, 1f)
+        drawOutlinedText(batch, smallFont, promptText, boxX + 10f, curY - 2f, promptColor)
+
+        batch.end()
+        smallFont.data.setScale(oldScale) // Trả lại kích thước font cũ
+    }
+
+    private fun drawBottomBarBackground(shapeRenderer: ShapeRenderer, barHeight: Float) {
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        shapeRenderer.color = Color(0.12f, 0.12f, 0.14f, 0.95f)
+        shapeRenderer.rect(0f, 0f, Config.WORLD_WIDTH, barHeight)
         shapeRenderer.end()
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-        shapeRenderer.color = Color.GOLD
-        shapeRenderer.rect(boxX, boxY, 220f, 95f)
+        shapeRenderer.color = Color.DARK_GRAY
+        shapeRenderer.line(0f, barHeight, Config.WORLD_WIDTH, barHeight)
+        shapeRenderer.end()
+    }
+
+    private fun renderShieldWithBars(
+        shapeRenderer: ShapeRenderer,
+        startX: Float,
+        startY: Float,
+        activeBars: Int,
+        color: Color
+    ) {
+        val sX = startX
+        val sY = startY
+
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
+        shapeRenderer.color = color
+        shapeRenderer.line(sX, sY + 22f, sX + 11f, sY + 18f)
+        shapeRenderer.line(sX + 11f, sY + 18f, sX + 22f, sY + 22f)
+        shapeRenderer.line(sX + 22f, sY + 22f, sX + 22f, sY + 11f)
+        shapeRenderer.line(sX + 22f, sY + 11f, sX + 11f, sY)
+        shapeRenderer.line(sX + 11f, sY, sX, sY + 11f)
+        shapeRenderer.line(sX, sY + 11f, sX, sY + 22f)
         shapeRenderer.end()
 
-        batch.begin()
-        when (type) {
-            TowerType.ARCHER -> {
-                drawOutlinedText(batch, smallFont, "Archer Tower", boxX + 10f, boxY + 80f, Color.WHITE)
-                drawOutlinedText(batch, smallFont, "Damage: 4-6 (Physical)", boxX + 10f, boxY + 60f, Color.LIGHT_GRAY)
-                drawOutlinedText(batch, smallFont, "Speed: Average | Range: Short", boxX + 10f, boxY + 40f, Color.LIGHT_GRAY)
-            }
-            TowerType.BARRACKS -> {
-                drawOutlinedText(batch, smallFont, "Militia Barracks", boxX + 10f, boxY + 80f, Color.WHITE)
-                drawOutlinedText(batch, smallFont, "Soldiers: 3 Militias (50 HP)", boxX + 10f, boxY + 60f, Color.LIGHT_GRAY)
-                drawOutlinedText(batch, smallFont, "Role: Block & Attack enemies", boxX + 10f, boxY + 40f, Color.LIGHT_GRAY)
-            }
-            TowerType.MAGE -> {
-                drawOutlinedText(batch, smallFont, "Mage Tower", boxX + 10f, boxY + 80f, Color.WHITE)
-                val dmgDesc = if (UpgradeManager.getEffectiveMageLevel() >= 4) "Damage: 10-20 (Magical +15%)" else "Damage: 9-17 (Magical)"
-                drawOutlinedText(batch, smallFont, dmgDesc, boxX + 10f, boxY + 60f, Color.LIGHT_GRAY)
-                drawOutlinedText(batch, smallFont, "Speed: Slow | Range: Med", boxX + 10f, boxY + 40f, Color.LIGHT_GRAY)
-            }
-            TowerType.ARTILLERY -> {
-                drawOutlinedText(batch, smallFont, "Bombard Artillery", boxX + 10f, boxY + 80f, Color.WHITE)
-                drawOutlinedText(batch, smallFont, "Damage: 8-15 (Area AoE)", boxX + 10f, boxY + 60f, Color.LIGHT_GRAY)
-                drawOutlinedText(batch, smallFont, "Speed: Very Slow | Range: Short", boxX + 10f, boxY + 40f, Color.LIGHT_GRAY)
-            }
-            else -> {
-                drawOutlinedText(batch, smallFont, "Special Tower", boxX + 10f, boxY + 80f, Color.WHITE)
-                drawOutlinedText(batch, smallFont, "Unique shrine support", boxX + 10f, boxY + 60f, Color.LIGHT_GRAY)
-                drawOutlinedText(batch, smallFont, "Strategic reinforcement", boxX + 10f, boxY + 40f, Color.LIGHT_GRAY)
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
+        for (i in 0 until 3) {
+            val barX = startX + 28f + (i * 10f)
+            val barY = startY + 2f
+            if (i < activeBars) {
+                shapeRenderer.color = color
+                shapeRenderer.rect(barX, barY, 6.5f, 18f)
+            } else {
+                shapeRenderer.color = Color(0.22f, 0.22f, 0.25f, 0.8f)
+                shapeRenderer.rect(barX, barY, 6.5f, 18f)
             }
         }
-        drawOutlinedText(batch, smallFont, "[ Tap again to build ]", boxX + 10f, boxY + 20f, Color.YELLOW)
-        batch.end()
+        shapeRenderer.end()
     }
 
     fun renderBottomInfoBar(
@@ -1040,50 +1325,5 @@ object GameUIRenderer {
         }
     }
 
-    private fun drawBottomBarBackground(shapeRenderer: ShapeRenderer, barHeight: Float) {
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        shapeRenderer.color = Color(0.12f, 0.12f, 0.14f, 0.95f)
-        shapeRenderer.rect(0f, 0f, Config.WORLD_WIDTH, barHeight)
-        shapeRenderer.end()
-
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-        shapeRenderer.color = Color.DARK_GRAY
-        shapeRenderer.line(0f, barHeight, Config.WORLD_WIDTH, barHeight)
-        shapeRenderer.end()
-    }
-
-    private fun renderShieldWithBars(
-        shapeRenderer: ShapeRenderer,
-        startX: Float,
-        startY: Float,
-        activeBars: Int,
-        color: Color
-    ) {
-        val sX = startX
-        val sY = startY
-
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-        shapeRenderer.color = color
-        shapeRenderer.line(sX, sY + 22f, sX + 11f, sY + 18f)
-        shapeRenderer.line(sX + 11f, sY + 18f, sX + 22f, sY + 22f)
-        shapeRenderer.line(sX + 22f, sY + 22f, sX + 22f, sY + 11f)
-        shapeRenderer.line(sX + 22f, sY + 11f, sX + 11f, sY)
-        shapeRenderer.line(sX + 11f, sY, sX, sY + 11f)
-        shapeRenderer.line(sX, sY + 11f, sX, sY + 22f)
-        shapeRenderer.end()
-
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        for (i in 0 until 3) {
-            val barX = startX + 28f + (i * 10f)
-            val barY = startY + 2f
-            if (i < activeBars) {
-                shapeRenderer.color = color
-                shapeRenderer.rect(barX, barY, 6.5f, 18f)
-            } else {
-                shapeRenderer.color = Color(0.22f, 0.22f, 0.25f, 0.8f)
-                shapeRenderer.rect(barX, barY, 6.5f, 18f)
-            }
-        }
-        shapeRenderer.end()
-    }
+    private data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
 }
