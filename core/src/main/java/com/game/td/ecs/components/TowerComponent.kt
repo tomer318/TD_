@@ -31,7 +31,7 @@ enum class TowerSpecialization(
     ARCANE_WIZARD("Arcane Wizard", 300, "Death Ray", listOf(350, 200, 200), "Teleport", listOf(300, 100, 100)),
     SORCERER_MAGE("Sorcerer Mage", 300, "Polymorph", listOf(300, 150, 150), "Elemental", listOf(350, 150, 150)),
     BIG_BERTHA("Big Bertha", 400, "Dragon Missile", listOf(250, 100, 100), "Cluster Bombs", listOf(250, 150, 150)),
-    TESLA_X104("Tesla x104", 375, "Chain Bolt", listOf(250, 200, 200), "Overcharge", listOf(250, 150, 150)),
+    TESLA_X104("Tesla x104", 375, "Supercharged Bolt", listOf(250, 250), "Overcharge", listOf(250, 125, 125)),
     SYLVAN_ELF_HALL("Elf Hall", 100, "", listOf(), "", listOf()),
     SUNRAY_TOWER("Sunray", 100, "", listOf(), "", listOf())
 }

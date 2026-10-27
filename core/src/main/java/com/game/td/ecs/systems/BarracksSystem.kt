@@ -10,6 +10,7 @@ import com.badlogic.gdx.math.Vector2
 import com.game.td.ecs.components.*
 import com.game.td.managers.EconomyManager
 import com.game.td.managers.UpgradeManager
+import com.game.td.managers.SoundManager
 
 class BarracksSystem(
     private val onAxeThrown: (Vector2, Vector2) -> Unit = { _, _ -> },
@@ -40,9 +41,8 @@ class BarracksSystem(
 
     override fun update(deltaTime: Float) {
         val deadSoldiers = mutableListOf<Entity>()
-        val soldiersToInspect = engine.getEntitiesFor(soldierFamily)
-        for (i in 0 until soldiersToInspect.size()) {
-            val sol = soldiersToInspect.get(i)
+        val soldiersToInspect = engine.getEntitiesFor(soldierFamily).toList()
+        for (sol in soldiersToInspect) {
             val hp = healthMapper.get(sol)
             val reinf = sol.getComponent(ReinforcementComponent::class.java)
             if (reinf != null) reinf.lifeTime -= deltaTime
@@ -66,11 +66,10 @@ class BarracksSystem(
             engine.removeEntity(sol)
         }
 
-        val towers = engine.getEntitiesFor(towerFamily)
-        for (i in 0 until towers.size()) {
-            val tower = towers.get(i)
-            val tComp = tower.getComponent(TowerComponent::class.java)
-            val bComp = tower.getComponent(BarracksComponent::class.java)
+        val towers = engine.getEntitiesFor(towerFamily).toList()
+        for (tower in towers) {
+            val tComp = tower.getComponent(TowerComponent::class.java) ?: continue
+            val bComp = tower.getComponent(BarracksComponent::class.java) ?: continue
 
             if (tComp.skill1Cooldown > 0f) tComp.skill1Cooldown -= deltaTime
             if (tComp.skill2Cooldown > 0f) tComp.skill2Cooldown -= deltaTime
@@ -82,8 +81,8 @@ class BarracksSystem(
                     hp != null && !hp.isDead && hp.currentHealth < hp.maxHealth * 0.7f
                 }
                 if (injuredSoldier != null) {
-                    val healPos = transformMapper.get(injuredSoldier).position
-                    onHealingLight(Vector2(healPos))
+                    val healPos = transformMapper.get(injuredSoldier)?.position
+                    if (healPos != null) onHealingLight(Vector2(healPos))
                     val healAmount = 40f + tComp.skill1Level * 30f
                     for (sol in bComp.soldiers) {
                         val sHp = healthMapper.get(sol)
@@ -95,11 +94,11 @@ class BarracksSystem(
                 }
             }
 
+            // BARBARIAN PHÓNG RÌU TẦM XA: Vẫn nhắm bắn cả cừu chuẩn theo Wiki ("targeted by Barbarians with Throwing Axes")
             if (tComp.specialization == TowerSpecialization.BARBARIAN_MEAD_HALL && tComp.skill1Level > 0 && tComp.skill1Cooldown <= 0f) {
-                val enemies = engine.getEntitiesFor(enemyFamily)
+                val enemies = engine.getEntitiesFor(enemyFamily).toList()
                 var targetEnemy: Entity? = null
-                for (j in 0 until enemies.size()) {
-                    val e = enemies.get(j)
+                for (e in enemies) {
                     val eTrans = transformMapper.get(e)
                     val hp = healthMapper.get(e)
                     if (hp != null && !hp.isDead && eTrans != null && bComp.rallyPoint.dst(eTrans.position) <= 180f) {
@@ -117,6 +116,7 @@ class BarracksSystem(
                         eHp.currentHealth -= axeDmg
                         val eComp = enemy.getComponent(EnemyComponent::class.java)
                         if (eHp.currentHealth <= 0f) {
+                            eHp.currentHealth = 0f
                             if (eComp != null && !eComp.isSummonedMinion) EconomyManager.addGold(eComp.enemyType.rewardGold)
                             enemy.getComponent(MovementComponent::class.java)?.isBlocked = false
                             engine.removeEntity(enemy)
@@ -155,22 +155,25 @@ class BarracksSystem(
 
         distributeEngagements()
 
-        val currentEnemies = engine.getEntitiesFor(enemyFamily)
-        val enemyListSnapshot = mutableListOf<Entity>()
-        for (i in 0 until currentEnemies.size()) {
-            enemyListSnapshot.add(currentEnemies.get(i))
-        }
-
-        val allCurrentSoldiers = engine.getEntitiesFor(soldierFamily)
+        val enemyListSnapshot = engine.getEntitiesFor(enemyFamily).toList()
+        val allCurrentSoldiers = engine.getEntitiesFor(soldierFamily).toList()
 
         for (enemy in enemyListSnapshot) {
-            val eComp = enemy.getComponent(EnemyComponent::class.java)
+            val eComp = enemy.getComponent(EnemyComponent::class.java) ?: continue
             val eTrans = transformMapper.get(enemy)
             val eMove = enemy.getComponent(MovementComponent::class.java)
             val eHp = healthMapper.get(enemy)
-            if (eHp == null || eHp.isDead || eTrans == null || eMove == null) continue
+            if (eHp == null || eHp.isDead || eHp.currentHealth <= 0f || eTrans == null || eMove == null) continue
 
-            // Đếm lùi thời gian hồi chiêu đánh của quái độc lập mỗi frame
+            // CỪU VÔ HẠI: Không thể dùng kỹ năng (gõ trống) hay bắn xa, không bị chặn đường
+            if (eComp.isSheep) {
+                eComp.isRangedAttacking = false
+                if (eMove.trapTimer <= 0f) {
+                    eMove.isBlocked = false
+                }
+                continue
+            }
+
             if (eComp.attackCooldown > 0f) {
                 eComp.attackCooldown -= deltaTime
             }
@@ -187,9 +190,9 @@ class BarracksSystem(
                         val oHp = healthMapper.get(otherE)
                         val isTroll = oComp?.enemyType in listOf(EnemyType.TROLL, EnemyType.TROLL_CHAMPION, EnemyType.TROLL_CHIEFTAIN)
 
-                        if (isTroll && oTrans != null && oHp != null && !oHp.isDead && oTrans.position.dst(eTrans.position) <= 140f) {
+                        if (isTroll && oComp?.isSheep != true && oTrans != null && oHp != null && !oHp.isDead && oTrans.position.dst(eTrans.position) <= 140f) {
                             oHp.currentHealth = (oHp.currentHealth + 50f).coerceAtMost(oHp.maxHealth)
-                            oComp.enrageDuration = 6.0f
+                            oComp?.enrageDuration = 6.0f
                         }
                     }
                 }
@@ -202,8 +205,7 @@ class BarracksSystem(
             if (eComp.enemyType.canRangedAttack) {
                 if (eComp.rangedCooldown > 0f) eComp.rangedCooldown -= deltaTime
 
-                val isMeleeCombat = (0 until allCurrentSoldiers.size()).any { idx ->
-                    val sol = allCurrentSoldiers.get(idx)
+                val isMeleeCombat = allCurrentSoldiers.any { sol ->
                     val sHp = healthMapper.get(sol)
                     val sTrans = transformMapper.get(sol)
                     val sComp = soldierMapper.get(sol)
@@ -221,8 +223,7 @@ class BarracksSystem(
                 var closestSol: Entity? = null
                 var minDist = eComp.enemyType.rangedRange
 
-                for (k in 0 until allCurrentSoldiers.size()) {
-                    val sol = allCurrentSoldiers.get(k)
+                for (sol in allCurrentSoldiers) {
                     val sHp = healthMapper.get(sol)
                     val sTrans = transformMapper.get(sol)
                     if (sHp == null || sHp.isDead || sTrans == null) continue
@@ -303,6 +304,9 @@ class BarracksSystem(
         engine.addEntity(proj)
     }
 
+    // =========================================================================
+    // PHÂN BỔ CHẶN QUÁI: CỪU (isSheep = true) KHÔNG BAO GIỜ BỊ LÍNH CHẶN ĐÁNH
+    // =========================================================================
     private fun distributeEngagements() {
         val allEnemies = engine.getEntitiesFor(enemyFamily)
         val allSoldiers = engine.getEntitiesFor(soldierFamily)
@@ -321,7 +325,9 @@ class BarracksSystem(
             val enemy = sComp.engagedEnemy
             if (enemy != null) {
                 val eHp = healthMapper.get(enemy)
-                if (eHp != null && !eHp.isDead && eHp.currentHealth > 0f) {
+                val eComp = enemy.getComponent(EnemyComponent::class.java)
+                // Nếu mục tiêu đã chết hoặc biến thành Cừu -> nhả mục tiêu ngay lập tức
+                if (eHp != null && !eHp.isDead && eHp.currentHealth > 0f && eComp?.isSheep != true) {
                     blockersPerEnemy[enemy]?.add(sol)
                 } else {
                     sComp.engagedEnemy = null
@@ -329,11 +335,11 @@ class BarracksSystem(
             }
         }
 
-        // Giai đoạn 1: Ưu tiên mỗi quái chưa bị chặn nhận ít nhất 1 lính chặn đường
+        // Giai đoạn 1: Ưu tiên mỗi quái chưa bị chặn nhận ít nhất 1 lính chặn đường (Bỏ qua quái bay và Cừu)
         for (i in 0 until allEnemies.size()) {
             val enemy = allEnemies.get(i)
             val eComp = enemy.getComponent(EnemyComponent::class.java)
-            if (eComp?.enemyType?.isFlying == true) continue
+            if (eComp?.enemyType?.isFlying == true || eComp?.isSheep == true) continue
 
             val eHp = healthMapper.get(enemy) ?: continue
             if (eHp.isDead || eHp.currentHealth <= 0f) continue
@@ -368,7 +374,7 @@ class BarracksSystem(
             }
         }
 
-        // Giai đoạn 2: Những lính còn rảnh rỗi sẽ cùng lao vào hội đồng quái gần nhất (tối đa 3 lính / 1 quái)
+        // Giai đoạn 2: Những lính còn rảnh rỗi sẽ cùng lao vào hội đồng quái gần nhất (Bỏ qua quái bay và Cừu)
         for (j in 0 until allSoldiers.size()) {
             val sol = allSoldiers.get(j)
             val hp = healthMapper.get(sol)
@@ -382,7 +388,7 @@ class BarracksSystem(
                 for (i in 0 until allEnemies.size()) {
                     val enemy = allEnemies.get(i)
                     val eComp = enemy.getComponent(EnemyComponent::class.java)
-                    if (eComp?.enemyType?.isFlying == true) continue
+                    if (eComp?.enemyType?.isFlying == true || eComp?.isSheep == true) continue
                     val eHp = healthMapper.get(enemy) ?: continue
                     if (eHp.isDead || eHp.currentHealth <= 0f) continue
                     val ePos = transformMapper.get(enemy)?.position ?: continue
@@ -410,20 +416,21 @@ class BarracksSystem(
             val enemy = allEnemies.get(i)
             val eMove = enemy.getComponent(MovementComponent::class.java)
             val eComp = enemy.getComponent(EnemyComponent::class.java)
-            if (eComp?.enemyType?.isFlying == true) {
-                eMove?.isBlocked = false
+            val isTrapped = (eMove?.trapTimer ?: 0f) > 0f
+
+            if (eComp?.enemyType?.isFlying == true || eComp?.isSheep == true) {
+                eMove?.isBlocked = isTrapped
                 continue
             }
             val blockers = blockersPerEnemy[enemy] ?: mutableListOf()
-            val isTrapped = (eMove?.trapTimer ?: 0f) > 0f
             val isRangedAttacking = eComp?.isRangedAttacking == true
             eMove?.isBlocked = blockers.isNotEmpty() || isTrapped || isRangedAttacking
         }
     }
 
     override fun processEntity(sol: Entity, deltaTime: Float) {
-        val sComp = soldierMapper.get(sol)
-        val sTrans = transformMapper.get(sol)
+        val sComp = soldierMapper.get(sol) ?: return
+        val sTrans = transformMapper.get(sol) ?: return
         val hp = healthMapper.get(sol)
 
         if (hp == null || hp.isDead || hp.currentHealth <= 0f) {
@@ -444,10 +451,11 @@ class BarracksSystem(
             val eHp = healthMapper.get(enemy)
             val eComp = enemy.getComponent(EnemyComponent::class.java)
 
-            if (eHp == null || eHp.isDead || eHp.currentHealth <= 0f || eTrans == null) {
+            // Nếu mục tiêu chết hoặc vừa bị hóa cừu -> Lính nhả mục tiêu và để cừu đi qua
+            if (eHp == null || eHp.isDead || eHp.currentHealth <= 0f || eTrans == null || eComp?.isSheep == true) {
                 val eMove = enemy.getComponent(MovementComponent::class.java)
                 val engEc = enemy.getComponent(EnemyComponent::class.java)
-                if (eMove != null && eMove.trapTimer <= 0f && engEc?.isRangedAttacking != true) {
+                if (eMove != null && eMove.trapTimer <= 0f && (engEc?.isRangedAttacking != true || engEc.isSheep)) {
                     eMove.isBlocked = false
                 }
                 sComp.engagedEnemy = null
@@ -456,7 +464,6 @@ class BarracksSystem(
 
             val dst = sTrans.position.dst(eTrans.position)
 
-            // Áp sát trực diện vào quái (khoảng cách 20px)
             if (dst > 20f) {
                 val dir = Vector2(eTrans.position).sub(sTrans.position).nor()
                 val moveSpd = if (sComp.moveSpeed > 0f) sComp.moveSpeed else 50f
@@ -487,10 +494,12 @@ class BarracksSystem(
                     dmg *= 0.5f
                 }
 
+                SoundManager.playSwordClash()
                 eHp.currentHealth -= dmg
                 sComp.attackCooldown = sComp.attackRate
 
                 if (eHp.currentHealth <= 0f) {
+                    eHp.currentHealth = 0f
                     if (eComp != null && !eComp.isSummonedMinion) EconomyManager.addGold(eComp.enemyType.rewardGold)
                     enemy.getComponent(MovementComponent::class.java)?.isBlocked = false
                     engine.removeEntity(enemy)
@@ -499,8 +508,8 @@ class BarracksSystem(
                 }
             }
 
-            // 2. QUÁI VUNG VŨ KHÍ TẤN CÔNG LẠI LÍNH (TẦM <= 35px)
-            if (eComp != null && dst <= 35f) {
+            // 2. QUÁI VUNG VŨ KHÍ TẤN CÔNG LẠI LÍNH (TẦM <= 35px, Cừu không bao giờ đánh lính)
+            if (eComp != null && !eComp.isSheep && dst <= 35f) {
                 if (eComp.attackCooldown <= 0f) {
                     var enemyDmg = MathUtils.random(eComp.enemyType.damageMin, eComp.enemyType.damageMax)
                     if (eComp.enrageDuration > 0f) {
@@ -508,9 +517,8 @@ class BarracksSystem(
                     }
 
                     if (eComp.enemyType == EnemyType.YETI || eComp.enemyType == EnemyType.MAGMA_ELEMENTAL) {
-                        val allSoldiers = engine.getEntitiesFor(soldierFamily)
-                        for (idx in 0 until allSoldiers.size()) {
-                            val otherSol = allSoldiers.get(idx)
+                        val allSoldiers = engine.getEntitiesFor(soldierFamily).toList()
+                        for (otherSol in allSoldiers) {
                             val oHp = healthMapper.get(otherSol)
                             val oTrans = transformMapper.get(otherSol)
                             if (oHp != null && !oHp.isDead && oTrans != null && oTrans.position.dst(eTrans.position) <= 42f) {
@@ -527,6 +535,7 @@ class BarracksSystem(
                         if (UpgradeManager.getEffectiveBarracksLevel() >= 5) {
                             eHp.currentHealth -= (enemyDmg * 0.10f)
                             if (eHp.currentHealth <= 0f) {
+                                eHp.currentHealth = 0f
                                 if (!eComp.isSummonedMinion) EconomyManager.addGold(eComp.enemyType.rewardGold)
                                 enemy.getComponent(MovementComponent::class.java)?.isBlocked = false
                                 engine.removeEntity(enemy)
@@ -544,7 +553,7 @@ class BarracksSystem(
                             other != sol && soldierMapper.get(other)?.engagedEnemy == enemy &&
                                 healthMapper.get(other)?.isDead == false
                         }
-                        if (!otherBlockers && eMove != null && eMove.trapTimer <= 0f && eComp.isRangedAttacking != true) {
+                        if (!otherBlockers && eMove != null && eMove.trapTimer <= 0f && !eComp.isRangedAttacking) {
                             eMove.isBlocked = false
                         }
                         sComp.engagedEnemy = null
@@ -553,14 +562,12 @@ class BarracksSystem(
                 }
             }
         } else {
-            // Khi hết quái, quay về vị trí gác ban đầu
             if (sTrans.position.dst(sComp.targetPosition) > 2f) {
                 val dir = Vector2(sComp.targetPosition).sub(sTrans.position).nor()
                 val returnSpd = if (sComp.moveSpeed > 0f) sComp.moveSpeed else 50f
                 sTrans.position.add(dir.scl(returnSpd * deltaTime))
             }
 
-            // Hồi phục 25 HP/giây khi đứng yên ngoài giao tranh (chuẩn Wiki)
             if (hp.currentHealth < hp.maxHealth) {
                 val regRate = if (sComp.soldierRankName == "Imperial Guard") 25f else sComp.regenPerSec
                 hp.currentHealth = (hp.currentHealth + regRate * deltaTime).coerceAtMost(hp.maxHealth)

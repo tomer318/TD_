@@ -7,9 +7,9 @@ import com.badlogic.ashley.core.Family
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.InputAdapter
 import com.badlogic.gdx.ScreenAdapter
-import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.OrthographicCamera
+import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
@@ -23,14 +23,15 @@ import com.game.td.ecs.systems.*
 import com.game.td.effects.*
 import com.game.td.managers.CheatManager
 import com.game.td.managers.EconomyManager
+import com.game.td.managers.EncyclopediaManager
 import com.game.td.managers.GameMode
 import com.game.td.managers.SaveManager
+import com.game.td.managers.SoundManager
 import com.game.td.managers.UpgradeManager
 import com.game.td.managers.WaveManager
 import com.game.td.map.*
 import com.game.td.renderers.*
 import com.game.td.renderers.maps.Level12MapRenderer
-import com.game.td.renderers.GameUIRenderer.drawOutlinedText
 
 enum class ActiveSpell {
     NONE,
@@ -50,8 +51,15 @@ class PlayScreen(
     private val viewport = FitViewport(Config.WORLD_WIDTH, Config.WORLD_HEIGHT, camera)
     private val shapeRenderer = ShapeRenderer()
     private val batch = SpriteBatch()
-    private val font = BitmapFont().apply { data.setScale(1.35f) }
-    private val smallFont = BitmapFont().apply { data.setScale(0.95f) }
+
+    private val font = BitmapFont().apply {
+        data.setScale(1.45f)
+        region.texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest)
+    }
+    private val smallFont = BitmapFont().apply {
+        data.setScale(1.15f)
+        region.texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest)
+    }
 
     private val engine = Engine()
     private lateinit var waveManager: WaveManager
@@ -67,6 +75,9 @@ class PlayScreen(
     private var previewTowerAction: String? = null
 
     private var isGamePaused: Boolean = false
+    private var hasPlayedVictorySound: Boolean = false
+    private var hasPlayedDefeatSound: Boolean = false
+    private var lastRecordedLives: Int = 20
 
     private var selectedSpell: ActiveSpell = ActiveSpell.NONE
     private var rainOfFireCooldown = 0f
@@ -82,28 +93,19 @@ class PlayScreen(
 
     private var isAimingSunrayTarget: Boolean = false
 
-    // CƠ CHẾ ĐẶC BIỆT CỦA MÀN 11 THEO NOTE WIKI
     private var magmaFieldTotalTime = 0f
     private var magmaFieldSpawnTimer = 0f
 
-    // CƠ CHẾ ĐẶC BIỆT CỦA MÀN 12: THE DARK TOWER
-    private data class LockedTowerState(
-        var initialTimer: Float = 5.0f,
-        var penaltyTimer: Float = 5.0f,
-        var isUndispellable: Boolean = false
-    )
     private val lockedTowersMap = mutableMapOf<Entity, LockedTowerState>()
-    private val warningTowersMap = mutableMapOf<Entity, Float>() // Giai đoạn cảnh báo 2s (chặn wheel, vẫn bắn được)
+    private val warningTowersMap = mutableMapOf<Entity, Float>()
     private var veznanTowerLockCooldown = 16.0f
 
     private var veznanSummonTimer = 10.0f
     private var veznanSummonCountThisWave = 0
     private var lastRecordedWaveForSummon = -1
 
-    // Vòng tròn ma thuật đang phát sáng nạp năng lượng (Vị trí -> Thời gian còn lại)
     private val glowingCircles = mutableListOf<Pair<Vector2, Float>>()
 
-    // Hàng đợi xuất quỷ từng con một từ vòng tròn ma thuật
     private data class QueuedPortalSpawn(
         val circlePos: Vector2,
         val type: EnemyType,
@@ -111,7 +113,8 @@ class PlayScreen(
     )
     private val portalSpawnQueue = mutableListOf<QueuedPortalSpawn>()
 
-    // HÀNG ĐỢI XUẤT XƯƠNG TỪ BÃI THA MA (GIÃN CÁCH, TRÁNH TRÀN Ở WAVE 15)
+    private val activeJuggernautBombs = mutableListOf<JuggernautSummonBomb>()
+
     private val graveyardQueue = mutableListOf<EnemyType>()
     private var graveyardCooldown = 0f
     private var activeGraveyardSkeletons = 0
@@ -127,7 +130,15 @@ class PlayScreen(
                 1 -> listOf(TowerType.BARRACKS, TowerType.ARTILLERY)
                 2 -> listOf(TowerType.ARCHER, TowerType.MAGE, TowerType.ARTILLERY)
                 3 -> listOf(TowerType.ARCHER, TowerType.BARRACKS, TowerType.MAGE)
+                4 -> listOf(TowerType.ARCHER, TowerType.BARRACKS)
+                5 -> listOf(TowerType.ARCHER, TowerType.MAGE, TowerType.ARTILLERY)
+                6 -> listOf(TowerType.BARRACKS)
                 7 -> listOf(TowerType.ARCHER, TowerType.MAGE)
+                8 -> listOf(TowerType.BARRACKS, TowerType.ARTILLERY)
+                9 -> listOf(TowerType.MAGE)
+                10 -> listOf(TowerType.ARCHER, TowerType.MAGE, TowerType.ARTILLERY)
+                11 -> listOf(TowerType.MAGE, TowerType.BARRACKS)
+                12 -> listOf(TowerType.ARCHER, TowerType.MAGE, TowerType.BARRACKS)
                 else -> TowerType.values().toList()
             }
         } else {
@@ -135,20 +146,38 @@ class PlayScreen(
         }
 
     private val buildOptions = listOf(
-        Pair(TowerType.ARCHER, Vector2(0f, 75f)),
-        Pair(TowerType.BARRACKS, Vector2(-75f, 0f)),
-        Pair(TowerType.MAGE, Vector2(75f, 0f)),
-        Pair(TowerType.ARTILLERY, Vector2(0f, -75f))
+        Pair(TowerType.ARCHER, Vector2(-52f, 52f)),
+        Pair(TowerType.BARRACKS, Vector2(52f, 52f)),
+        Pair(TowerType.MAGE, Vector2(-52f, -52f)),
+        Pair(TowerType.ARTILLERY, Vector2(52f, -52f))
     )
 
     private val touchPoint = Vector3()
 
+    private fun getDiscountedBranchCost(spec: TowerSpecialization, towerType: TowerType): Int {
+        var cost = spec.branchCost
+        if (towerType == TowerType.MAGE && UpgradeManager.getEffectiveMageLevel() >= 3) {
+            cost = (cost * 0.9f).toInt()
+        }
+        if (towerType == TowerType.ARTILLERY && UpgradeManager.getEffectiveArtilleryLevel() >= 3) {
+            cost = (cost * 0.9f).toInt()
+        }
+        return cost
+    }
+
     override fun show() {
+        SoundManager.init()
+        SoundManager.playLevelMusic(currentLevel.levelNumber)
+
+        EncyclopediaManager.onEnterLevel(currentLevel.levelNumber)
+
         UpgradeManager.maxUpgradeCap = when (gameMode) {
             GameMode.CAMPAIGN -> 5
             GameMode.HEROIC, GameMode.IRON -> when (currentLevel.levelNumber) {
                 1 -> 1
-                2, 3 -> 2
+                2, 3, 4 -> 2
+                5, 6 -> 3
+                7, 8, 9, 10 -> 4
                 else -> 5
             }
         }
@@ -170,11 +199,18 @@ class PlayScreen(
         engine.removeAllSystems()
 
         isGamePaused = false
+        hasPlayedVictorySound = false
+        hasPlayedDefeatSound = false
+        SoundManager.setMusicPaused(false)
+
         EconomyManager.gold = currentLevel.startingGold
         EconomyManager.lives = currentLevel.startingLives
 
         engine.addSystem(MovementSystem(
-            onHealingTriggered = { pos -> effectRenderer.healingAuras.add(HealingAuraEffect(Vector2(pos))) },
+            onHealingTriggered = { pos ->
+                SoundManager.playHealingLight()
+                effectRenderer.healingAuras.add(HealingAuraEffect(Vector2(pos)))
+            },
             getLevelNumber = { currentLevel.levelNumber }
         ))
         engine.addSystem(SpiderEggSystem(difficulty))
@@ -201,18 +237,78 @@ class PlayScreen(
             }
         ))
 
-        engine.addSystem(ProjectileSystem())
-        engine.addSystem(BarracksSystem(
-            onAxeThrown = { from, to -> effectRenderer.axeProjectiles.add(ThrownAxeEffect(Vector2(from), Vector2(to))) },
-            onHealingLight = { pos -> effectRenderer.healingAuras.add(HealingAuraEffect(Vector2(pos))) },
-            onWhirlwindTriggered = { pos -> effectRenderer.whirlwindSlashes.add(WhirlwindEffect(Vector2(pos))) },
-            onHolyStrikeTriggered = { pos -> effectRenderer.holyStrikeBeams.add(HolyStrikeEffect(Vector2(pos))) }
+        engine.addSystem(ProjectileSystem(
+            onExplosion = { pos, _ ->
+                SoundManager.playBombExplosion()
+                effectRenderer.shrapnelExplosions.add(ShrapnelExplosionEffect(Vector2(pos)))
+            }
         ))
 
-        waveManager = WaveManager(engine, currentLevel, difficulty)
+        engine.addSystem(BarracksSystem(
+            onAxeThrown = { from, to ->
+                SoundManager.playWhirlwind()
+                effectRenderer.axeProjectiles.add(ThrownAxeEffect(Vector2(from), Vector2(to)))
+            },
+            onHealingLight = { pos ->
+                SoundManager.playHealingLight()
+                effectRenderer.healingAuras.add(HealingAuraEffect(Vector2(pos)))
+            },
+            onWhirlwindTriggered = { pos ->
+                SoundManager.playWhirlwind()
+                effectRenderer.whirlwindSlashes.add(WhirlwindEffect(Vector2(pos)))
+            },
+            onHolyStrikeTriggered = { pos ->
+                SoundManager.playHolyStrike()
+                effectRenderer.holyStrikeBeams.add(HolyStrikeEffect(Vector2(pos)))
+            }
+        ))
+
+        waveManager = WaveManager(engine, currentLevel, difficulty, gameMode)
+
+        when (gameMode) {
+            GameMode.CAMPAIGN -> {
+                EconomyManager.gold = currentLevel.startingGold
+                EconomyManager.lives = currentLevel.startingLives
+            }
+            GameMode.HEROIC -> {
+                EconomyManager.lives = 1
+                when (currentLevel.levelNumber) {
+                    4 -> EconomyManager.gold = Level4TwinRivers.heroicStartingGold
+                    5 -> EconomyManager.gold = Level5Silveroak.heroicStartingGold
+                    6 -> EconomyManager.gold = Level6Citadel.heroicStartingGold
+                    8 -> EconomyManager.gold = Level8IcewindPass.heroicStartingGold
+                    9 -> EconomyManager.gold = Level9StormcloudTemple.heroicStartingGold
+                    10 -> EconomyManager.gold = Level10TheWastes.heroicStartingGold
+                    11 -> EconomyManager.gold = Level11ForsakenValley.heroicStartingGold
+                    12 -> EconomyManager.gold = Level12TheDarkTower.heroicStartingGold
+                }
+            }
+            GameMode.IRON -> {
+                EconomyManager.lives = 1
+                when (currentLevel.levelNumber) {
+                    4 -> EconomyManager.gold = Level4TwinRivers.ironStartingGold
+                    5 -> EconomyManager.gold = Level5Silveroak.ironStartingGold
+                    6 -> EconomyManager.gold = Level6Citadel.ironStartingGold
+                    8 -> EconomyManager.gold = Level8IcewindPass.ironStartingGold
+                    9 -> EconomyManager.gold = Level9StormcloudTemple.ironStartingGold
+                    10 -> EconomyManager.gold = Level10TheWastes.ironStartingGold
+                    11 -> EconomyManager.gold = Level11ForsakenValley.ironStartingGold
+                    12 -> EconomyManager.gold = Level12TheDarkTower.ironStartingGold
+                }
+            }
+        }
+
+        lastRecordedLives = EconomyManager.lives
 
         engine.addEntityListener(Family.all(EnemyComponent::class.java, HealthComponent::class.java).get(), object : EntityListener {
-            override fun entityAdded(entity: Entity) {}
+            override fun entityAdded(entity: Entity) {
+                if (currentLevel.levelNumber > 0) {
+                    entity.getComponent(EnemyComponent::class.java)?.let { eComp ->
+                        EncyclopediaManager.unlockEnemy(eComp.enemyType)
+                    }
+                }
+            }
+
             override fun entityRemoved(entity: Entity) {
                 val hp = entity.getComponent(HealthComponent::class.java)
                 val eComp = entity.getComponent(EnemyComponent::class.java)
@@ -220,6 +316,11 @@ class PlayScreen(
                     activeGraveyardSkeletons = (activeGraveyardSkeletons - 1).coerceAtLeast(0)
                 }
                 if (hp != null && (hp.currentHealth <= 0f || hp.isDead)) {
+                    SoundManager.playEnemyDeath()
+                    if (gameMode == GameMode.IRON && eComp != null && !eComp.isSummonedMinion) {
+                        val ironBonusGold = (eComp.enemyType.rewardGold * 0.55f).toInt().coerceAtLeast(2)
+                        EconomyManager.addGold(ironBonusGold)
+                    }
                     checkGraveyardSpawn(entity)
                     checkVeznanTransformation(entity)
                 }
@@ -231,16 +332,26 @@ class PlayScreen(
             createTowerSpot(pos)
         }
 
-        // XÂY SẴN THÁP CUNG CẤP 3 VÀ NHÀ SLYVAN ELF HALL CHO MÀN 5
         if (currentLevel.levelNumber == 5) {
-            val pArcherPos = Level5Silveroak.prebuiltArcherSpot
-            val sylvanPos = Level5Silveroak.sylvanElfHallSpot
+            val archerPositions = if (gameMode == GameMode.IRON) {
+                Level5Silveroak.ironPrebuiltArcherSpots
+            } else {
+                listOf(Level5Silveroak.prebuiltArcherSpot)
+            }
+
+            val sylvanPositions = if (gameMode == GameMode.IRON) {
+                Level5Silveroak.ironSylvanElfHallSpots
+            } else {
+                listOf(Level5Silveroak.sylvanElfHallSpot)
+            }
 
             val spots = engine.getEntitiesFor(Family.all(TowerSpotComponent::class.java, TransformComponent::class.java).get())
             for (i in 0 until spots.size()) {
                 val s = spots.get(i)
                 val sPos = s.getComponent(TransformComponent::class.java).position
-                if (sPos.dst(pArcherPos) < 5f || sPos.dst(sylvanPos) < 5f) {
+                val isPrebuiltArcher = archerPositions.any { it.dst(sPos) < 5f }
+                val isPrebuiltSylvan = sylvanPositions.any { it.dst(sPos) < 5f }
+                if (isPrebuiltArcher || isPrebuiltSylvan) {
                     s.getComponent(TowerSpotComponent::class.java).isOccupied = true
                 }
             }
@@ -249,53 +360,90 @@ class PlayScreen(
             if (UpgradeManager.getEffectiveArcherLevel() >= 4) pRange *= 1.21f
             else if (UpgradeManager.getEffectiveArcherLevel() >= 2) pRange *= 1.10f
 
-            val prebuiltArcher = Entity().apply {
-                add(TransformComponent(position = Vector2(pArcherPos)))
-                add(TowerComponent(
-                    towerType = TowerType.ARCHER,
-                    level = 3,
-                    range = pRange,
-                    damageMin = 10f,
-                    damageMax = 16f,
-                    attackRate = 0.5f,
-                    totalInvestedGold = 450
-                ))
-            }
-            engine.addEntity(prebuiltArcher)
-
-            val sylvanHall = Entity().apply {
-                add(TransformComponent(position = Vector2(sylvanPos)))
-                add(TowerComponent(
-                    towerType = TowerType.BARRACKS,
-                    level = 4,
-                    specialization = TowerSpecialization.SYLVAN_ELF_HALL,
-                    range = 220f,
-                    totalInvestedGold = 100
-                ))
-                add(BarracksComponent(rallyPoint = Vector2(sylvanPos.x + 40f, sylvanPos.y - 40f)))
-            }
-            engine.addEntity(sylvanHall)
-        }
-
-        // KHỞI TẠO 7 LÍNH CANH (IMPERIAL GUARDS) CHO MÀN 6
-        if (currentLevel.levelNumber == 6) {
-            val allGuardPositions = Level6Citadel.imperialGuardPositions
-            for (pos in allGuardPositions) {
-                val guard = Entity().apply {
-                    add(TransformComponent(position = Vector2(pos)))
-                    add(HealthComponent(maxHealth = 250f, currentHealth = 250f))
-                    add(ArmorComponent(armorType = ArmorType.MEDIUM_ARMOR))
-                    add(SoldierComponent(
-                        attackDamageMin = 10f,
-                        attackDamageMax = 30f,
-                        attackRate = 1.2f,
-                        regenPerSec = 25f,
-                        targetPosition = Vector2(pos),
-                        soldierRankName = "Imperial Guard",
-                        moveSpeed = 50f
+            for (aPos in archerPositions) {
+                val prebuiltArcher = Entity().apply {
+                    add(TransformComponent(position = Vector2(aPos)))
+                    add(TowerComponent(
+                        towerType = TowerType.ARCHER,
+                        level = 3,
+                        range = pRange,
+                        damageMin = 10f,
+                        damageMax = 16f,
+                        attackRate = 0.5f,
+                        totalInvestedGold = 340
                     ))
                 }
-                engine.addEntity(guard)
+                engine.addEntity(prebuiltArcher)
+            }
+
+            for (sPos in sylvanPositions) {
+                val rally = getNearestRoadPoint(sPos)
+                val sylvanHall = Entity().apply {
+                    add(TransformComponent(position = Vector2(sPos)))
+                    add(TowerComponent(
+                        towerType = TowerType.BARRACKS,
+                        level = 4,
+                        specialization = TowerSpecialization.SYLVAN_ELF_HALL,
+                        range = 220f,
+                        totalInvestedGold = 0,
+                        isRuined = true
+                    ))
+                    add(BarracksComponent(rallyPoint = Vector2(rally)))
+                }
+                engine.addEntity(sylvanHall)
+            }
+        }
+
+        if (currentLevel.levelNumber == 6) {
+            if (gameMode == GameMode.IRON) {
+                val wizardPositions = Level6Citadel.ironPrebuiltWizardSpots
+                val spots = engine.getEntitiesFor(Family.all(TowerSpotComponent::class.java, TransformComponent::class.java).get())
+                for (i in 0 until spots.size()) {
+                    val s = spots.get(i)
+                    val sPos = s.getComponent(TransformComponent::class.java).position
+                    if (wizardPositions.any { it.dst(sPos) < 5f }) {
+                        s.getComponent(TowerSpotComponent::class.java).isOccupied = true
+                    }
+                }
+
+                var wRange = 260f
+                if (UpgradeManager.getEffectiveMageLevel() >= 1) wRange *= 1.10f
+                val invested = if (UpgradeManager.getEffectiveMageLevel() >= 3) 450 else 500
+
+                for (wPos in wizardPositions) {
+                    val prebuiltWizard = Entity().apply {
+                        add(TransformComponent(position = Vector2(wPos)))
+                        add(TowerComponent(
+                            towerType = TowerType.MAGE,
+                            level = 3,
+                            range = wRange,
+                            damageMin = 40f,
+                            damageMax = 74f,
+                            attackRate = 1.5f,
+                            totalInvestedGold = invested
+                        ))
+                    }
+                    engine.addEntity(prebuiltWizard)
+                }
+            } else {
+                val allGuardPositions = Level6Citadel.imperialGuardPositions
+                for (pos in allGuardPositions) {
+                    val guard = Entity().apply {
+                        add(TransformComponent(position = Vector2(pos)))
+                        add(HealthComponent(maxHealth = 250f, currentHealth = 250f))
+                        add(ArmorComponent(armorType = ArmorType.MEDIUM_ARMOR))
+                        add(SoldierComponent(
+                            attackDamageMin = 10f,
+                            attackDamageMax = 30f,
+                            attackRate = 1.2f,
+                            regenPerSec = 25f,
+                            targetPosition = Vector2(pos),
+                            soldierRankName = "Imperial Guard",
+                            moveSpeed = 50f
+                        ))
+                    }
+                    engine.addEntity(guard)
+                }
             }
         }
 
@@ -314,6 +462,23 @@ class PlayScreen(
                 ))
             }
             engine.addEntity(sunray)
+
+            if (gameMode == GameMode.IRON) {
+                val magePositions = Level9StormcloudTemple.ironPrebuiltMageSpots
+                val spots = engine.getEntitiesFor(Family.all(TowerSpotComponent::class.java, TransformComponent::class.java).get())
+                for (i in 0 until spots.size()) {
+                    val s = spots.get(i)
+                    val sPos = s.getComponent(TransformComponent::class.java).position
+                    if (magePositions.any { it.dst(sPos) < 5f }) {
+                        s.getComponent(TowerSpotComponent::class.java).isOccupied = true
+                    }
+                }
+
+                val mageLv1Cost = if (UpgradeManager.getEffectiveMageLevel() >= 3) 90 else 100
+                for (mPos in magePositions) {
+                    buildTower(mPos, TowerType.MAGE, mageLv1Cost)
+                }
+            }
         }
 
         if (currentLevel.levelNumber == 7 && gameMode == GameMode.IRON) {
@@ -335,6 +500,41 @@ class PlayScreen(
             }
         }
 
+        if (currentLevel.levelNumber == 8 && gameMode == GameMode.IRON) {
+            val adeptPos = Level8IcewindPass.ironPrebuiltAdeptSpot
+            val spots = engine.getEntitiesFor(Family.all(TowerSpotComponent::class.java, TransformComponent::class.java).get())
+            for (s in spots) {
+                if (s.getComponent(TransformComponent::class.java).position.dst(adeptPos) < 5f) {
+                    s.getComponent(TowerSpotComponent::class.java).isOccupied = true
+                    break
+                }
+            }
+
+            var aRange = 230f
+            var dMin = 23f
+            var dMax = 43f
+            if (UpgradeManager.getEffectiveMageLevel() >= 1) aRange *= 1.10f
+            if (UpgradeManager.getEffectiveMageLevel() >= 4) {
+                dMin *= 1.15f
+                dMax *= 1.15f
+            }
+            val invested = if (UpgradeManager.getEffectiveMageLevel() >= 3) 234 else 260
+
+            val prebuiltAdept = Entity().apply {
+                add(TransformComponent(position = Vector2(adeptPos)))
+                add(TowerComponent(
+                    towerType = TowerType.MAGE,
+                    level = 2,
+                    range = aRange,
+                    damageMin = dMin,
+                    damageMax = dMax,
+                    attackRate = 1.5f,
+                    totalInvestedGold = invested
+                ))
+            }
+            engine.addEntity(prebuiltAdept)
+        }
+
         clearSelections()
         rainOfFireCooldown = 0f
         reinforcementCooldown = 0f
@@ -348,12 +548,65 @@ class PlayScreen(
         lastRecordedWaveForSummon = -1
         glowingCircles.clear()
         portalSpawnQueue.clear()
+        activeJuggernautBombs.clear()
         graveyardQueue.clear()
         graveyardCooldown = 0f
         activeGraveyardSkeletons = 0
         veznanBossSteppedDown = false
-        Level12MapRenderer.isVeznanOnBalcony = true
+        Level12MapRenderer.isVeznanOnBalcony = (gameMode == GameMode.CAMPAIGN)
+        Level12MapRenderer.showForSaleSign = (gameMode != GameMode.CAMPAIGN)
         effectRenderer.clear()
+    }
+
+    private fun pickJuggernautSummonTarget(): Pair<Vector2, List<Vector2>> {
+        if (currentLevel.levelNumber == 6) {
+            val candidates = listOf(
+                Pair(Vector2(450f, 380f), listOf(Vector2(480f, 380f), Vector2(640f, 380f), Vector2(640f, 525f), Vector2(640f, 720f))),
+                Pair(Vector2(800f, 380f), listOf(Vector2(640f, 380f), Vector2(640f, 525f), Vector2(640f, 720f))),
+                Pair(Vector2(640f, 395f), listOf(Vector2(640f, 525f), Vector2(640f, 720f))),
+                Pair(Vector2(420f, 525f), listOf(Vector2(530f, 525f), Vector2(640f, 525f), Vector2(640f, 720f))),
+                Pair(Vector2(860f, 525f), listOf(Vector2(750f, 525f), Vector2(640f, 525f), Vector2(640f, 720f)))
+            )
+            return candidates.random()
+        }
+
+        val path = currentLevel.allPaths.firstOrNull() ?: listOf(Vector2(640f, 360f), Vector2(640f, 720f))
+        val safeIdx = (path.size - 4).coerceAtLeast(0)
+        val targetPos = Vector2(path[safeIdx])
+        val remWps = path.drop(safeIdx + 1)
+        return Pair(targetPos, if (remWps.isNotEmpty()) remWps else listOf(path.last()))
+    }
+
+    private fun spawnGolemHeadPackAt(impactPos: Vector2, remainingWaypoints: List<Vector2>) {
+        SoundManager.playBombExplosion()
+        effectRenderer.shrapnelExplosions.add(ShrapnelExplosionEffect(Vector2(impactPos)))
+
+        val packOffsets = listOf(
+            Vector2(0f, 0f),
+            Vector2(-15f, -8f),
+            Vector2(15f, -8f),
+            Vector2(-24f, 6f),
+            Vector2(24f, 6f),
+            Vector2(-10f, 16f),
+            Vector2(10f, 16f)
+        )
+
+        val maxHp = EnemyType.GOLEM_HEAD.getMaxHp(difficulty)
+        for (i in 0 until 7) {
+            val off = packOffsets[i]
+            val spawnPos = Vector2(impactPos.x + off.x, impactPos.y + off.y)
+            val golemHead = Entity().apply {
+                add(TransformComponent(position = spawnPos))
+                add(HealthComponent(maxHealth = maxHp, currentHealth = maxHp))
+                add(ArmorComponent(armorType = EnemyType.GOLEM_HEAD.armorType, magicResistType = EnemyType.GOLEM_HEAD.magicResist))
+                add(EnemyComponent(enemyType = EnemyType.GOLEM_HEAD, isSummonedMinion = true))
+                add(MovementComponent(
+                    speed = EnemyType.GOLEM_HEAD.speed + MathUtils.random(-3f, 3f),
+                    waypoints = remainingWaypoints.map { Vector2(it) }.toMutableList()
+                ))
+            }
+            engine.addEntity(golemHead)
+        }
     }
 
     private fun checkVeznanTransformation(deadEntity: Entity) {
@@ -361,26 +614,32 @@ class PlayScreen(
         val trans = deadEntity.getComponent(TransformComponent::class.java) ?: return
         val move = deadEntity.getComponent(MovementComponent::class.java) ?: return
 
-        if (eComp.enemyType == EnemyType.VEZNAN) {
-            effectRenderer.shrapnelExplosions.add(ShrapnelExplosionEffect(Vector2(trans.position)))
-            effectRenderer.magicSparks.add(MagicSparkEffect(Vector2(trans.position)))
+        if (eComp.enemyType == EnemyType.VEZNAN && !eComp.hasTriggeredTurbo) {
+            eComp.hasTriggeredTurbo = true
+            val spawnPos = Vector2(trans.position)
+            val remainingWps = move.waypoints.drop(move.currentWaypointIndex).toMutableList()
 
-            val demonVeznan = Entity().apply {
-                add(TransformComponent(position = Vector2(trans.position)))
-                val maxHp = EnemyType.VEZNAN_DEMON.getMaxHp(difficulty)
-                add(HealthComponent(maxHealth = maxHp, currentHealth = maxHp))
-                add(ArmorComponent(armorType = EnemyType.VEZNAN_DEMON.armorType, magicResistType = EnemyType.VEZNAN_DEMON.magicResist))
-                add(EnemyComponent(enemyType = EnemyType.VEZNAN_DEMON))
-                add(MovementComponent(
-                    speed = EnemyType.VEZNAN_DEMON.speed,
-                    waypoints = move.waypoints.drop(move.currentWaypointIndex).toMutableList()
-                ))
+            SoundManager.playBombExplosion()
+            effectRenderer.shrapnelExplosions.add(ShrapnelExplosionEffect(Vector2(spawnPos)))
+            effectRenderer.magicSparks.add(MagicSparkEffect(Vector2(spawnPos)))
+
+            Gdx.app.postRunnable {
+                val demonVeznan = Entity().apply {
+                    add(TransformComponent(position = spawnPos))
+                    val maxHp = EnemyType.VEZNAN_DEMON.getMaxHp(difficulty)
+                    add(HealthComponent(maxHealth = maxHp, currentHealth = maxHp))
+                    add(ArmorComponent(armorType = EnemyType.VEZNAN_DEMON.armorType, magicResistType = EnemyType.VEZNAN_DEMON.magicResist))
+                    add(EnemyComponent(enemyType = EnemyType.VEZNAN_DEMON))
+                    add(MovementComponent(
+                        speed = EnemyType.VEZNAN_DEMON.speed,
+                        waypoints = remainingWps
+                    ))
+                }
+                engine.addEntity(demonVeznan)
             }
-            engine.addEntity(demonVeznan)
         }
     }
 
-    // CƠ CHẾ NGHĨA ĐỊA (NẠP VÀO HÀNG ĐỢI ĐỂ KHÔNG BỊ TRÀN Ở WAVE 15)
     private fun checkGraveyardSpawn(enemy: Entity) {
         if (currentLevel.levelNumber != 10 && currentLevel.levelNumber != 12) return
         val eComp = enemy.getComponent(EnemyComponent::class.java) ?: return
@@ -465,31 +724,35 @@ class PlayScreen(
         val cX = Config.WORLD_WIDTH / 2f
         val cY = Config.WORLD_HEIGHT / 2f
 
-        // 1. XỬ LÝ PAUSE MENU
         if (isGamePaused) {
             if (x in (cX - 120f)..(cX + 120f) && y in (cY + 50f)..(cY + 94f)) {
+                SoundManager.playClick()
                 isGamePaused = false
+                SoundManager.setMusicPaused(false)
                 return
             }
             if (x in (cX - 120f)..(cX + 120f) && y in (cY - 10f)..(cY + 34f)) {
+                SoundManager.playClick()
                 isGamePaused = false
+                SoundManager.setMusicPaused(false)
                 startNewGame()
                 return
             }
             if (x in (cX - 120f)..(cX + 120f) && y in (cY - 70f)..(cY - 26f)) {
+                SoundManager.playClick()
                 isGamePaused = false
                 UpgradeManager.maxUpgradeCap = 5
                 onReturnToMap()
                 return
             }
             if (x in (cX - 120f)..(cX + 120f) && y in (cY - 130f)..(cY - 86f)) {
+                SoundManager.playClick()
                 CheatManager.toggleCheat()
                 return
             }
             return
         }
 
-        // 2. XỬ LÝ NÚT VÀ MENU CHEAT
         if (CheatManager.isCheatEnabled) {
             val cheatBtn = Vector2(Config.WORLD_WIDTH - 50f, Config.WORLD_HEIGHT - 90f)
 
@@ -498,17 +761,18 @@ class PlayScreen(
                 val pY = Config.WORLD_HEIGHT / 2f
 
                 if (x in (pX - 120f)..(pX + 120f) && y in (pY + 50f)..(pY + 86f)) {
+                    SoundManager.playTowerSell()
                     CheatManager.addGold(1000)
                     return
                 }
                 if (x in (pX - 120f)..(pX + 120f) && y in (pY + 5f)..(pY + 41f)) {
+                    SoundManager.playClick()
                     CheatManager.toggleHighDamage()
                     return
                 }
                 if (x in (pX - 120f)..(pX + 120f) && y in (pY - 40f)..(pY - 4f)) {
-                    val enemies = engine.getEntitiesFor(Family.all(EnemyComponent::class.java).get())
-                    val snapshot = mutableListOf<Entity>()
-                    for (i in 0 until enemies.size()) snapshot.add(enemies.get(i))
+                    SoundManager.playBombExplosion()
+                    val snapshot = engine.getEntitiesFor(Family.all(EnemyComponent::class.java).get()).toList()
                     for (e in snapshot) {
                         e.getComponent(MovementComponent::class.java)?.isBlocked = false
                         engine.removeEntity(e)
@@ -516,6 +780,7 @@ class PlayScreen(
                     return
                 }
                 if (x in (pX - 120f)..(pX + 120f) && y in (pY - 85f)..(pY - 49f)) {
+                    SoundManager.playVictory()
                     CheatManager.isCheatMenuOpen = false
                     EconomyManager.lives = 20
                     SaveManager.recordVictory(currentLevel.levelNumber, 20, gameMode)
@@ -525,44 +790,52 @@ class PlayScreen(
                     return
                 }
                 if (x in (pX - 60f)..(pX + 60f) && y in (pY - 135f)..(pY - 105f)) {
+                    SoundManager.playClick()
                     CheatManager.isCheatMenuOpen = false
                     return
                 }
                 if (x !in (pX - 150f)..(pX + 150f) || y !in (pY - 150f)..(pY + 150f)) {
+                    SoundManager.playClick()
                     CheatManager.isCheatMenuOpen = false
                 }
                 return
             }
 
             if (cheatBtn.dst(x, y) <= 22f) {
+                SoundManager.playClick()
                 CheatManager.toggleCheatMenu()
                 return
             }
         }
 
-        // 3. NÚT PAUSE VÀ QUAY VỀ MAP
         if (x >= Config.WORLD_WIDTH - 85f && y >= Config.WORLD_HEIGHT - 65f) {
+            SoundManager.playClick()
             clearSelections()
             isGamePaused = true
+            SoundManager.setMusicPaused(true)
             return
         }
 
         if (Vector2(35f, Config.WORLD_HEIGHT - 35f).dst(x, y) <= 26f) {
+            SoundManager.playClick()
             UpgradeManager.maxUpgradeCap = 5
             onReturnToMap()
             return
         }
 
-        // 4. GAME OVER VÀ VICTORY DIALOG
         if (EconomyManager.isGameOver) {
             val replayBtn = Vector2(Config.WORLD_WIDTH / 2f, Config.WORLD_HEIGHT / 2f - 70f)
-            if (replayBtn.dst(x, y) <= 60f) startNewGame()
+            if (replayBtn.dst(x, y) <= 60f) {
+                SoundManager.playClick()
+                startNewGame()
+            }
             return
         }
 
         if (waveManager.isLevelCompleted && (!veznanBossSteppedDown || engine.getEntitiesFor(Family.all(EnemyComponent::class.java).get()).size() == 0)) {
             val recordedLives = if (CheatManager.isCheatEnabled) 20 else EconomyManager.lives
             if (x in (cX - 120f)..(cX + 120f) && y in (cY - 115f)..(cY - 69f)) {
+                SoundManager.playClick()
                 SaveManager.recordVictory(currentLevel.levelNumber, recordedLives, gameMode)
                 UpgradeManager.maxUpgradeCap = 5
                 onLevelVictory()
@@ -572,15 +845,14 @@ class PlayScreen(
             return
         }
 
-        // 5. GIẢI PHÙ PHÉP CHO THÁP BỊ KHÓA
-        val allTowers = engine.getEntitiesFor(Family.all(TowerComponent::class.java, TransformComponent::class.java).get())
-        for (i in 0 until allTowers.size()) {
-            val t = allTowers.get(i)
+        val allTowers = engine.getEntitiesFor(Family.all(TowerComponent::class.java, TransformComponent::class.java).get()).toList()
+        for (t in allTowers) {
             val tComp = t.getComponent(TowerComponent::class.java)
-            val tPos = t.getComponent(TransformComponent::class.java).position
+            val tPos = t.getComponent(TransformComponent::class.java)?.position ?: continue
             if (tComp != null && tComp.isFrozen && tPos.dst(x, y) <= 40f) {
                 val lockState = lockedTowersMap[t]
                 if (lockState == null || !lockState.isUndispellable) {
+                    SoundManager.playSwordClash()
                     tComp.freezeHitsRemaining--
                     effectRenderer.magicSparks.add(MagicSparkEffect(Vector2(tPos)))
                     if (tComp.freezeHitsRemaining <= 0) {
@@ -592,7 +864,6 @@ class PlayScreen(
             }
         }
 
-        // 6. KHAI HỎA SUNRAY TOWER
         if (isAimingSunrayTarget) {
             val sunray = allTowers.firstOrNull {
                 it.getComponent(TowerComponent::class.java)?.specialization == TowerSpecialization.SUNRAY_TOWER
@@ -601,12 +872,11 @@ class PlayScreen(
             val sPos = sunray?.getComponent(TransformComponent::class.java)?.position
 
             if (sComp != null && sPos != null && sComp.isSunrayReady && sComp.sunraySorcerers > 0) {
-                val enemies = engine.getEntitiesFor(Family.all(EnemyComponent::class.java, TransformComponent::class.java, HealthComponent::class.java).get())
+                val enemies = engine.getEntitiesFor(Family.all(EnemyComponent::class.java, TransformComponent::class.java, HealthComponent::class.java).get()).toList()
                 var hitEnemy: Entity? = null
 
-                for (i in 0 until enemies.size()) {
-                    val e = enemies.get(i)
-                    val ePos = e.getComponent(TransformComponent::class.java).position
+                for (e in enemies) {
+                    val ePos = e.getComponent(TransformComponent::class.java)?.position ?: continue
                     val eHp = e.getComponent(HealthComponent::class.java)
                     if (ePos.dst(x, y) <= 38f && eHp != null && !eHp.isDead) {
                         hitEnemy = e
@@ -617,43 +887,55 @@ class PlayScreen(
                 if (hitEnemy != null) {
                     val eTrans = hitEnemy.getComponent(TransformComponent::class.java)
                     val eHp = hitEnemy.getComponent(HealthComponent::class.java)
-                    val eComp = hitEnemy.getComponent(EnemyComponent::class.java)
 
-                    effectRenderer.sunrayBeams.add(SunrayBeamEffect(Vector2(sPos.x, sPos.y + 44f), Vector2(eTrans.position)))
+                    if (eTrans != null && eHp != null) {
+                        val impactCenter = Vector2(eTrans.position)
+                        SoundManager.playSunrayLaser()
+                        effectRenderer.sunrayBeams.add(SunrayBeamEffect(Vector2(sPos.x, sPos.y + 44f), impactCenter))
+                        effectRenderer.shrapnelExplosions.add(ShrapnelExplosionEffect(Vector2(impactCenter)))
 
-                    val dmg = when (sComp.sunraySorcerers) {
-                        1 -> MathUtils.random(75f, 125f)
-                        2 -> MathUtils.random(125f, 175f)
-                        3 -> MathUtils.random(175f, 225f)
-                        else -> MathUtils.random(225f, 275f)
+                        for (nearE in enemies) {
+                            val nPos = nearE.getComponent(TransformComponent::class.java)?.position ?: continue
+                            val nHp = nearE.getComponent(HealthComponent::class.java) ?: continue
+                            val nComp = nearE.getComponent(EnemyComponent::class.java)
+                            if (!nHp.isDead && nHp.currentHealth > 0f && nPos.dst(impactCenter) <= 65f) {
+                                val dmg = when (sComp.sunraySorcerers) {
+                                    1 -> MathUtils.random(90f, 140f)
+                                    2 -> MathUtils.random(140f, 200f)
+                                    3 -> MathUtils.random(200f, 260f)
+                                    else -> MathUtils.random(260f, 340f)
+                                }
+                                nHp.currentHealth -= dmg
+                                if (nHp.currentHealth <= 0f) {
+                                    nHp.currentHealth = 0f
+                                    SoundManager.playEnemyDeath()
+                                    if (nComp != null && !nComp.isSummonedMinion) EconomyManager.addGold(nComp.enemyType.rewardGold)
+                                    nearE.getComponent(MovementComponent::class.java)?.isBlocked = false
+                                    engine.removeEntity(nearE)
+                                }
+                            }
+                        }
+
+                        sComp.isSunrayReady = false
+                        sComp.sunrayChargeTimer = when (sComp.sunraySorcerers) {
+                            1 -> 18.0f; 2 -> 15.0f; 3 -> 12.0f; else -> 9.0f
+                        }
+                        isAimingSunrayTarget = false
+                        clearSelections()
+                        return
                     }
-
-                    eHp.currentHealth -= dmg
-                    if (eHp.currentHealth <= 0f) {
-                        if (eComp != null && !eComp.isSummonedMinion) EconomyManager.addGold(eComp.enemyType.rewardGold)
-                        hitEnemy.getComponent(MovementComponent::class.java)?.isBlocked = false
-                        engine.removeEntity(hitEnemy)
-                    }
-
-                    sComp.isSunrayReady = false
-                    sComp.sunrayChargeTimer = when (sComp.sunraySorcerers) {
-                        1 -> 19.0f; 2 -> 16.0f; 3 -> 13.0f; else -> 10.0f
-                    }
-                    isAimingSunrayTarget = false
-                    clearSelections()
-                    return
                 }
             }
             isAimingSunrayTarget = false
             return
         }
 
-        // 7. NÚT CHỌN PHÉP
         val clickPos = Vector2(x, y)
-        val fireBtnPos = Vector2(45f, 45f)
-        val reinfBtnPos = Vector2(115f, 45f)
+        val fireBtnPos = Vector2(48f, 44f)
+        val reinfBtnPos = Vector2(112f, 44f)
 
-        if (fireBtnPos.dst(x, y) <= 28f) {
+        if (Math.abs(x - fireBtnPos.x) <= 24f && Math.abs(y - fireBtnPos.y) <= 30f) {
+            SoundManager.playClick()
             if (selectedSpell == ActiveSpell.RAIN_OF_FIRE) {
                 selectedSpell = ActiveSpell.NONE
             } else if (rainOfFireCooldown <= 0f) {
@@ -663,7 +945,8 @@ class PlayScreen(
             return
         }
 
-        if (reinfBtnPos.dst(x, y) <= 28f) {
+        if (Math.abs(x - reinfBtnPos.x) <= 24f && Math.abs(y - reinfBtnPos.y) <= 30f) {
+            SoundManager.playClick()
             if (selectedSpell == ActiveSpell.REINFORCEMENTS) {
                 selectedSpell = ActiveSpell.NONE
             } else if (reinforcementCooldown <= 0f) {
@@ -673,16 +956,17 @@ class PlayScreen(
             return
         }
 
-        // 8. THẢ PHÉP TRÊN ĐƯỜNG
         if (selectedSpell != ActiveSpell.NONE) {
             if (isPointOnRoad(clickPos, 45f)) {
                 when (selectedSpell) {
                     ActiveSpell.RAIN_OF_FIRE -> {
+                        SoundManager.playRainOfFire()
                         triggerRainOfFire(x, y)
                         rainOfFireCooldown = maxRainOfFireCooldown
                         selectedSpell = ActiveSpell.NONE
                     }
                     ActiveSpell.REINFORCEMENTS -> {
+                        SoundManager.playReinforcements()
                         spawnReinforcements(x, y)
                         reinforcementCooldown = maxReinforcementCooldown
                         selectedSpell = ActiveSpell.NONE
@@ -691,24 +975,37 @@ class PlayScreen(
                 }
                 return
             }
+            SoundManager.playClick()
             selectedSpell = ActiveSpell.NONE
         }
 
-        // 9. NÚT GO! GỌI WAVE SỚM
         val canCallWave = waveManager.currentWaveIndex == -1 || waveManager.isCountdownActive
-        if (canCallWave && waveManager.currentWaveDisplay < waveManager.totalWaves) {
+        if (canCallWave && waveManager.currentWaveDisplay <= waveManager.totalWaves) {
             val activePaths = waveManager.getActiveSpawningPathsForNextWave()
             val candidatePositions = mutableListOf<Vector2>()
 
-            for (pIdx in activePaths) {
+            val pathsToCheck = if (activePaths.isNotEmpty()) activePaths else listOf(0)
+            for (pIdx in pathsToCheck) {
                 if (pIdx in currentLevel.allPaths.indices && currentLevel.allPaths[pIdx].isNotEmpty()) {
                     val p = currentLevel.allPaths[pIdx][0]
-                    candidatePositions.add(Vector2(p.x.coerceIn(60f, Config.WORLD_WIDTH - 60f), p.y.coerceIn(60f, Config.WORLD_HEIGHT - 60f)))
+                    candidatePositions.add(Vector2(
+                        p.x.coerceIn(80f, Config.WORLD_WIDTH - 80f),
+                        p.y.coerceIn(85f, Config.WORLD_HEIGHT - 85f)
+                    ))
                 }
             }
 
-            val clickedAnyBtn = candidatePositions.any { it.dst(x, y) <= 42f }
+            if (candidatePositions.isEmpty() && currentLevel.allPaths.isNotEmpty() && currentLevel.allPaths[0].isNotEmpty()) {
+                val p0 = currentLevel.allPaths[0][0]
+                candidatePositions.add(Vector2(
+                    p0.x.coerceIn(80f, Config.WORLD_WIDTH - 80f),
+                    p0.y.coerceIn(85f, Config.WORLD_HEIGHT - 85f)
+                ))
+            }
+
+            val clickedAnyBtn = candidatePositions.any { it.dst(x, y) <= 45f }
             if (clickedAnyBtn) {
+                SoundManager.playWaveStart()
                 val (goldBonus, secondsSaved) = waveManager.callEarlyWave()
                 if (goldBonus > 0) EconomyManager.addGold(goldBonus)
                 if (secondsSaved > 0f) {
@@ -723,12 +1020,12 @@ class PlayScreen(
             }
         }
 
-        // 10. ĐẶT ĐIỂM RALLY
         if (isSettingRallyPoint && selectedTower != null) {
-            val tPos = selectedTower!!.getComponent(TransformComponent::class.java).position
+            val tPos = selectedTower!!.getComponent(TransformComponent::class.java)?.position
             val tComp = selectedTower!!.getComponent(TowerComponent::class.java)
 
-            if (tPos.dst(x, y) <= maxRallyRadius && isPointOnRoad(clickPos, 55f)) {
+            if (tPos != null && tComp != null && tPos.dst(x, y) <= maxRallyRadius && isPointOnRoad(clickPos, 55f)) {
+                SoundManager.playRallyPoint()
                 val bComp = selectedTower!!.getComponent(BarracksComponent::class.java)
                 if (bComp != null) {
                     bComp.rallyPoint.set(x, y)
@@ -756,10 +1053,10 @@ class PlayScreen(
                 selectedTower = null
                 return
             }
+            SoundManager.playClick()
             isSettingRallyPoint = false
         }
 
-        // 11. CLICK NÚT TRÊN CỌC ĐẤT ĐANG CHỌN (BUILD MENU - XÁC NHẬN 2 BƯỚC)
         if (selectedSpot != null) {
             val spot = selectedSpot!!
             val spotPos = spot.getComponent(TransformComponent::class.java).position
@@ -769,21 +1066,29 @@ class PlayScreen(
             for (opt in buildOptions) {
                 val offset = if (isHigh) Vector2(opt.second.x, -opt.second.y) else opt.second
                 val btnPos = Vector2(spotPos).add(offset)
-                if (btnPos.dst(x, y) <= 36f) {
+
+                val isInsideBtn = btnPos.dst(x, y) <= 40f ||
+                    (Math.abs(x - btnPos.x) <= 26f && y >= btnPos.y - 38f && y <= btnPos.y + 30f)
+
+                if (isInsideBtn) {
                     clickedAnyBuildBtn = true
                     val clickedType = opt.first
-                    if (!allowedTowers.contains(clickedType)) return
+                    if (!allowedTowers.contains(clickedType)) {
+                        SoundManager.playClick()
+                        return
+                    }
 
                     var finalCost = clickedType.cost
+                    if (clickedType == TowerType.ARCHER && UpgradeManager.getEffectiveArcherLevel() >= 3) finalCost = 60
                     if (clickedType == TowerType.BARRACKS && UpgradeManager.getEffectiveBarracksLevel() >= 2) finalCost = 60
                     if (clickedType == TowerType.MAGE && UpgradeManager.getEffectiveMageLevel() >= 3) finalCost = 90
                     if (clickedType == TowerType.ARTILLERY && UpgradeManager.getEffectiveArtilleryLevel() >= 3) {
                         finalCost = (finalCost * 0.9f).toInt()
                     }
 
-                    // BƯỚC 2: NẾU ĐÃ CHỌN TRƯỚC ĐÓ THÌ CHẠM LẦN NỮA ĐỂ XÁC NHẬN XÂY
                     if (previewBuildType == clickedType) {
                         if (EconomyManager.spendGold(finalCost)) {
+                            SoundManager.playTowerBuild()
                             spot.getComponent(TowerSpotComponent::class.java).isOccupied = true
                             if (clickedType == TowerType.BARRACKS) {
                                 val rally = getNearestRoadPoint(spotPos)
@@ -793,9 +1098,11 @@ class PlayScreen(
                             }
                             clearSelections()
                             return
+                        } else {
+                            SoundManager.playClick()
                         }
                     } else {
-                        // BƯỚC 1: CHỌN ĐỂ XEM THÔNG TIN (PREVIEW TOOLTIP)
+                        SoundManager.playTowerPreview()
                         previewBuildType = clickedType
                     }
                     return
@@ -807,48 +1114,50 @@ class PlayScreen(
             }
         }
 
-        // 12. CLICK NÚT TRÊN THÁP ĐANG CHỌN (XÁC NHẬN 2 BƯỚC: UPGRADE, BRANCH, SKILL, SELL)
         if (selectedTower != null) {
             val tower = selectedTower!!
-            val tPos = tower.getComponent(TransformComponent::class.java).position
+            val tPos = tower.getComponent(TransformComponent::class.java)?.position
             val tComp = tower.getComponent(TowerComponent::class.java)
+            if (tPos == null || tComp == null) {
+                clearSelections()
+                return
+            }
             val isHigh = tPos.y > 540f
 
-            // A. THÁP SUNRAY TOWER
-            if (tComp.specialization == TowerSpecialization.SUNRAY_TOWER) {
-                val upgradeBtnX = if (tComp.isSunrayReady && tComp.sunraySorcerers > 0) tPos.x - 55f else tPos.x
-                val upgradeBtnY = tPos.y + 60f
-                val fireBtnX = if (tComp.sunraySorcerers < 4) tPos.x + 55f else tPos.x
-                val fireBtnY = tPos.y + 60f
+            val upgradeY = if (isHigh) tPos.y - 55f else tPos.y + 55f
+            val sellY = if (isHigh) tPos.y + 55f else tPos.y - 55f
+            val branchY = if (isHigh) tPos.y - 55f else tPos.y + 55f
+            val rallyX = tPos.x + 44f
+            val rallyY = if (isHigh) tPos.y + 31f else tPos.y - 31f
 
-                if (tComp.sunraySorcerers < 4 && Vector2(upgradeBtnX, upgradeBtnY).dst(x, y) <= 32f) {
-                    if (previewTowerAction == "UPGRADE_SUNRAY") {
-                        if (EconomyManager.spendGold(100)) {
-                            tComp.sunraySorcerers++
-                            tComp.isSunrayReady = false
-                            tComp.sunrayChargeTimer = when (tComp.sunraySorcerers) {
-                                1 -> 19.0f; 2 -> 16.0f; 3 -> 13.0f; else -> 10.0f
-                            }
-                            clearSelections()
-                        }
-                    } else {
-                        previewTowerAction = "UPGRADE_SUNRAY"
-                    }
-                    return
-                }
+            val topBtn = Vector2(tPos.x, upgradeY)
+            val sellBtn = Vector2(tPos.x, sellY)
+            val rallyBtn = Vector2(rallyX, rallyY)
 
-                if (tComp.isSunrayReady && tComp.sunraySorcerers > 0 && Vector2(fireBtnX, fireBtnY).dst(x, y) <= 32f) {
-                    if (previewTowerAction == "FIRE_SUNRAY") {
-                        isAimingSunrayTarget = true
-                        selectedTower = null
-                        previewTowerAction = null
-                    } else {
-                        previewTowerAction = "FIRE_SUNRAY"
-                    }
-                    return
+            val maxLevel = when {
+                currentLevel.levelNumber == 0 -> 4
+                currentLevel.levelNumber == 5 -> if (waveManager.currentWaveDisplay >= 5 || gameMode != GameMode.CAMPAIGN) 4 else 3
+                currentLevel.levelNumber >= 6 -> 4
+                else -> currentLevel.maxTowerLevel
+            }
+
+            val canUpgrade = tComp.level < maxLevel && tComp.level < 3
+            val isLocked = tComp.level >= maxLevel && tComp.level < 4
+            val canUpgradeToSpec = if (tComp.level == 3) {
+                when (currentLevel.levelNumber) {
+                    0 -> true
+                    5 -> tComp.towerType == TowerType.ARCHER && maxLevel >= 4
+                    6 -> (tComp.towerType == TowerType.ARCHER || tComp.towerType == TowerType.MAGE || tComp.towerType == TowerType.BARRACKS)
+                    7 -> (tComp.towerType == TowerType.ARCHER || tComp.towerType == TowerType.MAGE || tComp.towerType == TowerType.BARRACKS)
+                    8, 9, 10, 11, 12 -> true
+                    else -> maxLevel >= 4
                 }
-            } else if (tComp.specialization == TowerSpecialization.SYLVAN_ELF_HALL) {
-                // B. NHÀ SYLVAN ELF HALL
+            } else false
+
+            val canRally = tComp.towerType == TowerType.BARRACKS ||
+                (tComp.specialization == TowerSpecialization.SORCERER_MAGE && tComp.skill2Level > 0)
+
+            if (tComp.specialization == TowerSpecialization.SYLVAN_ELF_HALL) {
                 val bComp = tower.getComponent(BarracksComponent::class.java)
                 val currentElves = bComp?.soldiers?.size ?: 0
 
@@ -856,11 +1165,15 @@ class PlayScreen(
                     if (Vector2(tPos.x, tPos.y - 60f).dst(x, y) <= 32f) {
                         if (previewTowerAction == "REPAIR") {
                             if (EconomyManager.spendGold(100)) {
+                                SoundManager.playTowerBuild()
                                 tComp.isRuined = false
                                 bComp?.respawnTimer = 2.0f
                                 clearSelections()
+                            } else {
+                                SoundManager.playClick()
                             }
                         } else {
+                            SoundManager.playClick()
                             previewTowerAction = "REPAIR"
                         }
                         return
@@ -869,6 +1182,7 @@ class PlayScreen(
                     if (currentElves < 4 && Vector2(tPos.x + 55f, tPos.y).dst(x, y) <= 32f) {
                         if (previewTowerAction == "HIRE_ELF") {
                             if (EconomyManager.spendGold(100)) {
+                                SoundManager.playTowerUpgrade()
                                 val sPos = getNearestRoadPoint(tPos)
                                 val elf = Entity().apply {
                                     add(TransformComponent(position = Vector2(sPos)))
@@ -883,276 +1197,366 @@ class PlayScreen(
                                 bComp?.soldiers?.add(elf)
                                 engine.addEntity(elf)
                                 clearSelections()
+                            } else {
+                                SoundManager.playClick()
                             }
                         } else {
+                            SoundManager.playClick()
                             previewTowerAction = "HIRE_ELF"
                         }
                         return
                     }
 
                     if (Vector2(tPos.x - 55f, tPos.y).dst(x, y) <= 30f) {
+                        SoundManager.playClick()
                         isSettingRallyPoint = true
                         previewTowerAction = null
                         return
                     }
                 }
-            } else {
-                // C. CÁC THÁP THƯỜNG (LEVEL 1 -> 4)
-                val upgradeY = if (isHigh) tPos.y - 65f else tPos.y + 65f
-                val sellY = if (isHigh) tPos.y + 65f else tPos.y - 65f
-                val branchY = if (isHigh) tPos.y - 60f else tPos.y + 60f
+                selectedTower = null
+                previewTowerAction = null
+                return
+            }
 
-                val maxLevel = when {
-                    currentLevel.levelNumber == 0 -> 4
-                    currentLevel.levelNumber == 5 -> if (waveManager.currentWaveDisplay >= 5) 4 else 3
-                    currentLevel.levelNumber >= 6 -> 4
-                    else -> currentLevel.maxTowerLevel
-                }
+            if (tComp.specialization == TowerSpecialization.SUNRAY_TOWER) {
+                val upgradeBtnX = tPos.x
+                val upgradeBtnY = tPos.y + 58f
+                val fireBtnX = tPos.x + 45f
+                val fireBtnY = tPos.y - 31f
 
-                // 1. NÂNG CẤP CẤP ĐỘ 1 -> 2, 2 -> 3
-                if (tComp.level < 3 && tComp.level < maxLevel && Vector2(tPos.x, upgradeY).dst(x, y) <= 32f) {
-                    var upCost = tComp.upgradeCost
-                    if (tComp.towerType == TowerType.MAGE && UpgradeManager.getEffectiveMageLevel() >= 3) upCost = (upCost * 0.9f).toInt()
-                    if (tComp.towerType == TowerType.ARTILLERY && UpgradeManager.getEffectiveArtilleryLevel() >= 3) upCost = (upCost * 0.9f).toInt()
+                val isInsideHireBtn = Vector2(upgradeBtnX, upgradeBtnY).dst(x, y) <= 32f ||
+                    (Math.abs(x - upgradeBtnX) <= 24f && y >= upgradeBtnY - 36f && y <= upgradeBtnY + 28f)
 
-                    if (previewTowerAction == "UPGRADE") {
-                        if (EconomyManager.spendGold(upCost)) {
-                            upgradeTower(tower, 0)
+                if (tComp.sunraySorcerers < 4 && isInsideHireBtn) {
+                    if (previewTowerAction == "UPGRADE_SUNRAY") {
+                        if (EconomyManager.spendGold(100)) {
+                            SoundManager.playTowerUpgrade()
+                            tComp.sunraySorcerers++
+                            tComp.isSunrayReady = false
+                            tComp.sunrayChargeTimer = when (tComp.sunraySorcerers) {
+                                1 -> 19.0f; 2 -> 16.0f; 3 -> 13.0f; else -> 10.0f
+                            }
                             clearSelections()
+                        } else {
+                            SoundManager.playClick()
                         }
                     } else {
-                        previewTowerAction = "UPGRADE"
+                        SoundManager.playClick()
+                        previewTowerAction = "UPGRADE_SUNRAY"
                     }
                     return
                 }
 
-                val canUpgradeToSpec = if (tComp.level == 3) {
-                    when (currentLevel.levelNumber) {
-                        0 -> true
-                        5 -> tComp.towerType == TowerType.ARCHER && maxLevel >= 4
-                        6 -> (tComp.towerType == TowerType.ARCHER || tComp.towerType == TowerType.MAGE || tComp.towerType == TowerType.BARRACKS)
-                        7 -> (tComp.towerType == TowerType.ARCHER || tComp.towerType == TowerType.MAGE || tComp.towerType == TowerType.BARRACKS)
-                        8, 9, 10, 11, 12 -> true
-                        else -> maxLevel >= 4
-                    }
-                } else false
+                if (tComp.isSunrayReady && tComp.sunraySorcerers > 0 && Vector2(fireBtnX, fireBtnY).dst(x, y) <= 28f) {
+                    SoundManager.playClick()
+                    isAimingSunrayTarget = true
+                    selectedTower = null
+                    previewTowerAction = null
+                    return
+                }
 
-                // 2. NÂNG CẤP CHUYÊN HÓA NHÁNH (LEVEL 3 -> LEVEL 4)
+                selectedTower = null
+                previewTowerAction = null
+                return
+            }
+
+            if (tComp.level < 3) {
+                if (topBtn.dst(x, y) <= 28f || (Math.abs(x - topBtn.x) <= 22f && Math.abs(y - (topBtn.y - 12f)) <= 24f)) {
+                    if (isLocked) {
+                        SoundManager.playClick()
+                        previewTowerAction = "LOCKED"
+                        return
+                    } else if (canUpgrade) {
+                        var upCost = tComp.upgradeCost
+                        if (tComp.towerType == TowerType.MAGE && UpgradeManager.getEffectiveMageLevel() >= 3) upCost = (upCost * 0.9f).toInt()
+                        if (tComp.towerType == TowerType.ARTILLERY && UpgradeManager.getEffectiveArtilleryLevel() >= 3) upCost = (upCost * 0.9f).toInt()
+
+                        if (previewTowerAction == "UPGRADE") {
+                            if (EconomyManager.spendGold(upCost)) {
+                                SoundManager.playTowerUpgrade()
+                                upgradeTower(tower, 0)
+                                clearSelections()
+                            } else {
+                                SoundManager.playClick()
+                            }
+                        } else {
+                            SoundManager.playTowerPreview()
+                            previewTowerAction = "UPGRADE"
+                        }
+                        return
+                    }
+                }
+            } else if (tComp.level == 3) {
                 if (canUpgradeToSpec) {
                     val (spec1, spec2) = getBranchSpecs(tComp.towerType)
+                    val cost1 = getDiscountedBranchCost(spec1, tComp.towerType)
+                    val cost2 = getDiscountedBranchCost(spec2, tComp.towerType)
                     val isSingleBranch = (currentLevel.levelNumber in listOf(5, 6))
 
                     if (isSingleBranch) {
-                        if (Vector2(tPos.x, branchY).dst(x, y) <= 34f) {
+                        val isTouchSingleSpec = Vector2(tPos.x, branchY).dst(x, y) <= 34f ||
+                            (Math.abs(x - tPos.x) <= 24f && y >= branchY - 36f && y <= branchY + 28f)
+                        if (isTouchSingleSpec) {
                             if (previewTowerAction == "SPEC_1") {
-                                if (EconomyManager.spendGold(spec1.branchCost)) {
+                                if (EconomyManager.spendGold(cost1)) {
+                                    SoundManager.playTowerUpgrade()
                                     upgradeTower(tower, 1)
                                     clearSelections()
+                                } else {
+                                    SoundManager.playClick()
                                 }
                             } else {
+                                SoundManager.playTowerPreview()
                                 previewTowerAction = "SPEC_1"
                             }
                             return
                         }
                     } else {
-                        if (Vector2(tPos.x - 45f, branchY).dst(x, y) <= 34f) {
+                        val b1X = tPos.x - 45f
+                        val b2X = tPos.x + 45f
+                        val isTouchSpec1 = Vector2(b1X, branchY).dst(x, y) <= 34f ||
+                            (Math.abs(x - b1X) <= 24f && y >= branchY - 36f && y <= branchY + 28f)
+                        val isTouchSpec2 = Vector2(b2X, branchY).dst(x, y) <= 34f ||
+                            (Math.abs(x - b2X) <= 24f && y >= branchY - 36f && y <= branchY + 28f)
+
+                        if (isTouchSpec1) {
                             if (previewTowerAction == "SPEC_1") {
-                                if (EconomyManager.spendGold(spec1.branchCost)) {
+                                if (EconomyManager.spendGold(cost1)) {
+                                    SoundManager.playTowerUpgrade()
                                     upgradeTower(tower, 1)
                                     clearSelections()
+                                } else {
+                                    SoundManager.playClick()
                                 }
                             } else {
+                                SoundManager.playTowerPreview()
                                 previewTowerAction = "SPEC_1"
                             }
                             return
                         }
-                        if (Vector2(tPos.x + 45f, branchY).dst(x, y) <= 34f) {
+                        if (isTouchSpec2) {
                             if (previewTowerAction == "SPEC_2") {
-                                if (EconomyManager.spendGold(spec2.branchCost)) {
+                                if (EconomyManager.spendGold(cost2)) {
+                                    SoundManager.playTowerUpgrade()
                                     upgradeTower(tower, 2)
                                     clearSelections()
+                                } else {
+                                    SoundManager.playClick()
                                 }
                             } else {
+                                SoundManager.playTowerPreview()
                                 previewTowerAction = "SPEC_2"
                             }
                             return
                         }
                     }
-                }
-
-                // 3. NÂNG CẤP KỸ NĂNG CHO THÁP CẤP 4 (SKILLS 1, 2, 3)
-                if (tComp.level == 4) {
-                    val spec = tComp.specialization
-                    val has3Skills = (tComp.towerType == TowerType.BARRACKS)
-                    val skillCenterY = if (isHigh) tPos.y - 55f else tPos.y + 55f
-                    val skillMiddleY = if (isHigh) tPos.y - 75f else tPos.y + 75f
-                    val costDiscount = if (tComp.towerType == TowerType.ARTILLERY && UpgradeManager.getEffectiveArtilleryLevel() >= 4) 0.75f else 1.0f
-
-                    if (has3Skills) {
-                        if (Vector2(tPos.x - 65f, skillCenterY).dst(x, y) <= 32f) {
-                            if (tComp.skill1Level < 3) {
-                                val cost = (spec.skill1Costs.getOrElse(tComp.skill1Level) { 0 } * costDiscount).toInt()
-                                if (previewTowerAction == "SKILL_1") {
-                                    if (EconomyManager.spendGold(cost)) {
-                                        tComp.skill1Level++
-                                        applySkillUpgrade(tower, 1)
-                                        clearSelections()
-                                    }
-                                } else {
-                                    previewTowerAction = "SKILL_1"
-                                }
-                            }
-                            return
-                        }
-                        val maxSkill2 = if (spec == TowerSpecialization.HOLY_ORDER) 1 else 3
-                        if (Vector2(tPos.x, skillMiddleY).dst(x, y) <= 32f) {
-                            if (tComp.skill2Level < maxSkill2) {
-                                val cost = (spec.skill2Costs.getOrElse(tComp.skill2Level) { 0 } * costDiscount).toInt()
-                                if (previewTowerAction == "SKILL_2") {
-                                    if (EconomyManager.spendGold(cost)) {
-                                        tComp.skill2Level++
-                                        applySkillUpgrade(tower, 2)
-                                        clearSelections()
-                                    }
-                                } else {
-                                    previewTowerAction = "SKILL_2"
-                                }
-                            }
-                            return
-                        }
-                        if (Vector2(tPos.x + 65f, skillCenterY).dst(x, y) <= 32f) {
-                            if (tComp.skill3Level < 3 && spec.skill3Costs.isNotEmpty()) {
-                                val cost = (spec.skill3Costs.getOrElse(tComp.skill3Level) { 0 } * costDiscount).toInt()
-                                if (previewTowerAction == "SKILL_3") {
-                                    if (EconomyManager.spendGold(cost)) {
-                                        tComp.skill3Level++
-                                        applySkillUpgrade(tower, 3)
-                                        clearSelections()
-                                    }
-                                } else {
-                                    previewTowerAction = "SKILL_3"
-                                }
-                            }
-                            return
-                        }
-                    } else {
-                        if (Vector2(tPos.x - 55f, skillCenterY).dst(x, y) <= 32f) {
-                            if (tComp.skill1Level < 3) {
-                                val cost = (spec.skill1Costs.getOrElse(tComp.skill1Level) { 0 } * costDiscount).toInt()
-                                if (previewTowerAction == "SKILL_1") {
-                                    if (EconomyManager.spendGold(cost)) {
-                                        tComp.skill1Level++
-                                        applySkillUpgrade(tower, 1)
-                                        clearSelections()
-                                    }
-                                } else {
-                                    previewTowerAction = "SKILL_1"
-                                }
-                            }
-                            return
-                        }
-                        if (Vector2(tPos.x + 55f, skillCenterY).dst(x, y) <= 32f) {
-                            if (tComp.skill2Level < 3) {
-                                val cost = (spec.skill2Costs.getOrElse(tComp.skill2Level) { 0 } * costDiscount).toInt()
-                                if (previewTowerAction == "SKILL_2") {
-                                    if (EconomyManager.spendGold(cost)) {
-                                        tComp.skill2Level++
-                                        applySkillUpgrade(tower, 2)
-                                        clearSelections()
-                                    }
-                                } else {
-                                    previewTowerAction = "SKILL_2"
-                                }
-                            }
-                            return
-                        }
+                } else {
+                    if (topBtn.dst(x, y) <= 28f) {
+                        SoundManager.playClick()
+                        previewTowerAction = "LOCKED"
+                        return
                     }
                 }
+            } else if (tComp.level == 4) {
+                val spec = tComp.specialization
+                val has3Skills = (tComp.towerType == TowerType.BARRACKS)
+                val skillCenterY = if (isHigh) tPos.y - 55f else tPos.y + 55f
+                val skillMiddleY = if (isHigh) tPos.y - 75f else tPos.y + 75f
 
-                // 4. BÁN THÁP (SELL TOWER - 2 BƯỚC)
-                if (Vector2(tPos.x, sellY).dst(x, y) <= 30f) {
-                    val isPreGame = (waveManager.currentWaveIndex == -1)
-                    val refundRatio = when {
-                        isPreGame -> 1.0f
-                        UpgradeManager.getEffectiveArcherLevel() >= 1 -> 0.90f
-                        else -> 0.70f
-                    }
-                    val refundAmount = (tComp.totalInvestedGold * refundRatio).toInt()
-
-                    if (previewTowerAction == "SELL") {
-                        EconomyManager.addGold(refundAmount)
-                        freeSpotAt(tPos)
-                        val bComp = tower.getComponent(BarracksComponent::class.java)
-                        bComp?.soldiers?.forEach { engine.removeEntity(it) }
-                        tComp.summonedGolem?.let { engine.removeEntity(it) }
-                        engine.removeEntity(tower)
-                        clearSelections()
-                    } else {
-                        previewTowerAction = "SELL"
-                    }
-                    return
+                fun isTouchInsideSkillBtn(btnX: Float, btnY: Float): Boolean {
+                    return Vector2(btnX, btnY + 4f).dst(x, y) <= 28f ||
+                        (Math.abs(x - btnX) <= 23f && y >= btnY - 35f && y <= btnY + 28f)
                 }
 
-                // 5. ĐẶT ĐIỂM TẬP KẾT RALLY
-                val canRally = tComp.towerType == TowerType.BARRACKS ||
-                    (tComp.specialization == TowerSpecialization.SORCERER_MAGE && tComp.skill2Level > 0)
-                if (canRally && Vector2(tPos.x - 65f, tPos.y).dst(x, y) <= 30f) {
-                    isSettingRallyPoint = true
-                    previewTowerAction = null
-                    return
+                if (has3Skills) {
+                    if (isTouchInsideSkillBtn(tPos.x - 65f, skillCenterY)) {
+                        if (tComp.skill1Level < 3) {
+                            val cost = GameUIRenderer.getSkillUpgradeCost(spec, 1, tComp.skill1Level, tComp.towerType)
+                            if (previewTowerAction == "SKILL_1") {
+                                if (EconomyManager.spendGold(cost)) {
+                                    SoundManager.playTowerUpgrade()
+                                    tComp.skill1Level++
+                                    tComp.totalInvestedGold += cost
+                                    applySkillUpgrade(tower, 1)
+                                    clearSelections()
+                                } else {
+                                    SoundManager.playClick()
+                                }
+                            } else {
+                                SoundManager.playTowerPreview()
+                                previewTowerAction = "SKILL_1"
+                            }
+                        }
+                        return
+                    }
+                    val maxSkill2 = if (spec == TowerSpecialization.HOLY_ORDER) 1 else 3
+                    if (isTouchInsideSkillBtn(tPos.x, skillMiddleY)) {
+                        if (tComp.skill2Level < maxSkill2) {
+                            val cost = GameUIRenderer.getSkillUpgradeCost(spec, 2, tComp.skill2Level, tComp.towerType)
+                            if (previewTowerAction == "SKILL_2") {
+                                if (EconomyManager.spendGold(cost)) {
+                                    SoundManager.playTowerUpgrade()
+                                    tComp.skill2Level++
+                                    tComp.totalInvestedGold += cost
+                                    applySkillUpgrade(tower, 2)
+                                    clearSelections()
+                                } else {
+                                    SoundManager.playClick()
+                                }
+                            } else {
+                                SoundManager.playTowerPreview()
+                                previewTowerAction = "SKILL_2"
+                            }
+                        }
+                        return
+                    }
+                    if (isTouchInsideSkillBtn(tPos.x + 65f, skillCenterY)) {
+                        if (tComp.skill3Level < 3 && spec.skill3Costs.isNotEmpty()) {
+                            val cost = GameUIRenderer.getSkillUpgradeCost(spec, 3, tComp.skill3Level, tComp.towerType)
+                            if (previewTowerAction == "SKILL_3") {
+                                if (EconomyManager.spendGold(cost)) {
+                                    SoundManager.playTowerUpgrade()
+                                    tComp.skill3Level++
+                                    tComp.totalInvestedGold += cost
+                                    applySkillUpgrade(tower, 3)
+                                    clearSelections()
+                                } else {
+                                    SoundManager.playClick()
+                                }
+                            } else {
+                                SoundManager.playTowerPreview()
+                                previewTowerAction = "SKILL_3"
+                            }
+                        }
+                        return
+                    }
+                } else {
+                    if (isTouchInsideSkillBtn(tPos.x - 45f, skillCenterY)) {
+                        if (tComp.skill1Level < 3) {
+                            val cost = GameUIRenderer.getSkillUpgradeCost(spec, 1, tComp.skill1Level, tComp.towerType)
+                            if (previewTowerAction == "SKILL_1") {
+                                if (EconomyManager.spendGold(cost)) {
+                                    SoundManager.playTowerUpgrade()
+                                    tComp.skill1Level++
+                                    tComp.totalInvestedGold += cost
+                                    applySkillUpgrade(tower, 1)
+                                    clearSelections()
+                                } else {
+                                    SoundManager.playClick()
+                                }
+                            } else {
+                                SoundManager.playTowerPreview()
+                                previewTowerAction = "SKILL_1"
+                            }
+                        }
+                        return
+                    }
+                    if (isTouchInsideSkillBtn(tPos.x + 45f, skillCenterY)) {
+                        if (tComp.skill2Level < 3) {
+                            val cost = GameUIRenderer.getSkillUpgradeCost(spec, 2, tComp.skill2Level, tComp.towerType)
+                            if (previewTowerAction == "SKILL_2") {
+                                if (EconomyManager.spendGold(cost)) {
+                                    SoundManager.playTowerUpgrade()
+                                    tComp.skill2Level++
+                                    tComp.totalInvestedGold += cost
+                                    applySkillUpgrade(tower, 2)
+                                    clearSelections()
+                                } else {
+                                    SoundManager.playClick()
+                                }
+                            } else {
+                                SoundManager.playTowerPreview()
+                                previewTowerAction = "SKILL_2"
+                            }
+                        }
+                        return
+                    }
                 }
+            }
+
+            if (sellBtn.dst(x, y) <= 28f) {
+                val isPreGame = (waveManager.currentWaveIndex == -1)
+                val refundRatio = when {
+                    isPreGame -> 1.0f
+                    tComp.towerType == TowerType.ARCHER && UpgradeManager.getEffectiveArcherLevel() >= 1 -> 0.90f
+                    else -> 0.70f
+                }
+                val refundAmount = (tComp.totalInvestedGold * refundRatio).toInt()
+
+                if (previewTowerAction == "SELL") {
+                    SoundManager.playTowerSell()
+                    EconomyManager.addGold(refundAmount)
+                    freeSpotAt(tPos)
+                    val bComp = tower.getComponent(BarracksComponent::class.java)
+                    bComp?.soldiers?.toList()?.forEach { engine.removeEntity(it) }
+                    bComp?.soldiers?.clear()
+                    tComp.summonedGolem?.let { engine.removeEntity(it) }
+                    tComp.summonedGolem = null
+                    engine.removeEntity(tower)
+                    clearSelections()
+                } else {
+                    SoundManager.playTowerPreview()
+                    previewTowerAction = "SELL"
+                }
+                return
+            }
+
+            if (canRally && rallyBtn.dst(x, y) <= 24f) {
+                SoundManager.playClick()
+                isSettingRallyPoint = true
+                previewTowerAction = null
+                return
             }
 
             selectedTower = null
             previewTowerAction = null
         }
 
-        // 13. CHỌN MỤC TIÊU MỚI: QUÁI, LÍNH, THÁP HOẶC CỌC ĐẤT TRỐNG
-        val enemies = engine.getEntitiesFor(Family.all(EnemyComponent::class.java, TransformComponent::class.java, HealthComponent::class.java).get())
-        for (i in 0 until enemies.size()) {
-            val e = enemies.get(i)
-            val ePos = e.getComponent(TransformComponent::class.java).position
+        val enemies = engine.getEntitiesFor(Family.all(EnemyComponent::class.java, TransformComponent::class.java, HealthComponent::class.java).get()).toList()
+        for (e in enemies) {
+            val ePos = e.getComponent(TransformComponent::class.java)?.position ?: continue
             if (ePos.dst(x, y) <= 28f) {
+                SoundManager.playClick()
                 clearSelections()
                 selectedEnemy = e
                 return
             }
         }
 
-        val soldiers = engine.getEntitiesFor(Family.all(SoldierComponent::class.java, TransformComponent::class.java, HealthComponent::class.java).get())
-        for (i in 0 until soldiers.size()) {
-            val sol = soldiers.get(i)
-            val sPos = sol.getComponent(TransformComponent::class.java).position
+        val soldiers = engine.getEntitiesFor(Family.all(SoldierComponent::class.java, TransformComponent::class.java, HealthComponent::class.java).get()).toList()
+        for (sol in soldiers) {
+            val sPos = sol.getComponent(TransformComponent::class.java)?.position ?: continue
             if (sPos.dst(x, y) <= 26f) {
+                SoundManager.playClick()
                 clearSelections()
                 selectedSoldier = sol
                 return
             }
         }
 
-        for (i in 0 until allTowers.size()) {
-            val t = allTowers.get(i)
-            val pos = t.getComponent(TransformComponent::class.java).position
+        for (t in allTowers) {
+            val pos = t.getComponent(TransformComponent::class.java)?.position ?: continue
             val tc = t.getComponent(TowerComponent::class.java)
             val hitRadius = if (tc?.specialization == TowerSpecialization.SUNRAY_TOWER) 50f else 34f
             if (pos.dst(x, y) <= hitRadius) {
-                // NẾU THÁP ĐANG BỊ CẢNH BÁO SẮP KHÓA HOẶC ĐANG BỊ KHÓA -> CHẶN MỞ WHEEL MENU
                 if (warningTowersMap.containsKey(t) || tc?.isFrozen == true) {
                     clearSelections()
                     return
                 }
+                SoundManager.playTowerPreview()
                 clearSelections()
                 selectedTower = t
                 return
             }
         }
 
-        val spots = engine.getEntitiesFor(Family.all(TowerSpotComponent::class.java, TransformComponent::class.java).get())
-        for (i in 0 until spots.size()) {
-            val s = spots.get(i)
+        val spots = engine.getEntitiesFor(Family.all(TowerSpotComponent::class.java, TransformComponent::class.java).get()).toList()
+        for (s in spots) {
             val spotComp = s.getComponent(TowerSpotComponent::class.java)
-            val pos = s.getComponent(TransformComponent::class.java).position
-            if (!spotComp.isOccupied && pos.dst(x, y) <= 42f) {
+            val pos = s.getComponent(TransformComponent::class.java)?.position ?: continue
+            if (spotComp != null && !spotComp.isOccupied && pos.dst(x, y) <= 42f) {
+                SoundManager.playTowerPreview()
                 clearSelections()
                 selectedSpot = s
                 return
@@ -1206,16 +1610,19 @@ class PlayScreen(
             val hitY = targetY + offsetY
 
             effectRenderer.fireRainEffects.add(FireRainEffect(hitX, hitY, delay = delay) { mx, my ->
-                val enemies = engine.getEntitiesFor(Family.all(EnemyComponent::class.java, TransformComponent::class.java, HealthComponent::class.java).get())
-                for (e in enemies) {
-                    val ePos = e.getComponent(TransformComponent::class.java).position
-                    val hp = e.getComponent(HealthComponent::class.java)
+                SoundManager.playBombExplosion()
+                val enemiesSnapshot = engine.getEntitiesFor(Family.all(EnemyComponent::class.java, TransformComponent::class.java, HealthComponent::class.java).get()).toList()
+                for (e in enemiesSnapshot) {
+                    val ePos = e.getComponent(TransformComponent::class.java)?.position ?: continue
+                    val hp = e.getComponent(HealthComponent::class.java) ?: continue
                     val eComp = e.getComponent(EnemyComponent::class.java)
 
-                    if (ePos.dst(mx, my) <= blastRadius) {
+                    if (!hp.isDead && hp.currentHealth > 0f && ePos.dst(mx, my) <= blastRadius) {
                         val dmg = MathUtils.random(dMin, dMax)
                         hp.currentHealth -= dmg
                         if (hp.currentHealth <= 0f || hp.isDead) {
+                            hp.currentHealth = 0f
+                            SoundManager.playEnemyDeath()
                             if (eComp != null && !eComp.isSummonedMinion) EconomyManager.addGold(eComp.enemyType.rewardGold)
                             e.getComponent(MovementComponent::class.java)?.isBlocked = false
                             engine.removeEntity(e)
@@ -1283,7 +1690,7 @@ class PlayScreen(
     }
 
     private fun upgradeTower(tower: Entity, branchChoice: Int) {
-        val tComp = tower.getComponent(TowerComponent::class.java)
+        val tComp = tower.getComponent(TowerComponent::class.java) ?: return
         tComp.level++
 
         if (tComp.level <= 3) {
@@ -1305,7 +1712,7 @@ class PlayScreen(
                         tComp.specialization = TowerSpecialization.MUSKETEER_GARRISON
                         tComp.damageMin = 35f; tComp.damageMax = 65f; tComp.attackRate = 1.5f; tComp.range = 330f
                     }
-                    tComp.totalInvestedGold += tComp.specialization.branchCost
+                    tComp.totalInvestedGold += getDiscountedBranchCost(tComp.specialization, tComp.towerType)
                 }
             }
             TowerType.BARRACKS -> when (tComp.level) {
@@ -1320,7 +1727,7 @@ class PlayScreen(
                         tComp.damageMin = 16f; tComp.damageMax = 24f
                     }
                     tComp.range = 240f
-                    tComp.totalInvestedGold += tComp.specialization.branchCost
+                    tComp.totalInvestedGold += getDiscountedBranchCost(tComp.specialization, tComp.towerType)
                 }
             }
             TowerType.MAGE -> when (tComp.level) {
@@ -1334,7 +1741,7 @@ class PlayScreen(
                         tComp.specialization = TowerSpecialization.SORCERER_MAGE
                         tComp.damageMin = 42f; tComp.damageMax = 78f; tComp.attackRate = 1.5f; tComp.range = 280f
                     }
-                    tComp.totalInvestedGold += tComp.specialization.branchCost
+                    tComp.totalInvestedGold += getDiscountedBranchCost(tComp.specialization, tComp.towerType)
                 }
             }
             TowerType.ARTILLERY -> when (tComp.level) {
@@ -1347,10 +1754,10 @@ class PlayScreen(
                         tComp.attackRate = 3.0f; tComp.range = 300f
                     } else {
                         tComp.specialization = TowerSpecialization.TESLA_X104
-                        tComp.damageMin = 30f; tComp.damageMax = 55f
+                        tComp.damageMin = 60f; tComp.damageMax = 110f
                         tComp.attackRate = 2.25f; tComp.range = 230f
                     }
-                    tComp.totalInvestedGold += tComp.specialization.branchCost
+                    tComp.totalInvestedGold += getDiscountedBranchCost(tComp.specialization, tComp.towerType)
                 }
             }
             else -> {}
@@ -1378,7 +1785,7 @@ class PlayScreen(
         if (tComp.towerType == TowerType.BARRACKS) {
             val bComp = tower.getComponent(BarracksComponent::class.java)
             if (bComp != null) {
-                for (sol in bComp.soldiers) {
+                for (sol in bComp.soldiers.toList()) {
                     val sComp = sol.getComponent(SoldierComponent::class.java)
                     sComp?.engagedEnemy?.getComponent(MovementComponent::class.java)?.isBlocked = false
                     sComp?.engagedEnemy = null
@@ -1435,7 +1842,7 @@ class PlayScreen(
     }
 
     private fun applySkillUpgrade(tower: Entity, skillNum: Int) {
-        val tComp = tower.getComponent(TowerComponent::class.java)
+        val tComp = tower.getComponent(TowerComponent::class.java) ?: return
         if (skillNum == 1) tComp.skill1Cooldown = 0f
         if (skillNum == 2) tComp.skill2Cooldown = 0f
         if (skillNum == 3) tComp.skill3Cooldown = 0f
@@ -1470,11 +1877,14 @@ class PlayScreen(
         }
 
         if (tComp.specialization == TowerSpecialization.SORCERER_MAGE && skillNum == 2) {
-            val golemHp = 500f + tComp.skill2Level * 200f
-            val golemDmgMin = 30f + tComp.skill2Level * 15f
-            val golemDmgMax = 50f + tComp.skill2Level * 25f
+            val golemHp = 500f + tComp.skill2Level * 100f
+            val golemDmgMin = 20f + tComp.skill2Level * 10f
+            val golemDmgMax = 40f + tComp.skill2Level * 10f
 
-            if (tComp.summonedGolem == null) {
+            val existingGolem = tComp.summonedGolem
+            val existingHp = existingGolem?.getComponent(HealthComponent::class.java)
+
+            if (existingGolem == null || existingHp == null || existingHp.isDead || existingHp.currentHealth <= 0f) {
                 val tPos = tower.getComponent(TransformComponent::class.java).position
                 val spawnPos = if (tComp.golemRallyPoint.isZero) getNearestRoadPoint(tPos) else Vector2(tComp.golemRallyPoint)
                 tComp.golemRallyPoint.set(spawnPos)
@@ -1486,7 +1896,7 @@ class PlayScreen(
                     add(SoldierComponent(
                         attackDamageMin = golemDmgMin,
                         attackDamageMax = golemDmgMax,
-                        attackRate = 1.35f,
+                        attackRate = 2.0f,
                         regenPerSec = 20f,
                         targetPosition = Vector2(spawnPos),
                         parentTower = tower,
@@ -1497,17 +1907,12 @@ class PlayScreen(
                 tComp.summonedGolem = golem
                 engine.addEntity(golem)
             } else {
-                tComp.summonedGolem?.let { golem ->
-                    val gHp = golem.getComponent(HealthComponent::class.java)
-                    val gSol = golem.getComponent(SoldierComponent::class.java)
-                    if (gHp != null) {
-                        gHp.maxHealth = golemHp
-                        gHp.currentHealth = golemHp
-                    }
-                    if (gSol != null) {
-                        gSol.attackDamageMin = golemDmgMin
-                        gSol.attackDamageMax = golemDmgMax
-                    }
+                val gSol = existingGolem.getComponent(SoldierComponent::class.java)
+                existingHp.maxHealth = golemHp
+                existingHp.currentHealth = golemHp
+                if (gSol != null) {
+                    gSol.attackDamageMin = golemDmgMin
+                    gSol.attackDamageMax = golemDmgMax
                 }
             }
         }
@@ -1518,7 +1923,7 @@ class PlayScreen(
         for ((type, count) in spawnList) {
             for (c in 0 until count) {
                 portalSpawnQueue.add(QueuedPortalSpawn(circlePos, type, delayCounter))
-                delayCounter += 0.85f // Giãn cách xuất hiện từng con một
+                delayCounter += 0.85f
             }
         }
     }
@@ -1681,28 +2086,69 @@ class PlayScreen(
         shapeRenderer.projectionMatrix = camera.combined
         batch.projectionMatrix = camera.combined
 
+        if (EconomyManager.lives < lastRecordedLives) {
+            SoundManager.playLifeLost()
+            lastRecordedLives = EconomyManager.lives
+        } else if (EconomyManager.lives > lastRecordedLives) {
+            lastRecordedLives = EconomyManager.lives
+        }
+
+        if (EconomyManager.isGameOver && !hasPlayedDefeatSound) {
+            hasPlayedDefeatSound = true
+            SoundManager.playDefeat()
+        }
+
         if (!isGamePaused) {
             if (rainOfFireCooldown > 0f) rainOfFireCooldown -= delta
             if (reinforcementCooldown > 0f) reinforcementCooldown -= delta
 
-            val allEnemies = engine.getEntitiesFor(Family.all(EnemyComponent::class.java).get())
-            for (i in 0 until allEnemies.size()) {
-                val ec = allEnemies.get(i).getComponent(EnemyComponent::class.java)
+            val allEnemiesSnapshot = engine.getEntitiesFor(Family.all(EnemyComponent::class.java, HealthComponent::class.java).get()).toList()
+            for (e in allEnemiesSnapshot) {
+                val ec = e.getComponent(EnemyComponent::class.java)
+                val hp = e.getComponent(HealthComponent::class.java)
+                val eTrans = e.getComponent(TransformComponent::class.java)
+
                 if (ec != null && ec.burnDuration > 0f) {
                     ec.burnDuration -= delta
+                }
+
+                if (ec != null && ec.curseTimer > 0f && hp != null && !hp.isDead && hp.currentHealth > 0f) {
+                    ec.curseTimer -= delta
+                    ec.curseTickTimer += delta
+                    if (ec.curseTickTimer >= 1.25f) {
+                        ec.curseTickTimer -= 1.25f
+                        hp.currentHealth -= 10f
+                        if (eTrans != null) {
+                            effectRenderer.magicSparks.add(MagicSparkEffect(Vector2(eTrans.position)))
+                        }
+                        if (hp.currentHealth <= 0f) {
+                            hp.currentHealth = 0f
+                            SoundManager.playEnemyDeath()
+                            if (!ec.isSummonedMinion) EconomyManager.addGold(ec.enemyType.rewardGold)
+                            e.getComponent(MovementComponent::class.java)?.isBlocked = false
+                            engine.removeEntity(e)
+                            continue
+                        }
+                    }
+                    if (ec.curseTimer <= 0f) {
+                        ec.isCursed = false
+                        ec.curseTickTimer = 0f
+                    }
                 }
             }
 
             effectRenderer.update(delta) { px, py, radius, tickDmg ->
-                val enemies = engine.getEntitiesFor(Family.all(EnemyComponent::class.java, TransformComponent::class.java, HealthComponent::class.java).get())
-                for (e in enemies) {
-                    val ePos = e.getComponent(TransformComponent::class.java).position
-                    val hp = e.getComponent(HealthComponent::class.java)
+                val enemiesSnapshot = engine.getEntitiesFor(Family.all(EnemyComponent::class.java, TransformComponent::class.java, HealthComponent::class.java).get()).toList()
+                for (e in enemiesSnapshot) {
+                    val ePos = e.getComponent(TransformComponent::class.java)?.position ?: continue
+                    val hp = e.getComponent(HealthComponent::class.java) ?: continue
                     val eComp = e.getComponent(EnemyComponent::class.java)
-                    if (hp != null && !hp.isDead && ePos.dst(px, py) <= radius) {
+                    if (!hp.isDead && hp.currentHealth > 0f && ePos.dst(px, py) <= radius) {
                         hp.currentHealth -= tickDmg
                         eComp?.burnDuration = 0.8f
                         if (hp.currentHealth <= 0f) {
+                            hp.currentHealth = 0f
+                            SoundManager.playEnemyDeath()
                             if (eComp != null && !eComp.isSummonedMinion) EconomyManager.addGold(eComp.enemyType.rewardGold)
                             e.getComponent(MovementComponent::class.java)?.isBlocked = false
                             engine.removeEntity(e)
@@ -1711,11 +2157,22 @@ class PlayScreen(
                 }
             }
 
+            if (activeJuggernautBombs.isNotEmpty()) {
+                val bombIter = activeJuggernautBombs.listIterator()
+                while (bombIter.hasNext()) {
+                    val bomb = bombIter.next()
+                    bomb.elapsed += delta
+                    if (bomb.elapsed >= bomb.duration) {
+                        bombIter.remove()
+                        spawnGolemHeadPackAt(bomb.targetPos, bomb.remainingWaypoints)
+                    }
+                }
+            }
+
             if (!EconomyManager.isGameOver && !waveManager.isLevelCompleted) {
                 waveManager.update(delta)
                 engine.update(delta)
 
-                // CƠ CHẾ NGHĨA ĐỊA: GIÃN CÁCH XUẤT XƯƠNG (1.8s/con, TỐI ĐA 5 con alive)
                 if (graveyardQueue.isNotEmpty() && activeGraveyardSkeletons < 5) {
                     graveyardCooldown -= delta
                     if (graveyardCooldown <= 0f) {
@@ -1725,10 +2182,14 @@ class PlayScreen(
                     }
                 }
 
-                // CƠ CHẾ MAGMA FIELD MÀN 11 CHUẨN THEO NOTE WIKI
                 if (currentLevel.levelNumber == 11 && waveManager.currentWaveIndex >= 0) {
                     magmaFieldTotalTime += delta
-                    if (magmaFieldTotalTime >= 400f) {
+                    val isMagmaActive = when (gameMode) {
+                        GameMode.HEROIC -> waveManager.currentWaveDisplay >= 6
+                        GameMode.IRON -> magmaFieldTotalTime >= 120f
+                        else -> magmaFieldTotalTime >= 400f
+                    }
+                    if (isMagmaActive) {
                         magmaFieldSpawnTimer -= delta
                         if (magmaFieldSpawnTimer <= 0f) {
                             magmaFieldSpawnTimer = 120f
@@ -1749,13 +2210,13 @@ class PlayScreen(
                                 ))
                             }
                             engine.addEntity(titan)
+                            SoundManager.playBombExplosion()
                             effectRenderer.shrapnelExplosions.add(ShrapnelExplosionEffect(Vector2(mPos)))
                         }
                     }
                 }
 
-                // CƠ CHẾ ĐẶC BIỆT MÀN 12: THE DARK TOWER
-                if (currentLevel.levelNumber == 12 && waveManager.currentWaveIndex >= 0) {
+                if (currentLevel.levelNumber == 12 && gameMode == GameMode.CAMPAIGN && waveManager.currentWaveIndex >= 0) {
                     val currentWaveNum = waveManager.currentWaveDisplay
 
                     val veznanEntity = engine.getEntitiesFor(Family.all(EnemyComponent::class.java).get()).firstOrNull {
@@ -1764,7 +2225,6 @@ class PlayScreen(
                     }
                     val veznanMove = veznanEntity?.getComponent(MovementComponent::class.java)
 
-                    // 1. CẬP NHẬT CÁC THÁP ĐANG BỊ CẢNH BÁO (2s niệm phép: chặn wheel, vẫn bắn được)
                     val warnIterator = warningTowersMap.entries.iterator()
                     while (warnIterator.hasNext()) {
                         val entry = warnIterator.next()
@@ -1773,26 +2233,27 @@ class PlayScreen(
                         if (newTimer <= 0f) {
                             warnIterator.remove()
                             val tComp = tower.getComponent(TowerComponent::class.java)
-                            if (tComp != null) {
+                            val tTrans = tower.getComponent(TransformComponent::class.java)
+                            if (tComp != null && tTrans != null) {
                                 tComp.isFrozen = true
                                 tComp.freezeHitsRemaining = 4
                                 lockedTowersMap[tower] = LockedTowerState()
-                                effectRenderer.magicSparks.add(MagicSparkEffect(Vector2(tower.getComponent(TransformComponent::class.java).position)))
+                                effectRenderer.magicSparks.add(MagicSparkEffect(Vector2(tTrans.position)))
                             }
                         } else {
                             entry.setValue(newTimer)
                         }
                     }
 
-                    // 2. CẬP NHẬT CÁC THÁP ĐÃ BỊ KHÓA HOÀN TOÀN (5s đầu cho mở -> 5s sau phạt cấm mở)
                     val lockIterator = lockedTowersMap.entries.iterator()
                     while (lockIterator.hasNext()) {
                         val entry = lockIterator.next()
                         val tower = entry.key
                         val state = entry.value
                         val tComp = tower.getComponent(TowerComponent::class.java)
+                        val tTrans = tower.getComponent(TransformComponent::class.java)
 
-                        if (tComp == null || !tComp.isFrozen) {
+                        if (tComp == null || tTrans == null || !tComp.isFrozen) {
                             lockIterator.remove()
                             continue
                         }
@@ -1802,7 +2263,7 @@ class PlayScreen(
                             if (state.initialTimer <= 0f) {
                                 state.isUndispellable = true
                                 tComp.freezeHitsRemaining = 0
-                                effectRenderer.magicSparks.add(MagicSparkEffect(Vector2(tower.getComponent(TransformComponent::class.java).position)))
+                                effectRenderer.magicSparks.add(MagicSparkEffect(Vector2(tTrans.position)))
                             }
                         } else {
                             state.penaltyTimer -= delta
@@ -1813,7 +2274,6 @@ class PlayScreen(
                         }
                     }
 
-                    // 3. VEZ'NAN TRÊN BAN CÔNG KHÓA THÁP TỪ WAVE 9 ĐỊNH KỲ MỖI 16s
                     if (currentWaveNum >= 9) {
                         veznanTowerLockCooldown -= delta
                         if (veznanTowerLockCooldown <= 0f) {
@@ -1829,13 +2289,14 @@ class PlayScreen(
 
                             val chosenTowers = availableTowers.shuffled().take(towersToDisableCount)
                             for (tw in chosenTowers) {
-                                warningTowersMap[tw] = 2.0f // 2s niệm phép cảnh báo
-                                effectRenderer.magicSparks.add(MagicSparkEffect(Vector2(tw.getComponent(TransformComponent::class.java).position)))
+                                warningTowersMap[tw] = 2.0f
+                                tw.getComponent(TransformComponent::class.java)?.let {
+                                    effectRenderer.magicSparks.add(MagicSparkEffect(Vector2(it.position)))
+                                }
                             }
                         }
                     }
 
-                    // 4. TRIỆU HỒI TẠI 3 VÒNG TRÒN MA THUẬT TỪ WAVE 6
                     val maxSummonsThisWave = if (currentWaveNum == 15) 2 else 3
                     val summonCooldownDuration = if (currentWaveNum == 15) 18.0f else 10.0f
 
@@ -1866,13 +2327,11 @@ class PlayScreen(
                         }
                     }
 
-                    // BOSS DỪNG LẠI NIỆM PHÉP KHI CÓ CỔNG MA THUẬT HOẶC KHÓA THÁP
                     val isBossCastingSpell = glowingCircles.isNotEmpty() || warningTowersMap.isNotEmpty()
                     if (veznanMove != null) {
                         veznanMove.isBlocked = isBossCastingSpell
                     }
 
-                    // CẬP NHẬT VÒNG TRÒN PHÁT SÁNG NẠP NĂNG LƯỢNG (2.5S)
                     val circleIterator = glowingCircles.listIterator()
                     while (circleIterator.hasNext()) {
                         val item = circleIterator.next()
@@ -1890,7 +2349,6 @@ class PlayScreen(
                         }
                     }
 
-                    // XỬ LÝ HÀNG ĐỢI XUẤT QUỶ TỪNG CON MỘT CÓ GIÃN CÁCH
                     val portalIterator = portalSpawnQueue.listIterator()
                     while (portalIterator.hasNext()) {
                         val spawnItem = portalIterator.next()
@@ -1901,7 +2359,6 @@ class PlayScreen(
                         }
                     }
 
-                    // 5. TRÙM CUỐI VEZ'NAN HẠ ĐÀI BƯỚC XUỐNG THÁP SAU WAVE 15
                     if (currentWaveNum == 15 && !veznanBossSteppedDown && waveManager.currentWaveIndex >= 14) {
                         val aliveNonBoss = engine.getEntitiesFor(Family.all(EnemyComponent::class.java).get()).filter {
                             val ec = it.getComponent(EnemyComponent::class.java)
@@ -1914,6 +2371,7 @@ class PlayScreen(
                             val bPos = Level12TheDarkTower.balconyPosition
                             val startP = Level12TheDarkTower.pathNorthwest
 
+                            SoundManager.playWaveStart()
                             effectRenderer.shrapnelExplosions.add(ShrapnelExplosionEffect(Vector2(bPos)))
                             val veznanBoss = Entity().apply {
                                 add(TransformComponent(position = Vector2(startP.first())))
@@ -1922,7 +2380,7 @@ class PlayScreen(
                                 add(ArmorComponent(armorType = EnemyType.VEZNAN.armorType, magicResistType = EnemyType.VEZNAN.magicResist))
                                 add(EnemyComponent(enemyType = EnemyType.VEZNAN))
                                 add(MovementComponent(
-                                    speed = 20f, // TỐC ĐỘ 20f CHẬM RÃI VÀ UY NGHIÊM
+                                    speed = 20f,
                                     waypoints = startP.toMutableList()
                                 ))
                             }
@@ -1931,14 +2389,14 @@ class PlayScreen(
                     }
                 }
 
-                val enemies = engine.getEntitiesFor(Family.all(EnemyComponent::class.java, TransformComponent::class.java).get())
-                for (e in enemies) {
+                val enemiesForEggs = engine.getEntitiesFor(Family.all(EnemyComponent::class.java, TransformComponent::class.java).get()).toList()
+                for (e in enemiesForEggs) {
                     val eComp = e.getComponent(EnemyComponent::class.java)
                     if (eComp?.enemyType == EnemyType.SPIDER_MATRIARCH) {
                         eComp.eggLayTimer -= delta
                         if (eComp.eggLayTimer <= 0f) {
                             eComp.eggLayTimer = 10.0f
-                            val pos = e.getComponent(TransformComponent::class.java).position
+                            val pos = e.getComponent(TransformComponent::class.java)?.position ?: continue
                             val move = e.getComponent(MovementComponent::class.java)
 
                             val egg = Entity().apply {
@@ -1963,19 +2421,62 @@ class PlayScreen(
                         if (sc.sunrayChargeTimer <= 0f) {
                             sc.sunrayChargeTimer = 0f
                             sc.isSunrayReady = true
+                            SoundManager.playTowerUpgrade()
                         }
                     }
                 }
 
-                // XỬ LÝ CHIÊU THỨC CỦA BOSS J.T. & VEZ'NAN TRÊN SÂN ĐẤU
-                val allBosses = engine.getEntitiesFor(Family.all(EnemyComponent::class.java, TransformComponent::class.java).get())
-                for (bIdx in 0 until allBosses.size()) {
-                    val boss = allBosses.get(bIdx)
+                val allBosses = engine.getEntitiesFor(Family.all(EnemyComponent::class.java, TransformComponent::class.java).get()).toList()
+                for (boss in allBosses) {
                     val bComp = boss.getComponent(EnemyComponent::class.java)
                     val bTrans = boss.getComponent(TransformComponent::class.java)
                     val bMove = boss.getComponent(MovementComponent::class.java)
+                    val bHp = boss.getComponent(HealthComponent::class.java)
 
-                    // 1. BOSS J.T.
+                    if (bComp?.enemyType == EnemyType.JUGGERNAUT && bTrans != null && bHp != null && !bHp.isDead) {
+                        bComp.bossSummonTimer -= delta
+                        if (bComp.bossSummonTimer <= 0f) {
+                            bComp.bossSummonTimer = 6.0f
+                            val (targetRoadPos, remWps) = pickJuggernautSummonTarget()
+                            val cannonMuzzlePos = Vector2(bTrans.position.x + 24f, bTrans.position.y + 16f)
+                            SoundManager.playArtilleryFire()
+                            activeJuggernautBombs.add(
+                                JuggernautSummonBomb(
+                                    startPos = cannonMuzzlePos,
+                                    targetPos = targetRoadPos,
+                                    remainingWaypoints = remWps
+                                )
+                            )
+                        }
+
+                        bComp.bossMissileTimer -= delta
+                        if (bComp.bossMissileTimer <= 0f) {
+                            bComp.bossMissileTimer = 14.0f
+                            val soldiers = engine.getEntitiesFor(Family.all(SoldierComponent::class.java, TransformComponent::class.java, HealthComponent::class.java).get()).toList()
+                            val targetSoldier = soldiers.firstOrNull {
+                                val sHp = it.getComponent(HealthComponent::class.java)
+                                val sComp = it.getComponent(SoldierComponent::class.java)
+                                sHp != null && !sHp.isDead && sComp?.soldierRankName == "Imperial Guard"
+                            } ?: soldiers.firstOrNull {
+                                val sHp = it.getComponent(HealthComponent::class.java)
+                                sHp != null && !sHp.isDead
+                            }
+
+                            targetSoldier?.let { victim ->
+                                val vTrans = victim.getComponent(TransformComponent::class.java)
+                                val vHp = victim.getComponent(HealthComponent::class.java)
+                                if (vTrans != null && vHp != null) {
+                                    val muzzlePos = Vector2(bTrans.position.x + 24f, bTrans.position.y + 16f)
+                                    val hitPos = Vector2(vTrans.position)
+                                    SoundManager.playBombExplosion()
+                                    effectRenderer.sniperTrails.add(SniperTrailEffect(muzzlePos, hitPos))
+                                    effectRenderer.shrapnelExplosions.add(ShrapnelExplosionEffect(hitPos))
+                                    vHp.currentHealth -= 150f
+                                }
+                            }
+                        }
+                    }
+
                     if (bComp?.enemyType == EnemyType.JT && bTrans != null) {
                         if (bComp.jtRestingTimer > 0f) {
                             bComp.jtRestingTimer -= delta
@@ -1984,9 +2485,8 @@ class PlayScreen(
                             bMove?.isBlocked = false
                         }
 
-                        val soldiers = engine.getEntitiesFor(Family.all(SoldierComponent::class.java, TransformComponent::class.java).get())
-                        for (sIdx in 0 until soldiers.size()) {
-                            val sol = soldiers.get(sIdx)
+                        val soldiers = engine.getEntitiesFor(Family.all(SoldierComponent::class.java, TransformComponent::class.java).get()).toList()
+                        for (sol in soldiers) {
                             val sTrans = sol.getComponent(TransformComponent::class.java)
                             val sHp = sol.getComponent(HealthComponent::class.java)
                             if (sTrans != null && sHp != null && !sHp.isDead && sTrans.position.dst(bTrans.position) <= 32f) {
@@ -1997,9 +2497,8 @@ class PlayScreen(
                         bComp.jtFreezeCooldown -= delta
                         if (bComp.jtFreezeCooldown <= 0f) {
                             var frozeAny = false
-                            val towers = engine.getEntitiesFor(Family.all(TowerComponent::class.java, TransformComponent::class.java).get())
-                            for (tIdx in 0 until towers.size()) {
-                                val tw = towers.get(tIdx)
+                            val towers = engine.getEntitiesFor(Family.all(TowerComponent::class.java, TransformComponent::class.java).get()).toList()
+                            for (tw in towers) {
                                 val tc = tw.getComponent(TowerComponent::class.java)
                                 val tp = tw.getComponent(TransformComponent::class.java)?.position
                                 if (tc != null && tp != null && !tc.isFrozen && tc.specialization != TowerSpecialization.SUNRAY_TOWER && tp.dst(bTrans.position) <= 145f) {
@@ -2010,6 +2509,7 @@ class PlayScreen(
                             }
 
                             if (frozeAny) {
+                                SoundManager.playBombExplosion()
                                 effectRenderer.shrapnelExplosions.add(ShrapnelExplosionEffect(Vector2(bTrans.position)))
                                 bComp.jtRestingTimer = 3.5f
                                 bComp.jtFreezeCooldown = 12f
@@ -2017,11 +2517,9 @@ class PlayScreen(
                         }
                     }
 
-                    // 2. BOSS VEZ'NAN DẠNG 2: ĐẠI QUỶ ĐỎ THIÊU RỤI LÍNH DIỆN RỘNG
                     if (bComp?.enemyType == EnemyType.VEZNAN_DEMON && bTrans != null) {
-                        val soldiers = engine.getEntitiesFor(Family.all(SoldierComponent::class.java, TransformComponent::class.java).get())
-                        for (sIdx in 0 until soldiers.size()) {
-                            val sol = soldiers.get(sIdx)
+                        val soldiers = engine.getEntitiesFor(Family.all(SoldierComponent::class.java, TransformComponent::class.java).get()).toList()
+                        for (sol in soldiers) {
                             val sTrans = sol.getComponent(TransformComponent::class.java)
                             val sHp = sol.getComponent(HealthComponent::class.java)
                             if (sTrans != null && sHp != null && !sHp.isDead && sTrans.position.dst(bTrans.position) <= 45f) {
@@ -2031,26 +2529,27 @@ class PlayScreen(
                     }
                 }
 
-                val towers = engine.getEntitiesFor(Family.all(TowerComponent::class.java).get())
-                for (t in towers) {
+                val towersSnapshot = engine.getEntitiesFor(Family.all(TowerComponent::class.java, TransformComponent::class.java).get()).toList()
+                for (t in towersSnapshot) {
                     val tComp = t.getComponent(TowerComponent::class.java)
-                    if (tComp?.specialization == TowerSpecialization.SORCERER_MAGE && tComp.skill2Level > 0) {
+                    val tTrans = t.getComponent(TransformComponent::class.java)
+                    if (tComp?.specialization == TowerSpecialization.SORCERER_MAGE && tComp.skill2Level > 0 && tTrans != null) {
                         val golem = tComp.summonedGolem
                         val gHp = golem?.getComponent(HealthComponent::class.java)
                         if (golem == null || gHp == null || gHp.isDead || gHp.currentHealth <= 0f) {
                             if (tComp.skill2Cooldown > 0f) {
                                 tComp.skill2Cooldown -= delta
                             } else {
-                                val golemHp = 500f + tComp.skill2Level * 200f
-                                val spawnPos = if (tComp.golemRallyPoint.isZero) getNearestRoadPoint(t.getComponent(TransformComponent::class.java).position) else Vector2(tComp.golemRallyPoint)
+                                val golemHp = 500f + tComp.skill2Level * 100f
+                                val spawnPos = if (tComp.golemRallyPoint.isZero) getNearestRoadPoint(tTrans.position) else Vector2(tComp.golemRallyPoint)
                                 val newGolem = Entity().apply {
                                     add(TransformComponent(position = Vector2(spawnPos)))
                                     add(HealthComponent(maxHealth = golemHp, currentHealth = golemHp))
                                     add(ArmorComponent(armorType = ArmorType.HEAVY_ARMOR))
                                     add(SoldierComponent(
-                                        attackDamageMin = 30f + tComp.skill2Level * 15f,
-                                        attackDamageMax = 50f + tComp.skill2Level * 25f,
-                                        attackRate = 1.35f,
+                                        attackDamageMin = 20f + tComp.skill2Level * 10f,
+                                        attackDamageMax = 40f + tComp.skill2Level * 10f,
+                                        attackRate = 2.0f,
                                         regenPerSec = 20f,
                                         targetPosition = Vector2(spawnPos),
                                         parentTower = t,
@@ -2059,7 +2558,7 @@ class PlayScreen(
                                     ))
                                 }
                                 tComp.summonedGolem = newGolem
-                                tComp.skill2Cooldown = 10f
+                                tComp.skill2Cooldown = 8f
                                 engine.addEntity(newGolem)
                             }
                         }
@@ -2068,183 +2567,48 @@ class PlayScreen(
             }
         }
 
-        MapRenderer.render(shapeRenderer, currentLevel)
+        val isVictoryReady = waveManager.isLevelCompleted &&
+            (!veznanBossSteppedDown || engine.getEntitiesFor(Family.all(EnemyComponent::class.java).get()).size() == 0)
 
-        // VẼ HIỆU ỨNG VÒNG TRÒN MA THUẬT PHÁT SÁNG KHI ĐANG NẠP NĂNG LƯỢNG TRIỆU HỒI (MÀN 12)
-        if (glowingCircles.isNotEmpty()) {
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-            for (circle in glowingCircles) {
-                val cPos = circle.first
-                shapeRenderer.color = Color(0.75f, 0.20f, 0.95f, 0.45f)
-                shapeRenderer.circle(cPos.x, cPos.y, 40f)
-                shapeRenderer.color = Color(1f, 0.85f, 0.20f, 0.65f)
-                shapeRenderer.circle(cPos.x, cPos.y, 24f)
-            }
-            shapeRenderer.end()
+        if (isVictoryReady && !hasPlayedVictorySound) {
+            hasPlayedVictorySound = true
+            SoundManager.playVictory()
         }
 
-        effectRenderer.renderGroundPatches(shapeRenderer)
-        renderEntities()
-        effectRenderer.render(shapeRenderer)
-
-        GameUIRenderer.renderEarlyCallWaveButtons(
-            shapeRenderer, batch, font, smallFont, waveManager, currentLevel.allPaths
-        )
-
-        val maxLevel = when {
-            currentLevel.levelNumber == 0 -> 4
-            currentLevel.levelNumber == 5 -> if (waveManager.currentWaveDisplay >= 5) 4 else 3
-            currentLevel.levelNumber >= 6 -> 4
-            else -> currentLevel.maxTowerLevel
-        }
-
-        GameUIRenderer.renderWheelMenu(
-            shapeRenderer, batch, smallFont,
-            selectedSpot, selectedTower, previewBuildType, previewTowerAction,
-            isSettingRallyPoint, maxRallyRadius, buildOptions, ::getBranchSpecs,
-            maxLevelAllowed = maxLevel,
+        PlayScreenRenderer.render(
+            shapeRenderer = shapeRenderer,
+            batch = batch,
+            font = font,
+            smallFont = smallFont,
+            engine = engine,
+            currentLevel = currentLevel,
+            gameMode = gameMode,
+            waveManager = waveManager,
+            effectRenderer = effectRenderer,
+            glowingCircles = glowingCircles,
+            warningTowersMap = warningTowersMap,
+            lockedTowersMap = lockedTowersMap,
+            activeJuggernautBombs = activeJuggernautBombs,
+            selectedSpot = selectedSpot,
+            selectedTower = selectedTower,
+            selectedEnemy = selectedEnemy,
+            selectedSoldier = selectedSoldier,
+            previewBuildType = previewBuildType,
+            previewTowerAction = previewTowerAction,
+            isSettingRallyPoint = isSettingRallyPoint,
+            maxRallyRadius = maxRallyRadius,
+            buildOptions = buildOptions,
+            getBranchSpecs = ::getBranchSpecs,
             allowedTowers = allowedTowers,
-            currentLevelNumber = currentLevel.levelNumber,
-            isPreGame = (waveManager.currentWaveIndex == -1)
-        )
-
-        GameUIRenderer.renderSpellUI(
-            shapeRenderer, batch, font, smallFont,
-            selectedSpell, rainOfFireCooldown, reinforcementCooldown
-        )
-
-        GameUIRenderer.renderBottomInfoBar(
-            shapeRenderer, batch, font, smallFont,
-            selectedEnemy, selectedSoldier, selectedTower,
+            selectedSpell = selectedSpell,
+            rainOfFireCooldown = rainOfFireCooldown,
+            reinforcementCooldown = reinforcementCooldown,
+            isAimingSunrayTarget = isAimingSunrayTarget,
+            isGamePaused = isGamePaused,
+            isVictoryReady = isVictoryReady,
             onClearEnemySelection = { selectedEnemy = null },
             onClearSoldierSelection = { selectedSoldier = null }
         )
-
-        GameUIRenderer.renderHUD(
-            shapeRenderer, batch, font, waveManager, isSettingRallyPoint, isGamePaused
-        )
-
-        if (isAimingSunrayTarget) {
-            batch.begin()
-            drawOutlinedText(
-                batch, font,
-                "SELECT AN ENEMY TO FIRE SOLAR BEAM!",
-                Config.WORLD_WIDTH / 2f - 190f, 65f, Color.YELLOW
-            )
-            batch.end()
-        }
-
-        if (isGamePaused) {
-            GameUIRenderer.renderPauseMenu(shapeRenderer, batch, font, smallFont)
-        } else {
-            if (CheatManager.isCheatEnabled) {
-                GameUIRenderer.renderCheatFloatingButton(shapeRenderer, batch, font)
-                if (CheatManager.isCheatMenuOpen) {
-                    GameUIRenderer.renderCheatMenuPopup(shapeRenderer, batch, font, smallFont)
-                }
-            }
-        }
-
-        if (waveManager.isLevelCompleted && (!veznanBossSteppedDown || engine.getEntitiesFor(Family.all(EnemyComponent::class.java).get()).size() == 0)) {
-            val earnedStars = if (gameMode == GameMode.CAMPAIGN) {
-                when {
-                    EconomyManager.lives >= 18 -> 3
-                    EconomyManager.lives >= 6 -> 2
-                    EconomyManager.lives >= 1 -> 1
-                    else -> 0
-                }
-            } else {
-                1
-            }
-            GameUIRenderer.renderVictoryDialog(
-                shapeRenderer, batch, font, smallFont, earnedStars,
-                isChallengeMode = (gameMode != GameMode.CAMPAIGN)
-            )
-        }
-    }
-
-    private fun renderEntities() {
-        val spots = engine.getEntitiesFor(Family.all(TowerSpotComponent::class.java, TransformComponent::class.java).get())
-        val towers = engine.getEntitiesFor(Family.all(TowerComponent::class.java, TransformComponent::class.java).get())
-        val enemies = engine.getEntitiesFor(Family.all(EnemyComponent::class.java, TransformComponent::class.java).get())
-        val eggs = engine.getEntitiesFor(Family.all(SpiderEggComponent::class.java, TransformComponent::class.java).get())
-        val soldiers = engine.getEntitiesFor(Family.all(SoldierComponent::class.java, TransformComponent::class.java).get())
-        val projectiles = engine.getEntitiesFor(Family.all(ProjectileComponent::class.java, TransformComponent::class.java).get())
-
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        for (s in spots) {
-            if (!s.getComponent(TowerSpotComponent::class.java).isOccupied) {
-                val p = s.getComponent(TransformComponent::class.java).position
-                shapeRenderer.color = Color(0.48f, 0.45f, 0.38f, 1f)
-                shapeRenderer.circle(p.x, p.y, 25f)
-                shapeRenderer.color = Color(0.62f, 0.58f, 0.48f, 1f)
-                shapeRenderer.circle(p.x, p.y, 19f)
-            }
-        }
-
-        for (egg in eggs) {
-            EnemyRenderer.renderEgg(shapeRenderer, egg)
-        }
-
-        for (t in towers) {
-            TowerRenderer.render(shapeRenderer, t)
-
-            val tPos = t.getComponent(TransformComponent::class.java)?.position
-            val tComp = t.getComponent(TowerComponent::class.java)
-
-            // VẼ HIỆU ỨNG CẢNH BÁO SẮP BỊ KHÓA (VẪN BẮN ĐƯỢC, CHẶN WHEEL)
-            if (warningTowersMap.containsKey(t) && tPos != null) {
-                shapeRenderer.color = Color(0.95f, 0.35f, 1.0f, 0.35f)
-                shapeRenderer.circle(tPos.x, tPos.y, 38f)
-            }
-
-            // HIỆU ỨNG PHONG ẤN THÁP CỦA VEZ'NAN KHI ĐÃ BỊ KHÓA HOÀN TOÀN
-            if (tComp != null && tComp.isFrozen && tPos != null) {
-                val lockState = lockedTowersMap[t]
-                if (lockState != null && lockState.isUndispellable) {
-                    shapeRenderer.color = Color(0.65f, 0.15f, 0.85f, 0.70f) // Tím đậm cấm mở
-                } else {
-                    shapeRenderer.color = Color(0.85f, 0.25f, 0.95f, 0.50f) // Tím cho phép click mở
-                }
-                shapeRenderer.circle(tPos.x, tPos.y, 34f)
-                shapeRenderer.color = Color(1f, 0.85f, 0.25f, 0.85f)
-                shapeRenderer.circle(tPos.x, tPos.y, 16f)
-            }
-        }
-
-        for (sol in soldiers) {
-            SoldierRenderer.render(shapeRenderer, sol)
-        }
-
-        for (e in enemies) {
-            val move = e.getComponent(MovementComponent::class.java)
-            if (move?.isInsideTunnel == true) continue
-            val eComp = e.getComponent(EnemyComponent::class.java)
-            val eTrans = e.getComponent(TransformComponent::class.java)
-
-            // VẼ HÀO QUANG KHI BOSS VEZ'NAN ĐỨNG YÊN NIỆM CHÚ
-            if (eComp?.enemyType == EnemyType.VEZNAN && eTrans != null) {
-                val isBossCasting = glowingCircles.isNotEmpty() || warningTowersMap.isNotEmpty()
-                if (isBossCasting) {
-                    shapeRenderer.color = Color(0.85f, 0.20f, 0.95f, 0.40f)
-                    shapeRenderer.circle(eTrans.position.x, eTrans.position.y, 32f)
-                }
-            }
-
-            EnemyRenderer.render(shapeRenderer, e)
-        }
-
-        for (proj in projectiles) {
-            val p = proj.getComponent(TransformComponent::class.java).position
-            val pComp = proj.getComponent(ProjectileComponent::class.java)
-            shapeRenderer.color = pComp.color
-            when (pComp.type) {
-                ProjectileType.ARROW -> shapeRenderer.rect(p.x - 2f, p.y - 2f, 8f, 4f)
-                ProjectileType.MAGIC_BOLT -> shapeRenderer.circle(p.x, p.y, 6.5f)
-                ProjectileType.BOMB -> shapeRenderer.circle(p.x, p.y, 9.5f)
-            }
-        }
-        shapeRenderer.end()
     }
 
     override fun resize(width: Int, height: Int) {

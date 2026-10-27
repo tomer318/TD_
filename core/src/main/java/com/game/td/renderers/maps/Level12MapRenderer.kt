@@ -7,8 +7,9 @@ import com.game.td.map.Level12TheDarkTower
 
 object Level12MapRenderer {
 
-    // Cờ kiểm soát hiển thị Vez'nan trên ban công
+    // Cờ kiểm soát hiển thị Vez'nan trên ban công (Campaign) hoặc biển "FOR SALE" (Heroic/Iron)
     var isVeznanOnBalcony: Boolean = true
+    var showForSaleSign: Boolean = false
 
     fun render(shapeRenderer: ShapeRenderer) {
         // 1. NỀN TRO NÚI LỬA XÁM SẪM ĐẶC TRƯNG VÙNG WASTES
@@ -52,10 +53,11 @@ object Level12MapRenderer {
         drawPath(shapeRenderer, pathNE, 46f)
         drawPath(shapeRenderer, pathG, 30f)
 
-        // 4. 3 VÒNG TRÒN MA THUẬT PENTAGRAM NỔI BẬT
-        drawSummoningPentagram(shapeRenderer, Level12TheDarkTower.summoningCircleTop, 36f)
-        drawSummoningPentagram(shapeRenderer, Level12TheDarkTower.summoningCircleCenter, 36f)
-        drawSummoningPentagram(shapeRenderer, Level12TheDarkTower.summoningCircleBottom, 36f)
+        // 4. 3 VÒNG TRÒN MA THUẬT PENTAGRAM (TẮT NĂNG LƯỢNG KHI Ở CHẾ ĐỘ HEROIC / IRON)
+        val isCircleDormant = showForSaleSign
+        drawSummoningPentagram(shapeRenderer, Level12TheDarkTower.summoningCircleTop, 36f, isCircleDormant)
+        drawSummoningPentagram(shapeRenderer, Level12TheDarkTower.summoningCircleCenter, 36f, isCircleDormant)
+        drawSummoningPentagram(shapeRenderer, Level12TheDarkTower.summoningCircleBottom, 36f, isCircleDormant)
 
         // 5. KHU VỰC NGHĨA ĐỊA (VẼ ĐÈ LÊN TRÊN ĐƯỜNG ĐI)
         val gPos = Level12TheDarkTower.graveyardPosition
@@ -113,8 +115,11 @@ object Level12MapRenderer {
         shapeRenderer.triangle(bX - 8f, bY - 2f, bX, bY + 6f, bX + 8f, bY - 2f)
         shapeRenderer.triangle(bX + 18f, bY - 2f, bX + 26f, bY + 6f, bX + 34f, bY - 2f)
 
-        // CHỈ VẼ VEZ'NAN TRÊN BAN CÔNG KHI CHƯA XUỐNG SÂN
-        if (isVeznanOnBalcony) {
+        if (showForSaleSign) {
+            // VẼ BIỂN GỖ "FOR SALE" TRÊN BAN CÔNG (CHẾ ĐỘ HEROIC & IRON)
+            drawForSaleSignOnBalcony(shapeRenderer, bX, bY)
+        } else if (isVeznanOnBalcony) {
+            // VẼ VEZ'NAN TRÊN BAN CÔNG KHI CHƯA XUỐNG SÂN (CHẾ ĐỘ CAMPAIGN)
             shapeRenderer.color = Color(0.35f, 0.18f, 0.45f, 1f)
             shapeRenderer.rect(bX - 9f, bY - 2f, 18f, 24f)
             shapeRenderer.circle(bX, bY + 12f, 11f)
@@ -139,6 +144,28 @@ object Level12MapRenderer {
             shapeRenderer.color = Color(1f, 0.85f, 0.20f, 1f)
             shapeRenderer.circle(bX - 14.5f, bY + 25f, 3f)
         }
+    }
+
+    // VẼ BIỂN GỖ "FOR SALE" TRÊN BAN CÔNG THÁP ĐEN
+    private fun drawForSaleSignOnBalcony(sr: ShapeRenderer, bX: Float, bY: Float) {
+        // Cọc gỗ cắm biển
+        sr.color = Color(0.36f, 0.22f, 0.11f, 1f)
+        sr.rect(bX - 3f, bY - 2f, 6f, 34f)
+
+        // Khung viền biển gỗ đậm
+        sr.color = Color(0.32f, 0.19f, 0.09f, 1f)
+        sr.rect(bX - 29f, bY + 10f, 58f, 24f)
+
+        // Mặt bảng gỗ sáng màu vàng nâu
+        sr.color = Color(0.76f, 0.56f, 0.30f, 1f)
+        sr.rect(bX - 27f, bY + 12f, 54f, 20f)
+
+        // Vân ván gỗ ngang và 2 đinh tán
+        sr.color = Color(0.62f, 0.44f, 0.22f, 1f)
+        sr.rect(bX - 27f, bY + 21f, 54f, 1.5f)
+        sr.color = Color(0.25f, 0.25f, 0.28f, 1f)
+        sr.circle(bX - 23f, bY + 28f, 1.5f)
+        sr.circle(bX + 23f, bY + 28f, 1.5f)
     }
 
     private fun drawPath(sr: ShapeRenderer, pts: List<Vector2>, width: Float) {
@@ -185,7 +212,29 @@ object Level12MapRenderer {
         sr.rect(x - 3.5f, y + 1f, 7f, 2f)
     }
 
-    private fun drawSummoningPentagram(sr: ShapeRenderer, center: Vector2, radius: Float) {
+    private fun drawSummoningPentagram(sr: ShapeRenderer, center: Vector2, radius: Float, isDormant: Boolean = false) {
+        if (isDormant) {
+            // Vòng đá cổ tự đã tắt năng lượng khi chơi Heroic / Iron
+            sr.color = Color(0.45f, 0.44f, 0.48f, 1f)
+            sr.circle(center.x, center.y, radius)
+            sr.color = Color(0.58f, 0.58f, 0.62f, 1f)
+            sr.circle(center.x, center.y, radius - 3f)
+
+            val points = mutableListOf<Vector2>()
+            for (i in 0 until 5) {
+                val angle = Math.toRadians((90.0 + i * 72.0))
+                val px = center.x + (radius * 0.70f * Math.cos(angle)).toFloat()
+                val py = center.y + (radius * 0.70f * Math.sin(angle)).toFloat()
+                points.add(Vector2(px, py))
+            }
+            sr.color = Color(0.46f, 0.45f, 0.49f, 1f)
+            for (i in 0 until 5) {
+                val next = (i + 2) % 5
+                sr.rectLine(points[i], points[next], 2.5f)
+            }
+            return
+        }
+
         sr.color = Color(0.28f, 0.14f, 0.35f, 1f)
         sr.circle(center.x, center.y, radius)
 

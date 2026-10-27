@@ -5,7 +5,11 @@ import com.game.td.ecs.components.EnemyType
 
 object Level12TheDarkTower {
 
-    // 1. ĐƯỜNG ĐỎ (TÂY BẮC): QUA VÒNG TRÒN TRÊN RỒI QUẸO XUỐNG LUÔN TẦNG GIỮA
+    const val campaignStartingGold = 1300
+    const val heroicStartingGold = 2500
+    const val ironStartingGold = 2800
+
+    // 1. ĐƯỜNG ĐỎ (TÂY BẮC - NORTHWEST: pathIndex = 0)
     val pathNorthwest = listOf(
         Vector2(450f, 620f),
         Vector2(320f, 590f),
@@ -31,7 +35,7 @@ object Level12TheDarkTower {
         Vector2(890f, -40f)
     )
 
-    // 2. ĐƯỜNG VÀNG (ĐÔNG BẮC): CỔNG PHẢI VÒNG XUỐNG TẦNG GIỮA QUA VÒNG TRÒN TRUNG TÂM
+    // 2. ĐƯỜNG VÀNG (ĐÔNG BẮC - NORTHEAST: pathIndex = 1)
     val pathNortheast = listOf(
         Vector2(830f, 620f),
         Vector2(950f, 600f),
@@ -54,7 +58,7 @@ object Level12TheDarkTower {
         Vector2(890f, -40f)
     )
 
-    // 3. ĐƯỜNG XANH DƯƠNG: BÃI THA MA (GRAVEYARD)
+    // 3. ĐƯỜNG XANH DƯƠNG: BÃI THA MA (GRAVEYARD: pathIndex = 2)
     val pathGraveyard = listOf(
         Vector2(210f, 335f),
         Vector2(300f, 280f),
@@ -81,6 +85,7 @@ object Level12TheDarkTower {
         pathGraveyard
     )
 
+    // 13 VỊ TRÍ CỌC THÁP CHIẾN LƯỢC
     val towerSpotsList = listOf(
         Vector2(420f, 560f),
         Vector2(850f, 550f),
@@ -97,9 +102,8 @@ object Level12TheDarkTower {
         Vector2(940f, 155f)
     )
 
-    // 15 WAVES CAMPAIGN - ĐÃ ĐIỀU CHỈNH KHOẢNG CÁCH VÀ CÂN BẰNG TỪNG WAVE
+    // 15 WAVES CAMPAIGN
     val campaignWaves = listOf(
-        // Wave 1
         WaveData(listOf(
             WaveSpawnInfo(EnemyType.DEMON_SPAWN, 4, 1.4f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.DEMON_HOUND, 2, 2.0f, pathIndex = 0),
@@ -107,29 +111,25 @@ object Level12TheDarkTower {
             WaveSpawnInfo(EnemyType.BRIGAND, 6, 1.3f, pathIndex = 1),
             WaveSpawnInfo(EnemyType.NECROMANCER, 1, 3.5f, pathIndex = 1)
         )),
-        // Wave 2
         WaveData(listOf(
             WaveSpawnInfo(EnemyType.GARGOYLE, 5, 2.0f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.DEMON_IMP, 1, 3.0f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.GARGOYLE, 5, 2.0f, pathIndex = 1),
             WaveSpawnInfo(EnemyType.DEMON_IMP, 1, 3.0f, pathIndex = 1)
         )),
-        // Wave 3
         WaveData(listOf(
             WaveSpawnInfo(EnemyType.DEMON_SPAWN, 6, 1.2f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.DEMON_HOUND, 3, 2.0f, pathIndex = 0),
-            WaveSpawnInfo(EnemyType.DEMON_LORD, 1, 4.5f, pathIndex = 0), // Demon Lord cách xa quái nhỏ
+            WaveSpawnInfo(EnemyType.DEMON_LORD, 1, 4.5f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.DEMON_SPAWN, 4, 1.4f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.DEMON_HOUND, 2, 2.0f, pathIndex = 0)
         )),
-        // Wave 4: Dark Knight đi giãn cách để trụ kịp phá giáp
         WaveData(listOf(
             WaveSpawnInfo(EnemyType.DARK_KNIGHT, 6, 3.0f, pathIndex = 1),
             WaveSpawnInfo(EnemyType.SHADOW_ARCHER, 4, 1.6f, pathIndex = 1),
             WaveSpawnInfo(EnemyType.DARK_KNIGHT, 6, 3.2f, pathIndex = 1),
             WaveSpawnInfo(EnemyType.SHADOW_ARCHER, 4, 1.6f, pathIndex = 1)
         )),
-        // Wave 5
         WaveData(listOf(
             WaveSpawnInfo(EnemyType.BANDIT, 8, 1.3f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.BRIGAND, 2, 1.6f, pathIndex = 0),
@@ -142,7 +142,6 @@ object Level12TheDarkTower {
             WaveSpawnInfo(EnemyType.BANDIT, 8, 1.3f, pathIndex = 1),
             WaveSpawnInfo(EnemyType.MARAUDER, 1, 3.5f, pathIndex = 1)
         )),
-        // Wave 6
         WaveData(listOf(
             WaveSpawnInfo(EnemyType.BANDIT, 8, 1.3f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.BRIGAND, 6, 1.4f, pathIndex = 0),
@@ -153,12 +152,10 @@ object Level12TheDarkTower {
             WaveSpawnInfo(EnemyType.DARK_KNIGHT, 4, 2.8f, pathIndex = 1),
             WaveSpawnInfo(EnemyType.SHADOW_ARCHER, 6, 1.5f, pathIndex = 1)
         )),
-        // Wave 7
         WaveData(listOf(
             WaveSpawnInfo(EnemyType.ROCKET_RIDER, 6, 2.5f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.ROCKET_RIDER, 6, 2.5f, pathIndex = 1)
         )),
-        // Wave 8: Necromancer giãn cách lớn (4.0s)
         WaveData(listOf(
             WaveSpawnInfo(EnemyType.WORG, 6, 1.2f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.NECROMANCER, 1, 4.0f, pathIndex = 0),
@@ -169,7 +166,6 @@ object Level12TheDarkTower {
             WaveSpawnInfo(EnemyType.WORG, 6, 1.2f, pathIndex = 1),
             WaveSpawnInfo(EnemyType.NECROMANCER, 2, 4.0f, pathIndex = 1)
         )),
-        // Wave 9: Nhện mẹ Matriarch cách nhau 4.5s để không đẻ trứng quá tải
         WaveData(listOf(
             WaveSpawnInfo(EnemyType.GIANT_SPIDER, 12, 1.0f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.SPIDER_MATRIARCH, 4, 4.5f, pathIndex = 0),
@@ -180,7 +176,6 @@ object Level12TheDarkTower {
             WaveSpawnInfo(EnemyType.GIANT_SPIDER, 13, 1.0f, pathIndex = 1),
             WaveSpawnInfo(EnemyType.SPIDER_MATRIARCH, 4, 4.5f, pathIndex = 1)
         )),
-        // Wave 10
         WaveData(listOf(
             WaveSpawnInfo(EnemyType.DEMON_SPAWN, 6, 1.3f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.DEMON_HOUND, 6, 1.8f, pathIndex = 0),
@@ -189,17 +184,14 @@ object Level12TheDarkTower {
             WaveSpawnInfo(EnemyType.DARK_KNIGHT, 6, 3.0f, pathIndex = 1),
             WaveSpawnInfo(EnemyType.DARK_SLAYER, 1, 5.5f, pathIndex = 1)
         )),
-        // Wave 11
         WaveData(listOf(
             WaveSpawnInfo(EnemyType.DEMON_IMP, 10, 2.0f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.DEMON_IMP, 10, 2.0f, pathIndex = 1)
         )),
-        // Wave 12: Magma Elemental giãn cách lớn (6.0s) không đi dính chùm
         WaveData(listOf(
             WaveSpawnInfo(EnemyType.MAGMA_ELEMENTAL, 3, 6.0f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.MAGMA_ELEMENTAL, 3, 6.0f, pathIndex = 1)
         )),
-        // Wave 13
         WaveData(listOf(
             WaveSpawnInfo(EnemyType.DEMON_SPAWN, 7, 1.2f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.DEMON_HOUND, 3, 1.8f, pathIndex = 0),
@@ -214,7 +206,6 @@ object Level12TheDarkTower {
             WaveSpawnInfo(EnemyType.DARK_KNIGHT, 3, 3.0f, pathIndex = 1),
             WaveSpawnInfo(EnemyType.DARK_SLAYER, 1, 5.5f, pathIndex = 1)
         )),
-        // Wave 14
         WaveData(listOf(
             WaveSpawnInfo(EnemyType.DEMON_SPAWN, 28, 1.4f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.DARK_KNIGHT, 5, 3.0f, pathIndex = 1),
@@ -224,23 +215,17 @@ object Level12TheDarkTower {
             WaveSpawnInfo(EnemyType.SHADOW_ARCHER, 5, 1.5f, pathIndex = 1),
             WaveSpawnInfo(EnemyType.NECROMANCER, 2, 4.5f, pathIndex = 1)
         )),
-        // Wave 15: CHIA LÀM 3 ĐỢT HÀNH QUÂN RÕ RỆT (Tiền phong -> Chủ lực -> Tử thủ)
         WaveData(listOf(
-            // Đợt 1: Tiền phong
             WaveSpawnInfo(EnemyType.DEMON_SPAWN, 8, 1.3f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.MAGMA_ELEMENTAL, 1, 6.0f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.DARK_KNIGHT, 4, 3.0f, pathIndex = 1),
             WaveSpawnInfo(EnemyType.MAGMA_ELEMENTAL, 1, 6.0f, pathIndex = 1),
-
-            // Đợt 2: Chủ lực
             WaveSpawnInfo(EnemyType.DEMON_LORD, 2, 5.0f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.DEMON_SPAWN, 8, 1.3f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.MAGMA_ELEMENTAL, 1, 6.0f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.DARK_SLAYER, 2, 5.0f, pathIndex = 1),
             WaveSpawnInfo(EnemyType.DARK_KNIGHT, 4, 3.0f, pathIndex = 1),
             WaveSpawnInfo(EnemyType.MAGMA_ELEMENTAL, 1, 6.0f, pathIndex = 1),
-
-            // Đợt 3: Tử thủ
             WaveSpawnInfo(EnemyType.DEMON_LORD, 2, 5.5f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.DEMON_SPAWN, 8, 1.3f, pathIndex = 0),
             WaveSpawnInfo(EnemyType.MAGMA_ELEMENTAL, 1, 6.0f, pathIndex = 0),
@@ -250,10 +235,97 @@ object Level12TheDarkTower {
         ))
     )
 
+    // =========================================================================
+    // 6 WAVES HEROIC CHALLENGE MÀN 12 CHUẨN WIKI (2500 GOLD - NO VEZ'NAN / NO PORTALS)
+    // =========================================================================
+    val heroicWaves = listOf(
+        // Wave 1: Northwest (Demon Spawn x18, Demon Hound x6, Demon Lord x1) | Northeast (Brigand x16, Dark Knight x8, Marauder x3)
+        WaveData(listOf(
+            WaveSpawnInfo(EnemyType.DEMON_SPAWN, 18, 1.0f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.DEMON_HOUND, 6, 1.4f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.DEMON_LORD, 1, 4.0f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.BRIGAND, 16, 1.0f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.DARK_KNIGHT, 8, 1.6f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.MARAUDER, 3, 3.0f, pathIndex = 1)
+        )),
+        // Wave 2: Northwest (Gargoyle x20, Demon Imp x8) | Northeast (Gargoyle x20, Rocket Rider x6)
+        WaveData(listOf(
+            WaveSpawnInfo(EnemyType.GARGOYLE, 20, 0.9f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.DEMON_IMP, 8, 1.3f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.GARGOYLE, 20, 0.9f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.ROCKET_RIDER, 6, 1.8f, pathIndex = 1)
+        )),
+        // Wave 3: Northwest (Demon Spawn x24, Demon Hound x10, Demon Lord x2) | Northeast (Worg x12, Necromancer x4, Dark Knight x12, Shadow Archer x8)
+        WaveData(listOf(
+            WaveSpawnInfo(EnemyType.DEMON_SPAWN, 24, 0.85f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.DEMON_HOUND, 10, 1.3f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.DEMON_LORD, 2, 3.5f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.WORG, 12, 1.1f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.NECROMANCER, 4, 3.0f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.DARK_KNIGHT, 12, 1.4f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.SHADOW_ARCHER, 8, 1.2f, pathIndex = 1)
+        )),
+        // Wave 4: Northwest (Giant Spider x24, Spider Matriarch x8, Demon Imp x8) | Northeast (Giant Spider x24, Spider Matriarch x8, Rocket Rider x6)
+        WaveData(listOf(
+            WaveSpawnInfo(EnemyType.GIANT_SPIDER, 24, 0.75f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.SPIDER_MATRIARCH, 8, 2.5f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.DEMON_IMP, 8, 1.3f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.GIANT_SPIDER, 24, 0.75f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.SPIDER_MATRIARCH, 8, 2.5f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.ROCKET_RIDER, 6, 1.8f, pathIndex = 1)
+        )),
+        // Wave 5: Northwest (Demon Spawn x30, Demon Hound x12, Demon Lord x3, Magma Elemental x2) | Northeast (Dark Knight x16, Dark Slayer x4, Shadow Archer x12, Necromancer x4)
+        WaveData(listOf(
+            WaveSpawnInfo(EnemyType.DEMON_SPAWN, 30, 0.80f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.DEMON_HOUND, 12, 1.2f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.DEMON_LORD, 3, 3.5f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.MAGMA_ELEMENTAL, 2, 4.5f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.DARK_KNIGHT, 16, 1.2f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.DARK_SLAYER, 4, 3.2f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.SHADOW_ARCHER, 12, 1.1f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.NECROMANCER, 4, 3.0f, pathIndex = 1)
+        )),
+        // Wave 6: Northwest (Demon Spawn x36, Demon Lord x4, Magma Elemental x4) | Northeast (Dark Knight x22, Dark Slayer x5, Necromancer x4, Magma Elemental x4)
+        WaveData(listOf(
+            WaveSpawnInfo(EnemyType.DEMON_SPAWN, 36, 0.75f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.DEMON_LORD, 4, 3.2f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.MAGMA_ELEMENTAL, 4, 4.5f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.DARK_KNIGHT, 22, 1.1f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.DARK_SLAYER, 5, 3.0f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.NECROMANCER, 4, 2.8f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.MAGMA_ELEMENTAL, 4, 4.5f, pathIndex = 1)
+        ))
+    )
+
+    // =========================================================================
+    // 1 WAVE IRON CHALLENGE MÀN 12 CHUẨN WIKI (2800 GOLD - ARCHER, MAGE, BARRACKS ONLY)
+    // =========================================================================
+    val ironWaves = listOf(
+        WaveData(listOf(
+            // Northwest (pathIndex = 0): Demon Spawn x74, Demon Lord x11, Gargoyle x14, Demon Imp x5, Demon Hound x8, Magma Elemental x5
+            WaveSpawnInfo(EnemyType.DEMON_SPAWN, 74, 0.70f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.DEMON_LORD, 11, 3.5f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.GARGOYLE, 14, 1.2f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.DEMON_IMP, 5, 1.8f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.DEMON_HOUND, 8, 1.5f, pathIndex = 0),
+            WaveSpawnInfo(EnemyType.MAGMA_ELEMENTAL, 5, 5.0f, pathIndex = 0),
+
+            // Northeast (pathIndex = 1): Marauder x4, Brigand x29, Necromancer x4, Dark Slayer x8, Dark Knight x10, Shadow Archer x12, Worg x10, Magma Elemental x5
+            WaveSpawnInfo(EnemyType.MARAUDER, 4, 3.2f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.BRIGAND, 29, 0.90f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.NECROMANCER, 4, 3.5f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.DARK_SLAYER, 8, 3.5f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.DARK_KNIGHT, 10, 1.8f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.SHADOW_ARCHER, 12, 1.4f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.WORG, 10, 1.4f, pathIndex = 1),
+            WaveSpawnInfo(EnemyType.MAGMA_ELEMENTAL, 5, 5.0f, pathIndex = 1)
+        ))
+    )
+
     val data = LevelData(
         levelNumber = 12,
         levelName = "The Dark Tower",
-        startingGold = 1300,
+        startingGold = campaignStartingGold,
         startingLives = 20,
         paths = allLevelPaths,
         towerSpots = towerSpotsList,

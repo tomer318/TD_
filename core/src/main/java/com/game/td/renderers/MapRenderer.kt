@@ -27,7 +27,8 @@ object MapRenderer {
             12 -> Level12MapRenderer.render(shapeRenderer)
         }
 
-        if (levelData.levelNumber !in listOf(6, 7, 8, 9, 10, 11, 12)) {
+        // BỔ SUNG MÀN 4 VÀ MÀN 5 VÀO DANH SÁCH TỰ VẼ ĐƯỜNG ĐỂ KHÔNG BỊ ĐÈ LÊN CÔNG TRÌNH & RỪNG NHỆN
+        if (levelData.levelNumber !in listOf(4, 5, 6, 7, 8, 9, 10, 11, 12)) {
             val allPaths = levelData.allPaths
 
             shapeRenderer.color = Color(0.55f, 0.44f, 0.26f, 1f)

@@ -44,8 +44,8 @@ enum class EnemyType(
     DARK_KNIGHT("Dark Knight", 240f, 300f, 360f, 34f, 15f, 25f, ArmorType.HEAVY_ARMOR, MagicResistType.NONE, 25, 1),
     GARGOYLE("Gargoyle", 72f, 90f, 108f, 45f, 0f, 0f, ArmorType.NONE, MagicResistType.NONE, 12, 1, isFlying = true),
     SHADOW_ARCHER("Shadow Archer", 144f, 180f, 216f, 52f, 20f, 30f, ArmorType.NONE, MagicResistType.LOW, 16, 1, canRangedAttack = true, rangedRange = 145f, rangedDmgMin = 10f, rangedDmgMax = 20f),
-    GOLEM_HEAD("Golem Head", 100f, 120f, 150f, 75f, 10f, 20f, ArmorType.MEDIUM_ARMOR, MagicResistType.NONE, 0, 1),
-    JUGGERNAUT("The Juggernaut", 8000f, 10000f, 12000f, 22f, 150f, 25f, ArmorType.NONE, MagicResistType.NONE, 250, 20),
+    GOLEM_HEAD("Golem Head", 100f, 120f, 150f, 30f, 10f, 20f, ArmorType.MEDIUM_ARMOR, MagicResistType.NONE, 10, 1),
+    JUGGERNAUT("The Juggernaut", 8000f, 10000f, 12000f, 22f, 150f, 250f, ArmorType.NONE, MagicResistType.NONE, 250, 20, isAreaAttack = true),
     TROLL("Troll", 224f, 280f, 336f, 40f, 20f, 40f, ArmorType.NONE, MagicResistType.NONE, 25, 1),
     WINTER_WOLF("Winter Wolf", 280f, 350f, 420f, 88f, 20f, 40f, ArmorType.NONE, MagicResistType.MEDIUM, 35, 1, 0.30f),
     TROLL_CHAMPION("Troll Champion", 480f, 600f, 720f, 46f, 30f, 50f, ArmorType.NONE, MagicResistType.NONE, 50, 3, canRangedAttack = true, rangedRange = 155f, rangedDmgMin = 40f, rangedDmgMax = 80f),
@@ -167,8 +167,8 @@ class EnemyComponent(
         EnemyType.VEZNAN -> 2.5f
         else -> 1.45f
     },
-    var bossSummonTimer: Float = 6.0f,
-    var bossMissileTimer: Float = 14.0f,
+    var bossSummonTimer: Float = 3.5f,
+    var bossMissileTimer: Float = 10.0f,
 
     val regenPerSec: Float = when (enemyType) {
         EnemyType.TROLL -> 5f
@@ -195,6 +195,10 @@ class EnemyComponent(
     var veznanFlameBreathTimer: Float = 0f,
 
     var burnDuration: Float = 0f,
+
+    var isCursed: Boolean = false,
+    var curseTimer: Float = 0f,
+    var curseTickTimer: Float = 0f,
 
     var isSummonedMinion: Boolean = false,
     var infernalShieldHitsRemaining: Int = 0,
