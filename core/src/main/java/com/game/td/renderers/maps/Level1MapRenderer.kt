@@ -3,9 +3,22 @@ package com.game.td.renderers.maps
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector2
+import com.game.td.map.Level1Southport
+import com.game.td.renderers.MapRenderer
 
 object Level1MapRenderer {
     fun render(shapeRenderer: ShapeRenderer) {
+        // 1. VẼ ĐƯỜNG ĐI TRƯỚC ĐỂ CÁC CHI TIẾT & BIỂU TƯỢNG PHÒNG THỦ NỔI LÊN TRÊN
+        MapRenderer.drawStandardDirtPaths(shapeRenderer, Level1Southport.data.allPaths)
+
+        // 2. VÒNG TRÒN PHÒNG THỦ DƯỚI ĐẤT & 2 CỜ HIỆU LINIREA TẠI CỔNG ĐÔNG (PHẢI)
+        MapRenderer.drawDefensePoint(
+            sr = shapeRenderer,
+            crestX = 1220f, crestY = 255f,
+            flag1X = 1220f, flag1Y = 296f,
+            flag2X = 1220f, flag2Y = 202f
+        )
+
         // A. CỤM RỪNG LỚN PHÍA TÂY
         val westForest = listOf(
             Vector2(20f, 700f), Vector2(80f, 690f), Vector2(140f, 680f), Vector2(200f, 670f), Vector2(260f, 650f), Vector2(320f, 620f),

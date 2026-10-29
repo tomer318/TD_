@@ -305,6 +305,7 @@ class PlayScreen(
                 if (currentLevel.levelNumber > 0) {
                     entity.getComponent(EnemyComponent::class.java)?.let { eComp ->
                         EncyclopediaManager.unlockEnemy(eComp.enemyType)
+                        TutorialRenderer.onEnemySpawned(eComp.enemyType)
                     }
                 }
             }
@@ -556,6 +557,7 @@ class PlayScreen(
         Level12MapRenderer.isVeznanOnBalcony = (gameMode == GameMode.CAMPAIGN)
         Level12MapRenderer.showForSaleSign = (gameMode != GameMode.CAMPAIGN)
         effectRenderer.clear()
+        TutorialRenderer.initForLevel(currentLevel.levelNumber, gameMode)
     }
 
     private fun pickJuggernautSummonTarget(): Pair<Vector2, List<Vector2>> {
@@ -724,6 +726,21 @@ class PlayScreen(
         val cX = Config.WORLD_WIDTH / 2f
         val cY = Config.WORLD_HEIGHT / 2f
 
+        if (TutorialRenderer.isModalOpen()) {
+            TutorialRenderer.handleTouch(
+                x = x,
+                y = y,
+                onUnlockReinforcements = { reinforcementCooldown = 0f },
+                onUnlockRainOfFire = { rainOfFireCooldown = 0f }
+            )
+            return
+        }
+
+        if (!isGamePaused && TutorialRenderer.handleBadgeTouch(x, y)) {
+            clearSelections()
+            return
+        }
+
         if (isGamePaused) {
             if (x in (cX - 120f)..(cX + 120f) && y in (cY + 50f)..(cY + 94f)) {
                 SoundManager.playClick()
@@ -783,7 +800,7 @@ class PlayScreen(
                     SoundManager.playVictory()
                     CheatManager.isCheatMenuOpen = false
                     EconomyManager.lives = 20
-                    SaveManager.recordVictory(currentLevel.levelNumber, 20, gameMode)
+                    SaveManager.recordVictory(currentLevel.levelNumber, 20, gameMode, difficulty)
                     UpgradeManager.maxUpgradeCap = 5
                     onLevelVictory()
                     onReturnToMap()
@@ -834,12 +851,22 @@ class PlayScreen(
 
         if (waveManager.isLevelCompleted && (!veznanBossSteppedDown || engine.getEntitiesFor(Family.all(EnemyComponent::class.java).get()).size() == 0)) {
             val recordedLives = if (CheatManager.isCheatEnabled) 20 else EconomyManager.lives
-            if (x in (cX - 120f)..(cX + 120f) && y in (cY - 115f)..(cY - 69f)) {
+
+            // 1. Bấm nút CONTINUE (y = 140..208) -> Lưu kết quả và quay về World Map
+            if (x in (cX - 130f)..(cX + 130f) && y in 138f..212f) {
                 SoundManager.playClick()
-                SaveManager.recordVictory(currentLevel.levelNumber, recordedLives, gameMode)
+                SaveManager.recordVictory(currentLevel.levelNumber, recordedLives, gameMode, difficulty)
                 UpgradeManager.maxUpgradeCap = 5
                 onLevelVictory()
                 onReturnToMap()
+                return
+            }
+
+            // 2. Bấm nút RESTART (y = 46..108) -> Lưu kết quả chiến thắng và chơi lại màn hiện tại
+            if (x in (cX - 120f)..(cX + 120f) && y in 42f..112f) {
+                SoundManager.playClick()
+                SaveManager.recordVictory(currentLevel.levelNumber, recordedLives, gameMode, difficulty)
+                startNewGame()
                 return
             }
             return
@@ -935,6 +962,10 @@ class PlayScreen(
         val reinfBtnPos = Vector2(112f, 44f)
 
         if (Math.abs(x - fireBtnPos.x) <= 24f && Math.abs(y - fireBtnPos.y) <= 30f) {
+            if (!TutorialRenderer.isRainOfFireUnlocked) {
+                SoundManager.playClick()
+                return
+            }
             SoundManager.playClick()
             if (selectedSpell == ActiveSpell.RAIN_OF_FIRE) {
                 selectedSpell = ActiveSpell.NONE
@@ -946,6 +977,10 @@ class PlayScreen(
         }
 
         if (Math.abs(x - reinfBtnPos.x) <= 24f && Math.abs(y - reinfBtnPos.y) <= 30f) {
+            if (!TutorialRenderer.isReinforcementsUnlocked) {
+                SoundManager.playClick()
+                return
+            }
             SoundManager.playClick()
             if (selectedSpell == ActiveSpell.REINFORCEMENTS) {
                 selectedSpell = ActiveSpell.NONE
@@ -1134,11 +1169,13 @@ class PlayScreen(
             val sellBtn = Vector2(tPos.x, sellY)
             val rallyBtn = Vector2(rallyX, rallyY)
 
-            val maxLevel = when {
-                currentLevel.levelNumber == 0 -> 4
-                currentLevel.levelNumber == 5 -> if (waveManager.currentWaveDisplay >= 5 || gameMode != GameMode.CAMPAIGN) 4 else 3
-                currentLevel.levelNumber >= 6 -> 4
-                else -> currentLevel.maxTowerLevel
+            val maxLevel = when (currentLevel.levelNumber) {
+                0 -> 4
+                1 -> 1
+                2, 3 -> 2
+                4 -> 3
+                5 -> if (waveManager.currentWaveDisplay >= 5 || gameMode != GameMode.CAMPAIGN) 4 else 3
+                else -> 4
             }
 
             val canUpgrade = tComp.level < maxLevel && tComp.level < 3
@@ -2098,7 +2135,14 @@ class PlayScreen(
             SoundManager.playDefeat()
         }
 
-        if (!isGamePaused) {
+        TutorialRenderer.checkWaveTriggers(
+            levelNumber = currentLevel.levelNumber,
+            gameMode = gameMode,
+            currentWaveDisplay = waveManager.currentWaveDisplay,
+            totalWaves = waveManager.totalWaves
+        )
+
+        if (!isGamePaused && !TutorialRenderer.isModalOpen()) {
             if (rainOfFireCooldown > 0f) rainOfFireCooldown -= delta
             if (reinforcementCooldown > 0f) reinforcementCooldown -= delta
 

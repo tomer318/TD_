@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector2
 import com.game.td.map.Level9StormcloudTemple
+import com.game.td.renderers.MapRenderer
 
 object Level9MapRenderer {
 
@@ -77,6 +78,14 @@ object Level9MapRenderer {
         // Hàng thông viền trên chừa lối đi cổng Bắc
         for (x in 380..590 step 42) drawPine(shapeRenderer, x.toFloat(), 675f)
         for (x in 710..840 step 42) drawPine(shapeRenderer, x.toFloat(), 675f)
+
+        // 8. VÒNG TRÒN PHÒNG THỦ & 2 CỜ HIỆU LINIREA TRƯỚC CẦU ĐỀN THỜ STORMCLOUD
+        MapRenderer.drawDefensePoint(
+            sr = shapeRenderer,
+            crestX = 285f, crestY = 320f,
+            flag1X = 285f, flag1Y = 362f,
+            flag2X = 285f, flag2Y = 266f
+        )
     }
 
     private fun drawPath(sr: ShapeRenderer, pts: List<Vector2>, width: Float) {

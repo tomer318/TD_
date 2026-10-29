@@ -7,7 +7,7 @@ import com.game.td.ecs.components.*
 
 object EnemyRenderer {
 
-    private val OUTLINE = Color(0.13f, 0.10f, 0.08f, 1f)
+    private val OUTLINE = Color(0.12f, 0.09f, 0.07f, 1f)
     private val SHADOW = Color(0.06f, 0.06f, 0.05f, 0.36f)
 
     // =========================================================================
@@ -30,7 +30,7 @@ object EnemyRenderer {
 
         shapeRenderer.color = Color(0.45f, 0.72f, 0.28f, 0.9f)
         shapeRenderer.circle(p.x - 3f, p.y + 1f, 3.2f)
-        shapeRenderer.circle(p.x + 3.5f, p.y - 2f, 3.8f)
+        shapeRenderer.circle(p.x + 3f, p.y - 2f, 3.8f)
         shapeRenderer.circle(p.x, p.y + 5f, 2.4f)
     }
 
@@ -71,17 +71,14 @@ object EnemyRenderer {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 10f, p.y - 12f, 20f, 6f)
 
-                // Chân & Thân có viền đen
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.rect(p.x - 5.5f, p.y - 11f, 4.5f, 5f)
                 shapeRenderer.rect(p.x + 1f, p.y - 11f, 4.5f, 5f)
                 shapeRenderer.rect(p.x - 7.5f, p.y - 8f, 15f, 12f)
-                // Tai nhọn dài & Đầu
                 shapeRenderer.triangle(p.x - 5f, p.y + 6f, p.x - 16f, p.y + 10f, p.x - 5f, p.y + 1f)
                 shapeRenderer.triangle(p.x + 5f, p.y + 6f, p.x + 16f, p.y + 10f, p.x + 5f, p.y + 1f)
                 shapeRenderer.circle(p.x, p.y + 4.5f, 9f)
 
-                // Màu da xanh Goblin & Áo khố nâu
                 shapeRenderer.color = Color(0.36f, 0.58f, 0.18f, 1f)
                 shapeRenderer.rect(p.x - 4f, p.y - 9.5f, 3f, 4f)
                 shapeRenderer.rect(p.x + 1f, p.y - 9.5f, 3f, 4f)
@@ -91,13 +88,11 @@ object EnemyRenderer {
                 shapeRenderer.color = Color(0.62f, 0.44f, 0.22f, 1f)
                 shapeRenderer.rect(p.x - 6f, p.y - 2.5f, 12f, 2f)
 
-                // Đầu & Tai xanh sáng
                 shapeRenderer.color = Color(0.46f, 0.70f, 0.22f, 1f)
                 shapeRenderer.triangle(p.x - 5f, p.y + 5.5f, p.x - 14f, p.y + 9f, p.x - 5f, p.y + 2f)
                 shapeRenderer.triangle(p.x + 5f, p.y + 5.5f, p.x + 14f, p.y + 9f, p.x + 5f, p.y + 2f)
                 shapeRenderer.circle(p.x, p.y + 4.5f, 7.3f)
 
-                // Mắt vàng ác & Lông mày chữ V
                 shapeRenderer.color = Color(0.98f, 0.90f, 0.18f, 1f)
                 shapeRenderer.circle(p.x - 2.6f, p.y + 4.5f, 1.7f)
                 shapeRenderer.circle(p.x + 2.6f, p.y + 4.5f, 1.7f)
@@ -105,7 +100,6 @@ object EnemyRenderer {
                 shapeRenderer.rectLine(p.x - 5.5f, p.y + 7f, p.x - 1f, p.y + 5.2f, 1.8f)
                 shapeRenderer.rectLine(p.x + 5.5f, p.y + 7f, p.x + 1f, p.y + 5.2f, 1.8f)
 
-                // Chùy gỗ cầm ngang trước bụng
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.rectLine(p.x - 6f, p.y - 3.5f, p.x + 8f, p.y - 2f, 5f)
                 shapeRenderer.color = Color(0.65f, 0.45f, 0.22f, 1f)
@@ -117,7 +111,6 @@ object EnemyRenderer {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 13f, p.y - 14f, 26f, 7f)
 
-                // Viền đen tổng thể
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.rect(p.x - 7.5f, p.y - 13f, 6f, 6f)
                 shapeRenderer.rect(p.x + 1.5f, p.y - 13f, 6f, 6f)
@@ -127,7 +120,6 @@ object EnemyRenderer {
                 shapeRenderer.triangle(p.x + 7f, p.y + 8f, p.x + 15f, p.y + 11f, p.x + 6f, p.y + 4f)
                 shapeRenderer.circle(p.x, p.y + 6.5f, 9.8f)
 
-                // Thân & Giáp đai da
                 shapeRenderer.color = Color(0.28f, 0.48f, 0.16f, 1f)
                 shapeRenderer.rect(p.x - 6f, p.y - 11.5f, 4f, 5f)
                 shapeRenderer.rect(p.x + 2f, p.y - 11.5f, 4f, 5f)
@@ -135,7 +127,6 @@ object EnemyRenderer {
                 shapeRenderer.color = Color(0.38f, 0.25f, 0.14f, 1f)
                 shapeRenderer.rect(p.x - 8f, p.y - 8f, 16f, 5.5f)
 
-                // Đầu Orc & Chỏm mũ sắt đỉnh đầu
                 shapeRenderer.color = Color(0.36f, 0.58f, 0.20f, 1f)
                 shapeRenderer.triangle(p.x - 6f, p.y + 7.5f, p.x - 13f, p.y + 10f, p.x - 6f, p.y + 4.5f)
                 shapeRenderer.triangle(p.x + 6f, p.y + 7.5f, p.x + 13f, p.y + 10f, p.x + 6f, p.y + 4.5f)
@@ -143,14 +134,12 @@ object EnemyRenderer {
                 shapeRenderer.color = Color(0.25f, 0.38f, 0.14f, 1f)
                 shapeRenderer.triangle(p.x - 4f, p.y + 13f, p.x + 4f, p.y + 13f, p.x, p.y + 18f)
 
-                // Hàm dưới & 2 Răng nanh trắng nhô lên
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.rect(p.x - 5.5f, p.y + 2.5f, 11f, 2f)
                 shapeRenderer.color = Color.WHITE
                 shapeRenderer.triangle(p.x - 4.5f, p.y + 3.5f, p.x - 3f, p.y + 7.5f, p.x - 1.5f, p.y + 3.5f)
                 shapeRenderer.triangle(p.x + 1.5f, p.y + 3.5f, p.x + 3f, p.y + 7.5f, p.x + 4.5f, p.y + 3.5f)
 
-                // Mắt vàng & Mày dữ
                 shapeRenderer.color = Color(0.98f, 0.88f, 0.18f, 1f)
                 shapeRenderer.circle(p.x - 2.8f, p.y + 8.5f, 1.6f)
                 shapeRenderer.circle(p.x + 2.8f, p.y + 8.5f, 1.6f)
@@ -158,7 +147,6 @@ object EnemyRenderer {
                 shapeRenderer.rectLine(p.x - 6f, p.y + 10.5f, p.x - 1f, p.y + 9f, 1.8f)
                 shapeRenderer.rectLine(p.x + 6f, p.y + 10.5f, p.x + 1f, p.y + 9f, 1.8f)
 
-                // Dao phay bản rộng cầm ngang có vệt máu đỏ (chuẩn hình 2)
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.rect(p.x - 8.5f, p.y - 5.5f, 18f, 7f)
                 shapeRenderer.color = Color(0.82f, 0.86f, 0.90f, 1f)
@@ -174,7 +162,6 @@ object EnemyRenderer {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 13f, p.y - 10f, 26f, 6f)
 
-                // Viền đen 4 chân, thân, đuôi và bờm gai
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.rect(p.x - 9f, p.y - 9f, 3.5f, 6f)
                 shapeRenderer.rect(p.x - 4f, p.y - 9f, 3.5f, 6f)
@@ -186,7 +173,6 @@ object EnemyRenderer {
                 shapeRenderer.circle(p.x + 7.5f, p.y + 1f, 6.8f)
                 shapeRenderer.triangle(p.x + 7f, p.y + 4f, p.x + 15.5f, p.y + 1f, p.x + 7f, p.y - 3.5f)
 
-                // Lông sói nâu xám
                 shapeRenderer.color = Color(0.46f, 0.42f, 0.36f, 1f)
                 shapeRenderer.rect(p.x - 7.8f, p.y - 7.5f, 2f, 4.5f)
                 shapeRenderer.rect(p.x + 3f, p.y - 7.5f, 2f, 4.5f)
@@ -195,10 +181,8 @@ object EnemyRenderer {
                 shapeRenderer.triangle(p.x - 3f, p.y + 3f, p.x, p.y + 8.5f, p.x + 2.5f, p.y + 3f)
                 shapeRenderer.circle(p.x + 7.5f, p.y + 1f, 5.2f)
                 shapeRenderer.triangle(p.x + 7f, p.y + 3f, p.x + 14f, p.y + 1f, p.x + 7f, p.y - 2.5f)
-                // Tai nhọn
                 shapeRenderer.triangle(p.x + 4f, p.y + 5f, p.x + 6f, p.y + 10f, p.x + 8.5f, p.y + 5f)
 
-                // Nanh trắng & Mắt đỏ cam
                 shapeRenderer.color = Color.WHITE
                 shapeRenderer.triangle(p.x + 9.5f, p.y - 0.5f, p.x + 10.5f, p.y - 2.5f, p.x + 11.5f, p.y - 0.5f)
                 shapeRenderer.color = Color(0.95f, 0.25f, 0.12f, 1f)
@@ -221,7 +205,6 @@ object EnemyRenderer {
                 shapeRenderer.circle(p.x + 9f, p.y + 2f, 8f)
                 shapeRenderer.triangle(p.x + 8f, p.y + 6f, p.x + 18f, p.y + 1.5f, p.x + 8f, p.y - 4f)
 
-                // Lông đen ánh xanh thép
                 shapeRenderer.color = Color(0.22f, 0.26f, 0.30f, 1f)
                 shapeRenderer.rect(p.x - 9.5f, p.y - 8.5f, 2.5f, 5f)
                 shapeRenderer.rect(p.x + 3.5f, p.y - 8.5f, 2.5f, 5f)
@@ -240,12 +223,11 @@ object EnemyRenderer {
                 shapeRenderer.circle(p.x + 10.5f, p.y + 3.2f, 1.8f)
             }
 
-            // 05. SHAMAN: Pháp sư bộ tộc đeo mặt nạ sọ xương trắng, mũ bờm lông vũ cam rực, cầm trượng sọ (chuẩn hình 3)
+            // 05. SHAMAN: Pháp sư bộ tộc đeo mặt nạ sọ xương trắng, mũ bờm lông vũ cam rực, cầm trượng sọ
             EnemyType.SHAMAN -> {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 11f, p.y - 12f, 22f, 6.5f)
 
-                // Bờm lông vũ cam rực xòe trên đỉnh đầu (5 nhánh lông vũ có viền đen)
                 val feathers = listOf(-8f, -4f, 0f, 4f, 8f)
                 shapeRenderer.color = OUTLINE
                 for (fx in feathers) {
@@ -254,7 +236,6 @@ object EnemyRenderer {
                 shapeRenderer.rect(p.x - 7.5f, p.y - 10.5f, 15f, 13f)
                 shapeRenderer.circle(p.x, p.y + 4.5f, 9.5f)
 
-                // Màu lông vũ cam & vàng lửa
                 for (fx in feathers) {
                     shapeRenderer.color = Color(0.92f, 0.36f, 0.08f, 1f)
                     shapeRenderer.triangle(p.x + fx - 2.4f, p.y + 8f, p.x + fx + 2.4f, p.y + 8f, p.x + fx * 1.3f, p.y + 17.2f)
@@ -262,27 +243,22 @@ object EnemyRenderer {
                     shapeRenderer.triangle(p.x + fx - 1.2f, p.y + 8.5f, p.x + fx + 1.2f, p.y + 8.5f, p.x + fx * 1.15f, p.y + 14f)
                 }
 
-                // Áo choàng thổ dân màu nâu cam
                 shapeRenderer.color = Color(0.68f, 0.34f, 0.12f, 1f)
                 shapeRenderer.rect(p.x - 6f, p.y - 9f, 12f, 10f)
                 shapeRenderer.color = Color(0.92f, 0.56f, 0.16f, 1f)
                 shapeRenderer.rect(p.x - 6f, p.y - 5f, 12f, 2.5f)
 
-                // Mặt nạ hộp sọ trắng ngà (Skull Mask)
                 shapeRenderer.color = Color(0.94f, 0.90f, 0.78f, 1f)
                 shapeRenderer.circle(p.x, p.y + 4.5f, 7.6f)
                 shapeRenderer.rect(p.x - 4.5f, p.y - 1f, 9f, 5f)
-                // Hốc mắt sọ đen & Mũi sọ tam giác
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.circle(p.x - 2.8f, p.y + 4.5f, 2.1f)
                 shapeRenderer.circle(p.x + 2.8f, p.y + 4.5f, 2.1f)
                 shapeRenderer.triangle(p.x - 1.2f, p.y + 1.5f, p.x + 1.2f, p.y + 1.5f, p.x, p.y + 3.2f)
-                // Đốm mắt sáng nhỏ trong hốc sọ
                 shapeRenderer.color = Color(1f, 0.75f, 0.2f, 1f)
                 shapeRenderer.circle(p.x - 2.8f, p.y + 4.5f, 0.8f)
                 shapeRenderer.circle(p.x + 2.8f, p.y + 4.5f, 0.8f)
 
-                // Trượng phép xương bên tay phải
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.rectLine(p.x + 8.5f, p.y - 9f, p.x + 10.5f, p.y + 9f, 4f)
                 shapeRenderer.circle(p.x + 10.5f, p.y + 10f, 4.5f)
@@ -292,7 +268,7 @@ object EnemyRenderer {
                 shapeRenderer.circle(p.x + 10.5f, p.y + 10f, 3.2f)
             }
 
-            // 06. BANDIT: Thổ phỉ nhanh nhẹn, trán da người, khăn cam đỏ bịt kín mũi miệng, cầm dao găm bạc (chuẩn hình 5)
+            // 06. BANDIT: Thổ phỉ nhanh nhẹn, trán da người, khăn cam đỏ bịt kín mũi miệng, cầm dao găm bạc
             EnemyType.BANDIT -> {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 10f, p.y - 12f, 20f, 6f)
@@ -303,13 +279,11 @@ object EnemyRenderer {
                 shapeRenderer.rect(p.x - 7.5f, p.y - 8f, 15f, 12f)
                 shapeRenderer.circle(p.x, p.y + 4.5f, 8.8f)
 
-                // Quần áo tối & Áo nâu
                 shapeRenderer.color = Color(0.24f, 0.22f, 0.20f, 1f)
                 shapeRenderer.rect(p.x - 6f, p.y - 7f, 12f, 9f)
                 shapeRenderer.color = Color(0.52f, 0.34f, 0.18f, 1f)
                 shapeRenderer.rect(p.x - 6f, p.y - 3f, 12f, 5f)
 
-                // Đầu da người & Mắt dữ
                 shapeRenderer.color = Color(0.94f, 0.76f, 0.56f, 1f)
                 shapeRenderer.circle(p.x, p.y + 5f, 7f)
                 shapeRenderer.color = OUTLINE
@@ -318,14 +292,12 @@ object EnemyRenderer {
                 shapeRenderer.rectLine(p.x - 5f, p.y + 8.5f, p.x - 1f, p.y + 7.2f, 1.6f)
                 shapeRenderer.rectLine(p.x + 5f, p.y + 8.5f, p.x + 1f, p.y + 7.2f, 1.6f)
 
-                // Khăn cam-đỏ bịt mặt chéo xuống cổ
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.rect(p.x - 7.8f, p.y + 0.5f, 15.6f, 5f)
                 shapeRenderer.color = Color(0.88f, 0.36f, 0.14f, 1f)
                 shapeRenderer.rect(p.x - 6.8f, p.y + 1.2f, 13.6f, 3.8f)
                 shapeRenderer.triangle(p.x - 5.5f, p.y + 1.2f, p.x + 5.5f, p.y + 1.2f, p.x, p.y - 3.5f)
 
-                // Dao găm bạc cầm ngang trước bụng
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.rect(p.x - 5f, p.y - 5.5f, 13f, 4.5f)
                 shapeRenderer.color = Color(0.32f, 0.24f, 0.16f, 1f)
@@ -335,7 +307,7 @@ object EnemyRenderer {
                 shapeRenderer.triangle(p.x + 6f, p.y - 4.5f, p.x + 6f, p.y - 2f, p.x + 9.5f, p.y - 3.2f)
             }
 
-            // 07. BRIGAND: Sơn tặc mặc giáp da nâu, đội mũ sắt chóp nhọn có khe mắt đen, cầm kiếm bản rộng (chuẩn hình 6)
+            // 07. BRIGAND: Sơn tặc mặc giáp da nâu, đội mũ sắt chóp nhọn có khe mắt đen, cầm kiếm bản rộng
             EnemyType.BRIGAND -> {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 11f, p.y - 13f, 22f, 6.5f)
@@ -348,35 +320,31 @@ object EnemyRenderer {
                 shapeRenderer.circle(p.x, p.y + 5.5f, 9f)
                 shapeRenderer.triangle(p.x - 3f, p.y + 13f, p.x + 3f, p.y + 13f, p.x, p.y + 18f)
 
-                // Áo giáp da nâu & Tay áo vàng cát
                 shapeRenderer.color = Color(0.58f, 0.38f, 0.18f, 1f)
                 shapeRenderer.rect(p.x - 7f, p.y - 8f, 14f, 10f)
                 shapeRenderer.color = Color(0.84f, 0.68f, 0.42f, 1f)
                 shapeRenderer.circle(p.x - 7.5f, p.y - 2f, 3.5f)
                 shapeRenderer.circle(p.x + 7.5f, p.y - 2f, 3.5f)
 
-                // Mũ sắt chóp nhọn (Conical Iron Helmet)
                 shapeRenderer.color = Color(0.56f, 0.60f, 0.64f, 1f)
                 shapeRenderer.circle(p.x, p.y + 5.5f, 7.4f)
                 shapeRenderer.triangle(p.x - 2f, p.y + 12f, p.x + 2f, p.y + 12f, p.x, p.y + 16f)
                 shapeRenderer.color = Color(0.76f, 0.80f, 0.84f, 1f)
                 shapeRenderer.circle(p.x - 2.5f, p.y + 8f, 2.2f)
 
-                // Khe kính mũ sắt đen & Phần cằm da người
                 shapeRenderer.color = Color(0.92f, 0.74f, 0.54f, 1f)
                 shapeRenderer.rect(p.x - 5.5f, p.y + 1f, 11f, 3.5f)
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.rect(p.x - 6f, p.y + 4.5f, 12f, 3f)
                 shapeRenderer.rect(p.x + 0.5f, p.y + 3.5f, 4.5f, 4.5f)
 
-                // Thanh kiếm bản rộng cầm ngang trước người
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.rect(p.x - 5f, p.y - 6.5f, 16f, 5.5f)
                 shapeRenderer.color = Color(0.88f, 0.92f, 0.96f, 1f)
                 shapeRenderer.rect(p.x - 3.5f, p.y - 5.2f, 13f, 3f)
             }
 
-            // 08. MARAUDER: Tướng cướp khổng lồ mặc giáp đồng, mũ sắt song sắt dọc, cầm đinh ba bạc (chuẩn hàng 2 cột 1)
+            // 08. MARAUDER: Tướng cướp khổng lồ mặc giáp đồng, mũ sắt song sắt dọc, cầm đinh ba bạc
             EnemyType.MARAUDER -> {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 15f, p.y - 15f, 30f, 8f)
@@ -390,7 +358,6 @@ object EnemyRenderer {
                 shapeRenderer.circle(p.x + 12f, p.y + 3f, 6.5f)
                 shapeRenderer.circle(p.x, p.y + 9f, 9.5f)
 
-                // Giáp tấm màu nâu đồng & cầu vai lớn
                 shapeRenderer.color = Color(0.68f, 0.48f, 0.26f, 1f)
                 shapeRenderer.circle(p.x, p.y - 1f, 11.5f)
                 shapeRenderer.rect(p.x - 10f, p.y - 8.5f, 20f, 12f)
@@ -400,7 +367,6 @@ object EnemyRenderer {
                 shapeRenderer.color = Color(0.42f, 0.28f, 0.14f, 1f)
                 shapeRenderer.rect(p.x - 10f, p.y - 8.5f, 20f, 4f)
 
-                // Mũ sắt kín mặt có khe song sắt dọc
                 shapeRenderer.color = Color(0.58f, 0.56f, 0.52f, 1f)
                 shapeRenderer.circle(p.x, p.y + 9f, 7.8f)
                 shapeRenderer.color = OUTLINE
@@ -410,7 +376,6 @@ object EnemyRenderer {
                 shapeRenderer.rect(p.x, p.y + 6f, 1.5f, 5.5f)
                 shapeRenderer.rect(p.x + 3f, p.y + 6f, 1.5f, 5.5f)
 
-                // Cây Đinh Ba / Kích bạc dài cầm ngang trước bụng
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.rectLine(p.x - 14f, p.y - 4f, p.x + 12f, p.y - 2f, 4.5f)
                 shapeRenderer.color = Color(0.48f, 0.30f, 0.14f, 1f)
@@ -419,7 +384,7 @@ object EnemyRenderer {
                 shapeRenderer.triangle(p.x + 8f, p.y + 2.5f, p.x + 8f, p.y - 6.5f, p.x + 17f, p.y - 2f)
             }
 
-            // 09. OGRE: Gã khổng lồ Ogre cơ bắp xanh rêu, giáp vai sắt, cầm chùy gỗ đỏ đóng đinh trắng (chuẩn hình 4)
+            // 09. OGRE: Gã khổng lồ Ogre cơ bắp xanh rêu, giáp vai sắt, cầm chùy gỗ đỏ đóng đinh trắng
             EnemyType.OGRE -> {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 16f, p.y - 16f, 32f, 8.5f)
@@ -431,18 +396,15 @@ object EnemyRenderer {
                 shapeRenderer.rect(p.x - 13.5f, p.y - 11f, 27f, 16f)
                 shapeRenderer.circle(p.x, p.y + 11f, 10f)
 
-                // Thân cơ bắp xanh Ogre & Đai chéo ngực
                 shapeRenderer.color = Color(0.46f, 0.56f, 0.28f, 1f)
                 shapeRenderer.circle(p.x, p.y, 13.5f)
                 shapeRenderer.rect(p.x - 11.5f, p.y - 9f, 23f, 14f)
                 shapeRenderer.color = Color(0.38f, 0.24f, 0.12f, 1f)
                 shapeRenderer.rect(p.x - 11.5f, p.y - 9.5f, 23f, 4.5f)
                 shapeRenderer.rectLine(p.x - 10f, p.y + 7f, p.x + 9f, p.y - 6f, 3.5f)
-                // Giáp vai sắt bên trái
                 shapeRenderer.color = Color(0.55f, 0.58f, 0.62f, 1f)
                 shapeRenderer.circle(p.x - 11f, p.y + 6f, 5.5f)
 
-                // Đầu Ogre, răng nanh dưới & Mắt dữ
                 shapeRenderer.color = Color(0.52f, 0.62f, 0.32f, 1f)
                 shapeRenderer.circle(p.x, p.y + 11f, 8.2f)
                 shapeRenderer.color = OUTLINE
@@ -454,7 +416,6 @@ object EnemyRenderer {
                 shapeRenderer.circle(p.x - 2.8f, p.y + 13f, 1.6f)
                 shapeRenderer.circle(p.x + 2.8f, p.y + 13f, 1.6f)
 
-                // Chùy gỗ đỏ nạm đinh trắng cầm ngang
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.rectLine(p.x - 7f, p.y - 4f, p.x + 14f, p.y - 2f, 9f)
                 shapeRenderer.color = Color(0.75f, 0.28f, 0.14f, 1f)
@@ -466,12 +427,11 @@ object EnemyRenderer {
                 shapeRenderer.triangle(p.x + 11f, p.y - 5f, p.x + 13f, p.y - 5f, p.x + 12f, p.y - 9f)
             }
 
-            // 10. GIANT_SPIDER: Nhện độc xanh đen lưng vằn đỏ, 8 chân đốt cong quặp xuống đất (chuẩn hàng 2 cột 2)
+            // 10. GIANT_SPIDER: Nhện độc xanh đen lưng vằn đỏ, 8 chân đốt cong quặp xuống đất
             EnemyType.GIANT_SPIDER -> {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 13f, p.y - 10f, 26f, 7f)
 
-                // 8 chân nhện đốt gấp khúc quặp xuống dưới (giống hệt ảnh gốc)
                 for (side in listOf(-1f, 1f)) {
                     shapeRenderer.color = OUTLINE
                     shapeRenderer.rectLine(p.x + side * 4f, p.y + 1f, p.x + side * 12f, p.y + 6f, 3.6f)
@@ -490,7 +450,6 @@ object EnemyRenderer {
                     shapeRenderer.rectLine(p.x + side * 15f, p.y + 2f, p.x + side * 16f, p.y - 7.5f, 1.6f)
                 }
 
-                // Bụng & Đầu nhện có viền đen
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.circle(p.x, p.y + 2f, 8.8f)
                 shapeRenderer.circle(p.x, p.y - 3.5f, 6.8f)
@@ -499,7 +458,6 @@ object EnemyRenderer {
                 shapeRenderer.circle(p.x, p.y + 2f, 7.2f)
                 shapeRenderer.circle(p.x, p.y - 3.5f, 5.2f)
 
-                // Vằn đỏ trên lưng & Mắt đỏ rực
                 shapeRenderer.color = Color(0.86f, 0.18f, 0.14f, 1f)
                 shapeRenderer.rect(p.x - 4f, p.y + 3f, 8f, 2f)
                 shapeRenderer.rect(p.x - 3f, p.y + 6f, 6f, 1.8f)
@@ -507,7 +465,7 @@ object EnemyRenderer {
                 shapeRenderer.circle(p.x + 2.2f, p.y - 4f, 1.6f)
             }
 
-            // 11. SPIDER_MATRIARCH: Nhện Chúa khổng lồ chân to vạm vỡ, lưng vằn xanh độc vàng (chuẩn hàng 2 cột 3)
+            // 11. SPIDER_MATRIARCH: Nhện Chúa khổng lồ chân to vạm vỡ, lưng vằn xanh độc vàng
             EnemyType.SPIDER_MATRIARCH -> {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 16f, p.y - 13f, 32f, 8f)
@@ -538,7 +496,6 @@ object EnemyRenderer {
                 shapeRenderer.circle(p.x, p.y + 3.5f, 9.6f)
                 shapeRenderer.circle(p.x, p.y - 4.5f, 6.8f)
 
-                // Vằn xanh lá mạ / vàng độc tố trên bụng nhện chúa
                 shapeRenderer.color = Color(0.68f, 0.85f, 0.16f, 1f)
                 shapeRenderer.rect(p.x - 6f, p.y + 5f, 12f, 2.5f)
                 shapeRenderer.rect(p.x - 4.5f, p.y + 8.5f, 9f, 2.2f)
@@ -569,7 +526,7 @@ object EnemyRenderer {
                 shapeRenderer.circle(p.x + 1.5f, p.y - 1f, 1.2f)
             }
 
-            // 13. DARK_KNIGHT: Hiệp sĩ bóng đêm mũ sừng sắt, cầm kiếm lửa cam và khiên sắt (chuẩn hàng 2 cột 6)
+            // 13. DARK_KNIGHT: Hiệp sĩ bóng đêm mũ sừng sắt, cầm kiếm lửa cam và khiên sắt
             EnemyType.DARK_KNIGHT -> {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 12f, p.y - 13f, 24f, 7f)
@@ -579,11 +536,9 @@ object EnemyRenderer {
                 shapeRenderer.rect(p.x + 1.5f, p.y - 12f, 5.5f, 5f)
                 shapeRenderer.rect(p.x - 9f, p.y - 8.5f, 18f, 12f)
                 shapeRenderer.circle(p.x, p.y + 6f, 9f)
-                // 2 Sừng nhọn vểnh lên
                 shapeRenderer.triangle(p.x - 6f, p.y + 8f, p.x - 13f, p.y + 18f, p.x - 2f, p.y + 12f)
                 shapeRenderer.triangle(p.x + 6f, p.y + 8f, p.x + 13f, p.y + 18f, p.x + 2f, p.y + 12f)
 
-                // Giáp thép đen & Sừng xám sáng
                 shapeRenderer.color = Color(0.24f, 0.25f, 0.28f, 1f)
                 shapeRenderer.rect(p.x - 7.5f, p.y - 7f, 15f, 10f)
                 shapeRenderer.color = Color(0.38f, 0.40f, 0.44f, 1f)
@@ -592,7 +547,6 @@ object EnemyRenderer {
                 shapeRenderer.triangle(p.x - 6f, p.y + 9f, p.x - 11.5f, p.y + 16.5f, p.x - 3f, p.y + 11.5f)
                 shapeRenderer.triangle(p.x + 6f, p.y + 9f, p.x + 11.5f, p.y + 16.5f, p.x + 3f, p.y + 11.5f)
 
-                // Khe mắt chữ T đen & mắt đỏ
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.rect(p.x - 5f, p.y + 5f, 10f, 2.5f)
                 shapeRenderer.rect(p.x - 1.2f, p.y + 2f, 2.4f, 5f)
@@ -600,7 +554,6 @@ object EnemyRenderer {
                 shapeRenderer.circle(p.x - 2.5f, p.y + 6.2f, 1.1f)
                 shapeRenderer.circle(p.x + 2.5f, p.y + 6.2f, 1.1f)
 
-                // Khiên bạc bên phải & Thanh kiếm lửa cam-đỏ ngang ngực (chuẩn hình mẫu)
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.circle(p.x + 6.5f, p.y - 2f, 6.2f)
                 shapeRenderer.color = Color(0.78f, 0.80f, 0.84f, 1f)
@@ -612,12 +565,11 @@ object EnemyRenderer {
                 shapeRenderer.rect(p.x - 8f, p.y - 4.3f, 12f, 2.5f)
             }
 
-            // 14. GARGOYLE: Quỷ dơi đá cánh rộng, tai dơi nhọn, mắt đỏ (chuẩn hàng 2 cột 4)
+            // 14. GARGOYLE: Quỷ dơi đá cánh rộng, tai dơi nhọn, mắt đỏ
             EnemyType.GARGOYLE -> {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 10f, p.y - 14f, 20f, 6f)
 
-                // Đôi cánh dơi xòe rộng có viền đen
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.triangle(p.x - 3f, p.y + 3f, p.x - 22f, p.y + 13f, p.x - 13f, p.y - 7f)
                 shapeRenderer.triangle(p.x + 3f, p.y + 3f, p.x + 22f, p.y + 13f, p.x + 13f, p.y - 7f)
@@ -626,12 +578,10 @@ object EnemyRenderer {
                 shapeRenderer.triangle(p.x - 5f, p.y + 8f, p.x - 9f, p.y + 15f, p.x - 1f, p.y + 10f)
                 shapeRenderer.triangle(p.x + 5f, p.y + 8f, p.x + 9f, p.y + 15f, p.x + 1f, p.y + 10f)
 
-                // Màng cánh nâu xám
                 shapeRenderer.color = Color(0.46f, 0.40f, 0.38f, 1f)
                 shapeRenderer.triangle(p.x - 3f, p.y + 2f, p.x - 20f, p.y + 11.5f, p.x - 12f, p.y - 5.5f)
                 shapeRenderer.triangle(p.x + 3f, p.y + 2f, p.x + 20f, p.y + 11.5f, p.x + 12f, p.y - 5.5f)
 
-                // Thân & Đầu Gargoyle
                 shapeRenderer.color = Color(0.56f, 0.50f, 0.48f, 1f)
                 shapeRenderer.circle(p.x, p.y - 1f, 6.8f)
                 shapeRenderer.circle(p.x, p.y + 6f, 5.5f)
@@ -643,7 +593,7 @@ object EnemyRenderer {
                 shapeRenderer.circle(p.x + 2.2f, p.y + 6.5f, 1.4f)
             }
 
-            // 15. SHADOW_ARCHER: Cung thủ áo choàng trùm đầu đen kịt, 2 mắt vàng sáng, cầm cung gỗ ngang ngực (chuẩn hàng 2 cột 5)
+            // 15. SHADOW_ARCHER: Cung thủ áo choàng trùm đầu đen kịt, 2 mắt vàng sáng, cầm cung gỗ ngang ngực
             EnemyType.SHADOW_ARCHER -> {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 10f, p.y - 12f, 20f, 6f)
@@ -655,24 +605,21 @@ object EnemyRenderer {
                 shapeRenderer.circle(p.x, p.y + 5f, 8.5f)
                 shapeRenderer.triangle(p.x - 8f, p.y + 5f, p.x - 13f, p.y - 2f, p.x - 5f, p.y - 4f)
 
-                // Áo trùm đầu đen thẫm
                 shapeRenderer.color = Color(0.16f, 0.15f, 0.20f, 1f)
                 shapeRenderer.rect(p.x - 6.5f, p.y - 7f, 13f, 10f)
                 shapeRenderer.circle(p.x, p.y + 5f, 6.8f)
 
-                // Đôi mắt vàng rực trong bóng tối
                 shapeRenderer.color = Color(1f, 0.90f, 0.18f, 1f)
                 shapeRenderer.circle(p.x - 2.3f, p.y + 5.2f, 1.6f)
                 shapeRenderer.circle(p.x + 2.3f, p.y + 5.2f, 1.6f)
 
-                // Cánh cung gỗ nâu cầm ngang trước ngực
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.rectLine(p.x - 9f, p.y - 2.5f, p.x + 9f, p.y - 1.5f, 4.2f)
                 shapeRenderer.color = Color(0.62f, 0.36f, 0.16f, 1f)
                 shapeRenderer.rectLine(p.x - 8f, p.y - 2.5f, p.x + 8f, p.y - 1.5f, 2.4f)
             }
 
-            // 16. GOLEM_HEAD: Đầu người máy sắt 2 sừng trâu có chân nhỏ chạy lạch bạch (chuẩn hàng 3 cột 3)
+            // 16. GOLEM_HEAD: Đầu người máy sắt 2 sừng trâu có chân nhỏ chạy lạch bạch
             EnemyType.GOLEM_HEAD -> {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 10f, p.y - 10f, 20f, 6f)
@@ -700,7 +647,7 @@ object EnemyRenderer {
                 shapeRenderer.circle(p.x + 2.5f, p.y + 1f, 1.2f)
             }
 
-            // 17. JUGGERNAUT: BOSS CỖ MÁY HỦY DIỆT KHỔNG LỒ (GIỮ NGUYÊN TẠO HÌNH ĐẸP NHẤT)
+            // 17. JUGGERNAUT: BOSS CỖ MÁY HỦY DIỆT KHỔNG LỒ
             EnemyType.JUGGERNAUT -> {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 28f, p.y - 26f, 56f, 16f)
@@ -794,82 +741,118 @@ object EnemyRenderer {
                 shapeRenderer.circle(p.x + 3.5f, p.y + 17.8f, 1.5f)
             }
 
-            // 18. TROLL: Chiến binh Troll da xanh băng, bờm tóc Mohawk đỏ rực, nanh trắng, cầm đao/giáo đá (chuẩn hàng 3 cột 5)
+            // =================================================================
+            // 18. TROLL (Hàng 1 Cột 3 trong ảnh mẫu):
+            // Da xanh lam, tóc Mohawk đỏ xòe 3 chỏm, tai nhọn ngang, răng nanh trắng, cầm giáo/dao đá
+            // =================================================================
             EnemyType.TROLL -> {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 12f, p.y - 13f, 24f, 6.5f)
 
+                // Viền đen chân, thân, tai nhọn và chỏm tóc Mohawk đỏ
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.rect(p.x - 6.5f, p.y - 12f, 5f, 5f)
-                shapeRenderer.rect(p.x + 1.5f, p.y - 12f, 5f, 5f)
+                shapeRenderer.rect(p.x - 7f, p.y - 12f, 5.5f, 5.5f)
+                shapeRenderer.rect(p.x + 1.5f, p.y - 12f, 5.5f, 5.5f)
                 shapeRenderer.rect(p.x - 8.5f, p.y - 8.5f, 17f, 12f)
-                shapeRenderer.triangle(p.x - 6f, p.y + 7f, p.x - 14f, p.y + 10f, p.x - 5f, p.y + 3f)
-                shapeRenderer.triangle(p.x + 6f, p.y + 7f, p.x + 14f, p.y + 10f, p.x + 5f, p.y + 3f)
-                shapeRenderer.circle(p.x, p.y + 6f, 9.2f)
-                // Bờm tóc Mohawk đỏ
-                shapeRenderer.triangle(p.x - 5.5f, p.y + 12f, p.x + 5.5f, p.y + 12f, p.x, p.y + 21f)
+                shapeRenderer.triangle(p.x - 6f, p.y + 7f, p.x - 15f, p.y + 10.5f, p.x - 5f, p.y + 2.5f)
+                shapeRenderer.triangle(p.x + 6f, p.y + 7f, p.x + 15f, p.y + 10.5f, p.x + 5f, p.y + 2.5f)
+                shapeRenderer.circle(p.x, p.y + 5.5f, 9.2f)
+                // 3 chỏm tóc Mohawk đỏ dựng nhọn
+                shapeRenderer.triangle(p.x - 6.5f, p.y + 10f, p.x - 10f, p.y + 17f, p.x - 1f, p.y + 13f)
+                shapeRenderer.triangle(p.x - 4.5f, p.y + 11.5f, p.x, p.y + 20f, p.x + 4.5f, p.y + 11.5f)
+                shapeRenderer.triangle(p.x + 1f, p.y + 13f, p.x + 10f, p.y + 17f, p.x + 6.5f, p.y + 10f)
 
-                shapeRenderer.color = Color(0.32f, 0.62f, 0.72f, 1f)
-                shapeRenderer.rect(p.x - 7f, p.y - 7f, 14f, 10f)
+                // Thân xanh lam & Khố nâu
+                shapeRenderer.color = Color(0.28f, 0.60f, 0.70f, 1f)
+                shapeRenderer.rect(p.x - 5.5f, p.y - 10.5f, 3.5f, 4f)
+                shapeRenderer.rect(p.x + 2f, p.y - 10.5f, 3.5f, 4f)
+                shapeRenderer.rect(p.x - 7f, p.y - 7f, 14f, 9.5f)
                 shapeRenderer.color = Color(0.45f, 0.28f, 0.14f, 1f)
-                shapeRenderer.rect(p.x - 7f, p.y - 7.5f, 14f, 5f)
+                shapeRenderer.rect(p.x - 7f, p.y - 7.5f, 14f, 4.5f)
 
-                shapeRenderer.color = Color(0.38f, 0.70f, 0.80f, 1f)
-                shapeRenderer.triangle(p.x - 5f, p.y + 6.5f, p.x - 12.5f, p.y + 9f, p.x - 5f, p.y + 3.5f)
-                shapeRenderer.triangle(p.x + 5f, p.y + 6.5f, p.x + 12.5f, p.y + 9f, p.x + 5f, p.y + 3.5f)
-                shapeRenderer.circle(p.x, p.y + 6f, 7.5f)
+                // Đầu & Tai xanh sáng
+                shapeRenderer.color = Color(0.38f, 0.72f, 0.82f, 1f)
+                shapeRenderer.triangle(p.x - 5f, p.y + 6.5f, p.x - 13f, p.y + 9.5f, p.x - 5f, p.y + 3.5f)
+                shapeRenderer.triangle(p.x + 5f, p.y + 6.5f, p.x + 13f, p.y + 9.5f, p.x + 5f, p.y + 3.5f)
+                shapeRenderer.circle(p.x, p.y + 5.5f, 7.5f)
 
-                shapeRenderer.color = Color(0.90f, 0.20f, 0.15f, 1f)
-                shapeRenderer.triangle(p.x - 4f, p.y + 12f, p.x + 4f, p.y + 12f, p.x, p.y + 19f)
+                // Bờm tóc đỏ tươi
+                shapeRenderer.color = Color(0.88f, 0.22f, 0.16f, 1f)
+                shapeRenderer.triangle(p.x - 5.5f, p.y + 10.5f, p.x - 8.5f, p.y + 15.5f, p.x - 1f, p.y + 12.5f)
+                shapeRenderer.triangle(p.x - 3.5f, p.y + 11.5f, p.x, p.y + 18.2f, p.x + 3.5f, p.y + 11.5f)
+                shapeRenderer.triangle(p.x + 1f, p.y + 12.5f, p.x + 8.5f, p.y + 15.5f, p.x + 5.5f, p.y + 10.5f)
 
-                shapeRenderer.color = Color.WHITE
-                shapeRenderer.triangle(p.x - 4.5f, p.y + 3f, p.x - 3f, p.y + 6.5f, p.x - 1.5f, p.y + 3f)
-                shapeRenderer.triangle(p.x + 1.5f, p.y + 3f, p.x + 3f, p.y + 6.5f, p.x + 4.5f, p.y + 3f)
-                shapeRenderer.color = Color(1f, 0.90f, 0.20f, 1f)
-                shapeRenderer.circle(p.x - 2.6f, p.y + 7.5f, 1.5f)
-                shapeRenderer.circle(p.x + 2.6f, p.y + 7.5f, 1.5f)
-
-                // Giáo đá cầm ngang trước bụng
+                // 2 Răng nanh trắng nhô lên & Mắt vàng hung dữ
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.rectLine(p.x - 9f, p.y - 4f, p.x + 8f, p.y - 3f, 4f)
-                shapeRenderer.color = Color(0.55f, 0.35f, 0.16f, 1f)
-                shapeRenderer.rectLine(p.x - 8f, p.y - 4f, p.x + 6f, p.y - 3f, 2.2f)
-                shapeRenderer.color = Color(0.82f, 0.86f, 0.90f, 1f)
-                shapeRenderer.triangle(p.x + 6f, p.y, p.x + 6f, p.y - 6f, p.x + 13.5f, p.y - 3f)
+                shapeRenderer.rect(p.x - 5f, p.y + 2f, 10f, 1.8f)
+                shapeRenderer.color = Color.WHITE
+                shapeRenderer.triangle(p.x - 4.5f, p.y + 2.8f, p.x - 3.2f, p.y + 6.5f, p.x - 1.8f, p.y + 2.8f)
+                shapeRenderer.triangle(p.x + 1.8f, p.y + 2.8f, p.x + 3.2f, p.y + 6.5f, p.x + 4.5f, p.y + 2.8f)
+                shapeRenderer.color = Color(1f, 0.88f, 0.18f, 1f)
+                shapeRenderer.circle(p.x - 2.5f, p.y + 7f, 1.5f)
+                shapeRenderer.circle(p.x + 2.5f, p.y + 7f, 1.5f)
+
+                // Vũ khí cán gỗ mũi giáo đá nhọn cầm ngang trước bụng
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.rect(p.x - 9.5f, p.y - 5.5f, 16f, 4.8f)
+                shapeRenderer.triangle(p.x + 6f, p.y - 0.5f, p.x + 6f, p.y - 6.5f, p.x + 14.5f, p.y - 3.5f)
+                shapeRenderer.color = Color(0.68f, 0.36f, 0.16f, 1f)
+                shapeRenderer.rect(p.x - 8f, p.y - 4.3f, 14f, 2.5f)
+                shapeRenderer.color = Color(0.84f, 0.86f, 0.88f, 1f)
+                shapeRenderer.triangle(p.x + 6.5f, p.y - 1.5f, p.x + 6.5f, p.y - 5.5f, p.x + 13f, p.y - 3.5f)
             }
 
-            // 19. WINTER_WOLF: Sói băng tuyết trắng xanh bờm nhọn, mắt đỏ rực (chuẩn hàng 3 cột 4)
+            // =================================================================
+            // 19. WINTER_WOLF (Hàng 1 Cột 2 trong ảnh mẫu):
+            // Sói tuyết lông trắng xù gai nhọn trên lưng, chân và bụng xám tro, mắt đỏ, nhe nanh
+            // =================================================================
             EnemyType.WINTER_WOLF -> {
                 shapeRenderer.color = SHADOW
-                shapeRenderer.ellipse(p.x - 14f, p.y - 10f, 28f, 6.5f)
+                shapeRenderer.ellipse(p.x - 15f, p.y - 11f, 30f, 7f)
 
+                // Viền đen toàn thân sói tuyết
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.rect(p.x - 10f, p.y - 9.5f, 4f, 6.5f)
-                shapeRenderer.rect(p.x - 4.5f, p.y - 9.5f, 4f, 6.5f)
-                shapeRenderer.rect(p.x + 2f, p.y - 9.5f, 4f, 6.5f)
-                shapeRenderer.rect(p.x + 7f, p.y - 9.5f, 4f, 6.5f)
-                shapeRenderer.ellipse(p.x - 13f, p.y - 6f, 24f, 13f)
-                shapeRenderer.triangle(p.x - 9f, p.y + 3f, p.x - 5f, p.y + 11.5f, p.x - 1f, p.y + 3f)
-                shapeRenderer.triangle(p.x - 3f, p.y + 4f, p.x + 1f, p.y + 13f, p.x + 5f, p.y + 4f)
-                shapeRenderer.circle(p.x + 8.5f, p.y + 2f, 7.5f)
-                shapeRenderer.triangle(p.x + 7.5f, p.y + 5.5f, p.x + 17f, p.y + 1.5f, p.x + 7.5f, p.y - 3.5f)
+                shapeRenderer.rect(p.x - 10.5f, p.y - 10f, 4.2f, 7f)
+                shapeRenderer.rect(p.x - 5f, p.y - 10f, 4.2f, 7f)
+                shapeRenderer.rect(p.x + 2f, p.y - 10f, 4.2f, 7f)
+                shapeRenderer.rect(p.x + 7f, p.y - 10f, 4.2f, 7f)
+                shapeRenderer.ellipse(p.x - 13.5f, p.y - 6.5f, 25f, 13.5f)
+                // Bờm lông nhọn trắng dọc lưng
+                shapeRenderer.triangle(p.x - 12f, p.y + 1f, p.x - 16f, p.y + 8f, p.x - 6f, p.y + 4f)
+                shapeRenderer.triangle(p.x - 9f, p.y + 3f, p.x - 7f, p.y + 12f, p.x - 1f, p.y + 4f)
+                shapeRenderer.triangle(p.x - 4f, p.y + 4f, p.x, p.y + 13.5f, p.x + 5f, p.y + 4f)
+                shapeRenderer.circle(p.x + 8.5f, p.y + 2f, 7.8f)
+                shapeRenderer.triangle(p.x + 7.5f, p.y + 5.5f, p.x + 17.5f, p.y + 1f, p.x + 7.5f, p.y - 4f)
 
-                // Lông trắng băng giá ánh xanh
-                shapeRenderer.color = Color(0.86f, 0.92f, 0.98f, 1f)
-                shapeRenderer.rect(p.x - 8.8f, p.y - 8f, 2.2f, 5f)
-                shapeRenderer.rect(p.x + 3.2f, p.y - 8f, 2.2f, 5f)
-                shapeRenderer.ellipse(p.x - 11.5f, p.y - 4.5f, 21f, 10f)
+                // Bụng & 4 chân màu xám tro (giống ảnh mẫu)
+                shapeRenderer.color = Color(0.55f, 0.60f, 0.66f, 1f)
+                shapeRenderer.rect(p.x - 9.3f, p.y - 8.5f, 2.2f, 5.5f)
+                shapeRenderer.rect(p.x - 3.8f, p.y - 8.5f, 2.2f, 5.5f)
+                shapeRenderer.rect(p.x + 3.2f, p.y - 8.5f, 2.2f, 5.5f)
+                shapeRenderer.rect(p.x + 8.2f, p.y - 8.5f, 2.2f, 5.5f)
+                shapeRenderer.ellipse(p.x - 11f, p.y - 5.2f, 20f, 7f)
+                shapeRenderer.triangle(p.x + 7.5f, p.y + 2f, p.x + 15.8f, p.y + 0.5f, p.x + 7.5f, p.y - 2.8f)
+
+                // Lớp lông tuyết trắng muốt phủ trên lưng và đầu
+                shapeRenderer.color = Color(0.92f, 0.96f, 1f, 1f)
+                shapeRenderer.ellipse(p.x - 11.5f, p.y - 2.5f, 21f, 8.5f)
+                shapeRenderer.triangle(p.x - 11f, p.y + 1.5f, p.x - 14.5f, p.y + 7f, p.x - 6.5f, p.y + 3.8f)
+                shapeRenderer.triangle(p.x - 8f, p.y + 3f, p.x - 6.5f, p.y + 10.5f, p.x - 1.5f, p.y + 4f)
+                shapeRenderer.triangle(p.x - 3f, p.y + 4f, p.x, p.y + 11.8f, p.x + 4.5f, p.y + 4f)
+                shapeRenderer.circle(p.x + 8f, p.y + 2.8f, 5.8f)
+                shapeRenderer.triangle(p.x + 5f, p.y + 6.5f, p.x + 7.5f, p.y + 12f, p.x + 10.5f, p.y + 6.5f)
+
+                // Nanh trắng & Mắt đỏ rực
                 shapeRenderer.color = Color.WHITE
-                shapeRenderer.triangle(p.x - 8f, p.y + 3f, p.x - 5f, p.y + 10f, p.x - 2f, p.y + 3f)
-                shapeRenderer.triangle(p.x - 2f, p.y + 4f, p.x + 1f, p.y + 11f, p.x + 4f, p.y + 4f)
-                shapeRenderer.circle(p.x + 8.5f, p.y + 2f, 5.8f)
-                shapeRenderer.triangle(p.x + 7.5f, p.y + 4f, p.x + 15.2f, p.y + 1.5f, p.x + 7.5f, p.y - 2.2f)
-
-                shapeRenderer.color = Color.RED
-                shapeRenderer.circle(p.x + 10f, p.y + 3f, 1.6f)
+                shapeRenderer.triangle(p.x + 10.5f, p.y - 0.5f, p.x + 11.5f, p.y - 2.8f, p.x + 12.8f, p.y - 0.5f)
+                shapeRenderer.color = Color(0.95f, 0.20f, 0.12f, 1f)
+                shapeRenderer.circle(p.x + 10.2f, p.y + 3.2f, 1.6f)
             }
 
-            // 20. TROLL_CHAMPION: Troll tinh nhuệ đội mũ sừng sắt, bờm đỏ, cầm cặp rìu phóng
+            // =================================================================
+            // 20. TROLL_CHAMPION (Hàng 1 Cột 4 trong ảnh mẫu):
+            // Troll chiến binh cơ bắp xanh lam, bờm tóc đỏ sẫm dài, mặc giáp đai đen, cầm 2 rìu phóng
+            // =================================================================
             EnemyType.TROLL_CHAMPION -> {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 14f, p.y - 14f, 28f, 7.5f)
@@ -877,357 +860,727 @@ object EnemyRenderer {
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.rect(p.x - 8f, p.y - 13f, 6f, 6f)
                 shapeRenderer.rect(p.x + 2f, p.y - 13f, 6f, 6f)
-                shapeRenderer.circle(p.x, p.y, 13f)
-                shapeRenderer.rect(p.x - 11f, p.y - 10f, 22f, 14f)
-                shapeRenderer.circle(p.x, p.y + 8f, 10f)
-                shapeRenderer.triangle(p.x - 7f, p.y + 10f, p.x - 15f, p.y + 19f, p.x - 2f, p.y + 13f)
-                shapeRenderer.triangle(p.x + 7f, p.y + 10f, p.x + 15f, p.y + 19f, p.x + 2f, p.y + 13f)
+                shapeRenderer.circle(p.x, p.y - 1f, 12.5f)
+                shapeRenderer.rect(p.x - 10.5f, p.y - 9.5f, 21f, 13f)
+                shapeRenderer.triangle(p.x - 7f, p.y + 8f, p.x - 16f, p.y + 11.5f, p.x - 6f, p.y + 3.5f)
+                shapeRenderer.triangle(p.x + 7f, p.y + 8f, p.x + 16f, p.y + 11.5f, p.x + 6f, p.y + 3.5f)
+                shapeRenderer.circle(p.x, p.y + 7f, 9.8f)
+                // Bờm tóc đỏ sẫm vuốt ngược
+                shapeRenderer.triangle(p.x - 7.5f, p.y + 11f, p.x - 12f, p.y + 19f, p.x, p.y + 14f)
+                shapeRenderer.triangle(p.x - 5f, p.y + 13f, p.x - 2f, p.y + 22f, p.x + 5f, p.y + 13f)
 
-                shapeRenderer.color = Color(0.28f, 0.56f, 0.68f, 1f)
-                shapeRenderer.circle(p.x, p.y, 11f)
-                shapeRenderer.rect(p.x - 9f, p.y - 8.5f, 18f, 12f)
-                shapeRenderer.color = Color(0.52f, 0.55f, 0.60f, 1f)
-                shapeRenderer.circle(p.x, p.y + 8f, 8.2f)
-                shapeRenderer.color = Color(0.88f, 0.88f, 0.82f, 1f)
-                shapeRenderer.triangle(p.x - 6.5f, p.y + 10f, p.x - 13.5f, p.y + 17.5f, p.x - 2.5f, p.y + 12.5f)
-                shapeRenderer.triangle(p.x + 6.5f, p.y + 10f, p.x + 13.5f, p.y + 17.5f, p.x + 2.5f, p.y + 12.5f)
-                shapeRenderer.color = Color(0.92f, 0.22f, 0.15f, 1f)
-                shapeRenderer.triangle(p.x - 4f, p.y + 14f, p.x + 4f, p.y + 14f, p.x, p.y + 22f)
+                // Thân cơ bắp xanh lam & Đai giáp đen chéo ngực
+                shapeRenderer.color = Color(0.26f, 0.56f, 0.66f, 1f)
+                shapeRenderer.circle(p.x, p.y - 1f, 10.5f)
+                shapeRenderer.rect(p.x - 8.5f, p.y - 8f, 17f, 11f)
+                shapeRenderer.color = Color(0.20f, 0.22f, 0.25f, 1f)
+                shapeRenderer.rect(p.x - 8.5f, p.y - 8.5f, 17f, 4.5f)
+                shapeRenderer.rectLine(p.x - 7.5f, p.y + 4f, p.x + 7.5f, p.y - 5f, 3.5f)
 
-                // Rìu chiến cầm ngang
+                // Đầu, tai & bờm tóc đỏ sẫm
+                shapeRenderer.color = Color(0.34f, 0.66f, 0.76f, 1f)
+                shapeRenderer.triangle(p.x - 6f, p.y + 7.5f, p.x - 14f, p.y + 10.5f, p.x - 6f, p.y + 4.5f)
+                shapeRenderer.triangle(p.x + 6f, p.y + 7.5f, p.x + 14f, p.y + 10.5f, p.x + 6f, p.y + 4.5f)
+                shapeRenderer.circle(p.x, p.y + 7f, 8f)
+
+                shapeRenderer.color = Color(0.78f, 0.16f, 0.16f, 1f)
+                shapeRenderer.triangle(p.x - 6.5f, p.y + 11f, p.x - 10.5f, p.y + 17.5f, p.x - 0.5f, p.y + 13.5f)
+                shapeRenderer.triangle(p.x - 4f, p.y + 12.5f, p.x - 1.5f, p.y + 20f, p.x + 4f, p.y + 12.5f)
+
+                // Răng nanh trắng & Mắt vàng
+                shapeRenderer.color = Color.WHITE
+                shapeRenderer.triangle(p.x - 5f, p.y + 3.5f, p.x - 3.5f, p.y + 8f, p.x - 2f, p.y + 3.5f)
+                shapeRenderer.triangle(p.x + 2f, p.y + 3.5f, p.x + 3.5f, p.y + 8f, p.x + 5f, p.y + 3.5f)
+                shapeRenderer.color = Color(1f, 0.88f, 0.18f, 1f)
+                shapeRenderer.circle(p.x - 2.6f, p.y + 8.5f, 1.5f)
+                shapeRenderer.circle(p.x + 2.6f, p.y + 8.5f, 1.5f)
+
+                // Rìu chiến cầm trước ngực
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.rectLine(p.x - 10f, p.y - 3f, p.x + 10f, p.y - 2f, 4.2f)
-                shapeRenderer.color = Color(0.85f, 0.88f, 0.92f, 1f)
-                shapeRenderer.triangle(p.x + 5f, p.y + 3f, p.x + 13f, p.y + 2f, p.x + 9f, p.y - 7f)
+                shapeRenderer.rectLine(p.x - 9f, p.y - 4f, p.x + 9f, p.y - 2f, 4.5f)
+                shapeRenderer.triangle(p.x - 9f, p.y + 2f, p.x - 9f, p.y - 8f, p.x - 2f, p.y - 3f)
+                shapeRenderer.color = Color(0.78f, 0.82f, 0.86f, 1f)
+                shapeRenderer.triangle(p.x - 8f, p.y + 0.8f, p.x - 8f, p.y - 6.8f, p.x - 3f, p.y - 3f)
             }
 
-            // 21. YETI: Quái thú người tuyết khổng lồ lông trắng dày, mặt xanh xám, mắt vàng dữ tợn
+            // =================================================================
+            // 21. YETI (Hàng 2 Cột 2 trong ảnh mẫu):
+            // Vượn tuyết khổng lồ lông trắng dày khom lưng, 2 tay dài chạm đất, mặt & ngực xám tro
+            // =================================================================
             EnemyType.YETI -> {
                 shapeRenderer.color = SHADOW
-                shapeRenderer.ellipse(p.x - 19f, p.y - 17f, 38f, 10f)
+                shapeRenderer.ellipse(p.x - 20f, p.y - 17f, 40f, 10f)
 
+                // Viền đen thân hình đồ sộ và 2 cánh tay khổng lồ chống đất
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.rect(p.x - 13f, p.y - 16f, 10f, 8f)
-                shapeRenderer.rect(p.x + 3f, p.y - 16f, 10f, 8f)
-                shapeRenderer.circle(p.x, p.y + 1f, 18.5f)
-                shapeRenderer.circle(p.x - 14f, p.y + 3f, 9f)
-                shapeRenderer.circle(p.x + 14f, p.y + 3f, 9f)
-                shapeRenderer.circle(p.x, p.y + 11f, 12f)
+                shapeRenderer.circle(p.x, p.y + 2f, 18.5f)
+                shapeRenderer.circle(p.x - 14f, p.y - 3f, 10.5f)
+                shapeRenderer.circle(p.x + 14f, p.y - 3f, 10.5f)
+                shapeRenderer.rect(p.x - 20f, p.y - 14f, 11f, 12f)
+                shapeRenderer.rect(p.x + 9f, p.y - 14f, 11f, 12f)
+                shapeRenderer.rect(p.x - 10f, p.y - 15f, 8f, 8f)
+                shapeRenderer.rect(p.x + 2f, p.y - 15f, 8f, 8f)
+                shapeRenderer.circle(p.x, p.y + 11.5f, 11.5f)
 
-                shapeRenderer.color = Color(0.90f, 0.94f, 0.98f, 1f)
+                // Bàn chân & Bàn tay xám đá
+                shapeRenderer.color = Color(0.58f, 0.62f, 0.66f, 1f)
+                shapeRenderer.rect(p.x - 18.5f, p.y - 12.5f, 8f, 6f)
+                shapeRenderer.rect(p.x + 10.5f, p.y - 12.5f, 8f, 6f)
+                shapeRenderer.rect(p.x - 8.5f, p.y - 13.5f, 5.5f, 5f)
+                shapeRenderer.rect(p.x + 3f, p.y - 13.5f, 5.5f, 5f)
+
+                // Bộ lông trắng xù khổng lồ có lớp bóng xám băng
+                shapeRenderer.color = Color(0.80f, 0.86f, 0.90f, 1f)
                 shapeRenderer.circle(p.x, p.y + 1f, 16.5f)
-                shapeRenderer.circle(p.x - 13.5f, p.y + 3f, 7.2f)
-                shapeRenderer.circle(p.x + 13.5f, p.y + 3f, 7.2f)
-                shapeRenderer.circle(p.x, p.y + 11f, 10.2f)
+                shapeRenderer.circle(p.x - 13.5f, p.y - 2f, 8.8f)
+                shapeRenderer.circle(p.x + 13.5f, p.y - 2f, 8.8f)
 
-                shapeRenderer.color = Color(0.52f, 0.60f, 0.70f, 1f)
-                shapeRenderer.circle(p.x, p.y + 9f, 7f)
-                shapeRenderer.color = Color(1f, 0.88f, 0.15f, 1f)
-                shapeRenderer.circle(p.x - 3f, p.y + 11f, 1.8f)
-                shapeRenderer.circle(p.x + 3f, p.y + 11f, 1.8f)
+                shapeRenderer.color = Color(0.95f, 0.97f, 1f, 1f)
+                shapeRenderer.circle(p.x, p.y + 3f, 15f)
+                shapeRenderer.circle(p.x - 13f, p.y, 7.5f)
+                shapeRenderer.circle(p.x + 13f, p.y, 7.5f)
+                shapeRenderer.circle(p.x, p.y + 11.5f, 9.8f)
+
+                // Khuôn mặt & Ngực xám tro của Yeti (chuẩn ảnh mẫu)
+                shapeRenderer.color = Color(0.55f, 0.60f, 0.65f, 1f)
+                shapeRenderer.ellipse(p.x - 7f, p.y - 6f, 14f, 10f)
+                shapeRenderer.circle(p.x, p.y + 9.5f, 6.2f)
+
+                // Mắt tối sâu & Miệng rộng
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.rect(p.x - 4.5f, p.y + 4.5f, 9f, 3.2f)
-                shapeRenderer.color = Color.WHITE
-                shapeRenderer.triangle(p.x - 3.5f, p.y + 5f, p.x - 2f, p.y + 7.5f, p.x - 0.5f, p.y + 5f)
-                shapeRenderer.triangle(p.x + 0.5f, p.y + 5f, p.x + 2f, p.y + 7.5f, p.x + 3.5f, p.y + 5f)
+                shapeRenderer.circle(p.x - 2.6f, p.y + 11f, 1.5f)
+                shapeRenderer.circle(p.x + 2.6f, p.y + 11f, 1.5f)
+                shapeRenderer.rectLine(p.x - 3.8f, p.y + 6.8f, p.x + 3.8f, p.y + 6.8f, 2f)
             }
 
-            // 22. TROLL_CHIEFTAIN: Thủ lĩnh Troll đội mũ sọ sừng cừu đại, vác trống trận bộ lạc
+            // =================================================================
+            // 22. TROLL_CHIEFTAIN (Hàng 2 Cột 1 trong ảnh mẫu):
+            // Thủ lĩnh Troll đeo mặt nạ sọ xương trắng, bờm đỏ trên đỉnh, đeo 2 trống trận gỗ bên hông
+            // =================================================================
             EnemyType.TROLL_CHIEFTAIN -> {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 16f, p.y - 15f, 32f, 8.5f)
 
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.circle(p.x, p.y, 15.5f)
-                shapeRenderer.rect(p.x - 12f, p.y - 12f, 24f, 15f)
-                shapeRenderer.circle(p.x, p.y + 10f, 10.5f)
-                shapeRenderer.triangle(p.x - 8f, p.y + 11f, p.x - 19f, p.y + 22f, p.x - 3f, p.y + 15f)
-                shapeRenderer.triangle(p.x + 8f, p.y + 11f, p.x + 19f, p.y + 22f, p.x + 3f, p.y + 15f)
+                shapeRenderer.rect(p.x - 8.5f, p.y - 13.5f, 6.5f, 6f)
+                shapeRenderer.rect(p.x + 2f, p.y - 13.5f, 6.5f, 6f)
+                shapeRenderer.circle(p.x, p.y, 14.5f)
+                shapeRenderer.circle(p.x, p.y + 9.5f, 10.5f)
+                // Sừng sọ & Bờm tóc đỏ trên đỉnh sọ
+                shapeRenderer.triangle(p.x - 8f, p.y + 10f, p.x - 18f, p.y + 19f, p.x - 4f, p.y + 14f)
+                shapeRenderer.triangle(p.x + 8f, p.y + 10f, p.x + 18f, p.y + 19f, p.x + 4f, p.y + 14f)
+                shapeRenderer.triangle(p.x - 5f, p.y + 15f, p.x, p.y + 24f, p.x + 5f, p.y + 15f)
+                // Viền 2 chiếc trống trận đeo trước bụng/hông
+                shapeRenderer.circle(p.x - 9.5f, p.y - 3.5f, 7.5f)
+                shapeRenderer.circle(p.x + 9.5f, p.y - 3.5f, 7.5f)
 
-                shapeRenderer.color = Color(0.26f, 0.48f, 0.58f, 1f)
-                shapeRenderer.circle(p.x, p.y, 13.5f)
-                shapeRenderer.rect(p.x - 10f, p.y - 10f, 20f, 13f)
+                // Thân da xanh lam
+                shapeRenderer.color = Color(0.28f, 0.56f, 0.66f, 1f)
+                shapeRenderer.circle(p.x, p.y, 12.5f)
+                shapeRenderer.rect(p.x - 7f, p.y - 12f, 5f, 6f)
+                shapeRenderer.rect(p.x + 2f, p.y - 12f, 5f, 6f)
 
-                shapeRenderer.color = Color(0.94f, 0.90f, 0.80f, 1f)
-                shapeRenderer.circle(p.x, p.y + 10f, 8.8f)
-                shapeRenderer.triangle(p.x - 7.5f, p.y + 11f, p.x - 17f, p.y + 20.5f, p.x - 3f, p.y + 14f)
-                shapeRenderer.triangle(p.x + 7.5f, p.y + 11f, p.x + 17f, p.y + 20.5f, p.x + 3f, p.y + 14f)
+                // 2 Chiếc trống trận bằng gỗ nâu mặt da vàng kem (chuẩn ảnh mẫu)
+                for (dx in listOf(-9.5f, 9.5f)) {
+                    shapeRenderer.color = Color(0.55f, 0.34f, 0.14f, 1f)
+                    shapeRenderer.circle(p.x + dx, p.y - 3.5f, 6f)
+                    shapeRenderer.color = Color(0.92f, 0.84f, 0.62f, 1f)
+                    shapeRenderer.circle(p.x + dx, p.y - 2.5f, 4.2f)
+                }
 
+                // Bờm tóc đỏ trên đỉnh đầu
+                shapeRenderer.color = Color(0.86f, 0.20f, 0.14f, 1f)
+                shapeRenderer.triangle(p.x - 4f, p.y + 15f, p.x, p.y + 22f, p.x + 4f, p.y + 15f)
+
+                // Mặt nạ sọ xương trắng ngà & Cặp sừng
+                shapeRenderer.color = Color(0.92f, 0.88f, 0.76f, 1f)
+                shapeRenderer.circle(p.x, p.y + 9.5f, 8.8f)
+                shapeRenderer.triangle(p.x - 7.5f, p.y + 10.5f, p.x - 16f, p.y + 17.5f, p.x - 4f, p.y + 13.5f)
+                shapeRenderer.triangle(p.x + 7.5f, p.y + 10.5f, p.x + 16f, p.y + 17.5f, p.x + 4f, p.y + 13.5f)
+
+                // Hốc mắt đen có đốm sáng đỏ
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.circle(p.x - 3.2f, p.y + 10f, 2f)
-                shapeRenderer.circle(p.x + 3.2f, p.y + 10f, 2f)
+                shapeRenderer.circle(p.x - 3.2f, p.y + 9.5f, 2.2f)
+                shapeRenderer.circle(p.x + 3.2f, p.y + 9.5f, 2.2f)
+                shapeRenderer.color = Color(0.95f, 0.25f, 0.15f, 1f)
+                shapeRenderer.circle(p.x - 3.2f, p.y + 9.5f, 0.9f)
+                shapeRenderer.circle(p.x + 3.2f, p.y + 9.5f, 0.9f)
             }
 
-            // 23. ROCKET_RIDER: Pháo thủ cưỡi tên lửa sắt phun lửa đuôi
+            // =================================================================
+            // 23. ROCKET_RIDER (Hàng 2 Cột 3 trong ảnh mẫu):
+            // Kị sĩ mặc giáp sắt, mũ trụ có kính ngắm cam, đeo tên lửa lớn phun lửa cam-vàng phía sau
+            // =================================================================
             EnemyType.ROCKET_RIDER -> {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 12f, p.y - 15f, 24f, 6f)
 
-                shapeRenderer.color = Color(1f, 0.42f, 0.05f, 0.95f)
-                shapeRenderer.triangle(p.x - 13f, p.y + 4.5f, p.x - 13f, p.y - 4.5f, p.x - 26f, p.y)
-                shapeRenderer.color = Color(1f, 0.90f, 0.25f, 1f)
-                shapeRenderer.triangle(p.x - 13f, p.y + 2.2f, p.x - 13f, p.y - 2.2f, p.x - 20f, p.y)
-
+                // Luồng lửa phản lực cam-vàng phụt ra phía sau tên lửa
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.rect(p.x - 14f, p.y - 6.5f, 22f, 13f)
-                shapeRenderer.triangle(p.x + 8f, p.y + 6.5f, p.x + 8f, p.y - 6.5f, p.x + 16f, p.y)
+                shapeRenderer.triangle(p.x - 8f, p.y + 8f, p.x - 15f, p.y - 3f, p.x - 24f, p.y - 6f)
+                shapeRenderer.color = Color(0.98f, 0.42f, 0.08f, 1f)
+                shapeRenderer.triangle(p.x - 8f, p.y + 6.5f, p.x - 14f, p.y - 2.5f, p.x - 22f, p.y - 5f)
+                shapeRenderer.color = Color(1f, 0.88f, 0.20f, 1f)
+                shapeRenderer.triangle(p.x - 9f, p.y + 4.5f, p.x - 13f, p.y - 1.5f, p.x - 18f, p.y - 3.5f)
 
-                shapeRenderer.color = Color(0.48f, 0.50f, 0.55f, 1f)
-                shapeRenderer.rect(p.x - 12.5f, p.y - 5f, 19f, 10f)
-                shapeRenderer.color = Color(0.85f, 0.18f, 0.15f, 1f)
-                shapeRenderer.triangle(p.x + 6.5f, p.y + 5f, p.x + 6.5f, p.y - 5f, p.x + 14f, p.y)
-
+                // Thân tên lửa sắt xám bạc đặt chéo trên lưng
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.circle(p.x + 1f, p.y + 6.5f, 7.2f)
-                shapeRenderer.color = Color(0.45f, 0.28f, 0.15f, 1f)
-                shapeRenderer.circle(p.x + 1f, p.y + 6.5f, 5.8f)
-                shapeRenderer.color = Color(0.35f, 0.88f, 1f, 1f)
-                shapeRenderer.circle(p.x + 3.5f, p.y + 7f, 2.4f)
+                shapeRenderer.rectLine(p.x - 12f, p.y + 1f, p.x + 8f, p.y + 11f, 13f)
+                shapeRenderer.color = Color(0.55f, 0.58f, 0.64f, 1f)
+                shapeRenderer.rectLine(p.x - 11f, p.y + 1.5f, p.x + 7f, p.y + 10.5f, 9.5f)
+                shapeRenderer.color = Color(0.78f, 0.82f, 0.88f, 1f)
+                shapeRenderer.rectLine(p.x - 10f, p.y + 3f, p.x + 6f, p.y + 11f, 4f)
+
+                // Thân giáp sắt và Mũ trụ của Rocket Rider
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.rect(p.x - 6f, p.y - 9f, 14f, 12f)
+                shapeRenderer.circle(p.x + 3f, p.y + 3f, 8.8f)
+
+                shapeRenderer.color = Color(0.45f, 0.48f, 0.52f, 1f)
+                shapeRenderer.rect(p.x - 4.5f, p.y - 7.5f, 11f, 9.5f)
+                shapeRenderer.color = Color(0.65f, 0.68f, 0.74f, 1f)
+                shapeRenderer.circle(p.x + 3f, p.y + 3f, 7.2f)
+
+                // Khe kính bảo hộ màu cam sáng trên mũ trụ (chuẩn ảnh mẫu)
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.rect(p.x - 0.5f, p.y + 1.5f, 8.5f, 4.5f)
+                shapeRenderer.color = Color(0.98f, 0.52f, 0.12f, 1f)
+                shapeRenderer.rect(p.x + 0.5f, p.y + 2.3f, 6.5f, 2.8f)
             }
 
-            // 24. DARK_SLAYER: Đại kị sĩ hắc ám giáp đen viền vàng, mũ sừng lớn, đại kiếm
+            // =================================================================
+            // 24. DARK_SLAYER (Hàng 2 Cột 4 trong ảnh mẫu):
+            // Kị sĩ giáp đen hạng nặng, mũ trụ 2 sừng lớn, mắt đỏ, cầm đại kiếm răng cưa ánh cam ngang bụng
+            // =================================================================
             EnemyType.DARK_SLAYER -> {
                 shapeRenderer.color = SHADOW
-                shapeRenderer.ellipse(p.x - 16f, p.y - 15f, 32f, 8.5f)
+                shapeRenderer.ellipse(p.x - 15f, p.y - 15f, 30f, 8f)
 
+                // Viền đen tổng thể
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.circle(p.x, p.y, 16f)
-                shapeRenderer.rect(p.x - 13f, p.y - 12f, 26f, 16f)
-                shapeRenderer.circle(p.x, p.y + 10f, 10.5f)
-                shapeRenderer.triangle(p.x - 8f, p.y + 12f, p.x - 18f, p.y + 23f, p.x - 3f, p.y + 16f)
-                shapeRenderer.triangle(p.x + 8f, p.y + 12f, p.x + 18f, p.y + 23f, p.x + 3f, p.y + 16f)
-
-                shapeRenderer.color = Color(0.18f, 0.18f, 0.22f, 1f)
-                shapeRenderer.circle(p.x, p.y, 14f)
+                shapeRenderer.rect(p.x - 8.5f, p.y - 14f, 6.5f, 6f)
+                shapeRenderer.rect(p.x + 2f, p.y - 14f, 6.5f, 6f)
                 shapeRenderer.rect(p.x - 11f, p.y - 10f, 22f, 14f)
-                shapeRenderer.color = Color.GOLD
-                shapeRenderer.rect(p.x - 11f, p.y - 3f, 22f, 3f)
+                shapeRenderer.circle(p.x, p.y + 7f, 9.8f)
+                // Cặp sừng trâu lớn vểnh lên
+                shapeRenderer.triangle(p.x - 7f, p.y + 9f, p.x - 16f, p.y + 20f, p.x - 2.5f, p.y + 14f)
+                shapeRenderer.triangle(p.x + 7f, p.y + 9f, p.x + 16f, p.y + 20f, p.x + 2.5f, p.y + 14f)
 
-                shapeRenderer.color = Color(0.24f, 0.24f, 0.28f, 1f)
-                shapeRenderer.circle(p.x, p.y + 10f, 8.8f)
+                // Giáp thép đen xám & Sừng xám sáng
+                shapeRenderer.color = Color(0.22f, 0.23f, 0.26f, 1f)
+                shapeRenderer.rect(p.x - 7f, p.y - 12.5f, 4.5f, 5f)
+                shapeRenderer.rect(p.x + 2.5f, p.y - 12.5f, 4.5f, 5f)
+                shapeRenderer.rect(p.x - 9f, p.y - 8.5f, 18f, 11.5f)
+                shapeRenderer.color = Color(0.34f, 0.36f, 0.40f, 1f)
+                shapeRenderer.circle(p.x, p.y + 7f, 8f)
+
+                shapeRenderer.color = Color(0.68f, 0.66f, 0.62f, 1f)
+                shapeRenderer.triangle(p.x - 6.5f, p.y + 9.5f, p.x - 14f, p.y + 18.2f, p.x - 3f, p.y + 13.5f)
+                shapeRenderer.triangle(p.x + 6.5f, p.y + 9.5f, p.x + 14f, p.y + 18.2f, p.x + 3f, p.y + 13.5f)
+
+                // Khe mũ chữ T đen & Đôi mắt đỏ rực
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.rect(p.x - 5.5f, p.y + 5.5f, 11f, 2.8f)
+                shapeRenderer.rect(p.x - 1.4f, p.y + 2f, 2.8f, 5.5f)
                 shapeRenderer.color = Color.RED
-                shapeRenderer.rect(p.x - 5f, p.y + 9f, 10f, 2.5f)
+                shapeRenderer.circle(p.x - 2.6f, p.y + 6.8f, 1.3f)
+                shapeRenderer.circle(p.x + 2.6f, p.y + 6.8f, 1.3f)
+
+                // Thanh đại kiếm răng cưa phát sáng cam-trắng cầm ngang bụng (chuẩn ảnh mẫu)
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.rect(p.x - 9f, p.y - 6.5f, 19f, 5.8f)
+                shapeRenderer.triangle(p.x + 10f, p.y - 0.7f, p.x + 10f, p.y - 6.5f, p.x + 15.5f, p.y - 3.6f)
+                shapeRenderer.color = Color(0.96f, 0.48f, 0.14f, 1f)
+                shapeRenderer.rect(p.x - 7.5f, p.y - 5.2f, 17f, 3.4f)
+                shapeRenderer.color = Color(1f, 0.90f, 0.75f, 1f)
+                shapeRenderer.rect(p.x - 5f, p.y - 4.2f, 13f, 1.6f)
             }
 
-            // 25. JT: Boss người tuyết khổng lồ J.T.
+            // =================================================================
+            // 25. JT: BOSS ĐẠI QUÁI TUYẾT J.T. (CHUẨN WIKI KINGDOM RUSH)
+            // Dáng khom lưng khổng lồ, bờm lông trắng nhọn, 2 cánh tay to chống nắm đấm đá,
+            // mặt đá xám vuông góc cạnh, mắt vàng xếch và miệng há rộng nhe răng vàng
+            // =================================================================
             EnemyType.JT -> {
+                // 1. Bóng đổ khổng lồ dưới mặt đất
                 shapeRenderer.color = SHADOW
-                shapeRenderer.ellipse(p.x - 26f, p.y - 22f, 52f, 14f)
+                shapeRenderer.ellipse(p.x - 28f, p.y - 24f, 56f, 15f)
 
+                val furShadow = Color(0.75f, 0.80f, 0.82f, 1f)
+                val furMain = Color(0.92f, 0.95f, 0.94f, 1f)
+                val skinStone = Color(0.46f, 0.50f, 0.53f, 1f)
+                val skinStoneDark = Color(0.34f, 0.38f, 0.40f, 1f)
+
+                // 2. CHÂN SAU & THÂN LƯNG GỒ KHỔNG LỒ (Lớp viền đen)
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.circle(p.x, p.y, 26f)
-                shapeRenderer.rect(p.x - 21f, p.y - 19f, 42f, 24f)
-                shapeRenderer.circle(p.x, p.y + 13f, 15.5f)
+                // Chân trụ phía sau
+                shapeRenderer.rect(p.x + 6f, p.y - 21f, 16f, 16f)
+                shapeRenderer.ellipse(p.x + 4f, p.y - 23f, 20f, 9f)
+                // Khối lưng và bả vai gồ cao kiểu Gorilla khổng lồ
+                shapeRenderer.circle(p.x + 5f, p.y + 4f, 23f)
+                shapeRenderer.circle(p.x - 6f, p.y + 6f, 20f)
+                shapeRenderer.ellipse(p.x - 20f, p.y - 14f, 46f, 32f)
 
-                shapeRenderer.color = Color(0.88f, 0.93f, 0.98f, 1f)
-                shapeRenderer.circle(p.x, p.y, 23.5f)
-                shapeRenderer.rect(p.x - 18.5f, p.y - 17f, 37f, 22f)
+                // Cánh tay trái (phía trước) & Cánh tay phải (vòng qua ngực)
+                shapeRenderer.circle(p.x - 18f, p.y - 3f, 13f)
+                shapeRenderer.circle(p.x + 14f, p.y - 4f, 14f)
+                shapeRenderer.rect(p.x - 25f, p.y - 18f, 16f, 16f)
+                shapeRenderer.rect(p.x - 10f, p.y - 20f, 24f, 15f)
 
-                shapeRenderer.color = Color(0.52f, 0.58f, 0.66f, 1f)
-                shapeRenderer.circle(p.x, p.y + 13f, 13.5f)
-                shapeRenderer.color = Color.YELLOW
-                shapeRenderer.circle(p.x - 5f, p.y + 15f, 2.8f)
-                shapeRenderer.circle(p.x + 5f, p.y + 15f, 2.8f)
+                // Gai lông nhọn trên đỉnh đầu và vai
+                shapeRenderer.triangle(p.x - 14f, p.y + 20f, p.x - 4f, p.y + 20f, p.x - 11f, p.y + 29f)
+                shapeRenderer.triangle(p.x - 8f, p.y + 21f, p.x + 2f, p.y + 21f, p.x - 3f, p.y + 31f)
+                shapeRenderer.triangle(p.x - 1f, p.y + 20f, p.x + 8f, p.y + 20f, p.x + 4f, p.y + 29f)
+
+                // 3. TÔ MÀU LÔNG TRẮNG XÁM CHO THÂN, LƯNG & BẮP TAY
+                // Bàn chân đá phía sau
+                shapeRenderer.color = skinStoneDark
+                shapeRenderer.ellipse(p.x + 6f, p.y - 21.5f, 16f, 7f)
+
+                // Lớp lông bóng râm (furShadow) tạo khối 3D
+                shapeRenderer.color = furShadow
+                shapeRenderer.circle(p.x + 5f, p.y + 3f, 20.5f)
+                shapeRenderer.ellipse(p.x - 18f, p.y - 12f, 42f, 28f)
+                shapeRenderer.circle(p.x - 17.5f, p.y - 3f, 10.8f)
+                shapeRenderer.circle(p.x + 13.5f, p.y - 4f, 11.8f)
+
+                // Lớp lông trắng sáng chủ đạo (furMain)
+                shapeRenderer.color = furMain
+                shapeRenderer.circle(p.x + 4f, p.y + 5f, 19f)
+                shapeRenderer.circle(p.x - 6f, p.y + 6.5f, 17.5f)
+                shapeRenderer.circle(p.x - 16.5f, p.y - 2f, 9.5f)
+                shapeRenderer.circle(p.x + 12.5f, p.y - 3f, 10.5f)
+                // Bờm lông nhọn trên đỉnh đầu
+                shapeRenderer.triangle(p.x - 12.5f, p.y + 19f, p.x - 5f, p.y + 19f, p.x - 10f, p.y + 27f)
+                shapeRenderer.triangle(p.x - 7f, p.y + 20f, p.x + 1f, p.y + 20f, p.x - 3f, p.y + 29f)
+                shapeRenderer.triangle(p.x, p.y + 19f, p.x + 6.5f, p.y + 19f, p.x + 3.5f, p.y + 27f)
+
+                // 4. HAI NẮM ĐẤM ĐÁ XÁM ĐEN KHỔNG LỒ CHỐNG TRƯỚC NGỰC (Chuẩn ảnh mẫu)
+                // Nắm đấm tay phải (bên trái hình)
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.rect(p.x - 7.5f, p.y + 6f, 15f, 5f)
-                shapeRenderer.color = Color.WHITE
-                shapeRenderer.rect(p.x - 5.5f, p.y + 7.5f, 3f, 3.2f)
-                shapeRenderer.rect(p.x + 2.5f, p.y + 7.5f, 3f, 3.2f)
+                shapeRenderer.circle(p.x - 18f, p.y - 11f, 9.5f)
+                shapeRenderer.color = skinStoneDark
+                shapeRenderer.circle(p.x - 18f, p.y - 11f, 7.8f)
+                shapeRenderer.color = skinStone
+                shapeRenderer.circle(p.x - 17f, p.y - 10f, 5.5f)
+
+                // Cánh tay trái vắt ngang & Nắm đấm khổng lồ có lông cổ tay nhọn
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.circle(p.x - 4f, p.y - 12f, 10.5f)
+                shapeRenderer.rect(p.x - 5f, p.y - 19f, 20f, 14f)
+                shapeRenderer.color = skinStoneDark
+                shapeRenderer.circle(p.x - 4f, p.y - 12f, 8.8f)
+                shapeRenderer.color = skinStone
+                shapeRenderer.circle(p.x - 3.5f, p.y - 11.5f, 6.8f)
+
+                // Lớp lông trắng xù phủ dọc cẳng tay trước có gai lông nhọn ở cổ tay
+                shapeRenderer.color = furShadow
+                shapeRenderer.rect(p.x - 1f, p.y - 17.5f, 15f, 11f)
+                shapeRenderer.color = furMain
+                shapeRenderer.rect(p.x, p.y - 16f, 14f, 9.5f)
+                shapeRenderer.triangle(p.x + 1f, p.y - 6.5f, p.x + 1f, p.y - 16f, p.x - 5.5f, p.y - 11f)
+                shapeRenderer.triangle(p.x + 2f, p.y - 6.5f, p.x + 2f, p.y - 12f, p.x - 3.5f, p.y - 8f)
+
+                // 5. KHUÔN MẶT ĐÁ XÁM GÓC CẠNH DỮ TỢN CỦA J.T.
+                val faceX = p.x - 5f
+                val faceY = p.y + 8f
+
+                // Viền đen khung mặt vuông vức
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.rect(faceX - 11.5f, faceY - 9.5f, 22f, 21f)
+                shapeRenderer.circle(faceX - 0.5f, faceY + 7f, 11f)
+
+                // Nền da mặt đá xám
+                shapeRenderer.color = skinStone
+                shapeRenderer.rect(faceX - 9.8f, faceY - 8f, 18.6f, 18f)
+                shapeRenderer.circle(faceX - 0.5f, faceY + 6.5f, 9.2f)
+
+                // Nếp nhăn trán & Gờ chân mày đá nhíu chặt
+                shapeRenderer.color = skinStoneDark
+                shapeRenderer.rect(faceX - 8.5f, faceY + 4.5f, 16f, 4.5f)
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.rectLine(faceX - 9f, faceY + 7f, faceX - 1f, faceY + 4.2f, 2.4f)
+                shapeRenderer.rectLine(faceX + 8f, faceY + 7f, faceX, faceY + 4.2f, 2.4f)
+                shapeRenderer.rectLine(faceX - 5f, faceY + 9.5f, faceX + 4f, faceY + 9.5f, 1.6f)
+
+                // Đôi mắt vàng rực xếch ngược hung tợn
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.circle(faceX - 5f, faceY + 3.2f, 2.6f)
+                shapeRenderer.circle(faceX + 4f, faceY + 3.2f, 2.6f)
+                shapeRenderer.color = Color(1f, 0.88f, 0.12f, 1f)
+                shapeRenderer.circle(faceX - 5f, faceY + 3.2f, 1.8f)
+                shapeRenderer.circle(faceX + 4f, faceY + 3.2f, 1.8f)
+
+                // 6. CÁI MIỆNG VUÔNG HÁ TO GẦM THÉT, LƯỠI HỒNG XÁM & RĂNG VÀNG XỈN
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.rect(faceX - 8.5f, faceY - 7.5f, 16f, 9.5f)
+                // Hốc miệng tối thẫm
+                shapeRenderer.color = Color(0.22f, 0.15f, 0.17f, 1f)
+                shapeRenderer.rect(faceX - 7f, faceY - 6.2f, 13f, 7f)
+                // Lưỡi bên trong miệng
+                shapeRenderer.color = Color(0.58f, 0.42f, 0.45f, 1f)
+                shapeRenderer.ellipse(faceX - 4.5f, faceY - 6f, 9f, 4.5f)
+
+                // 4 Chiếc răng đá vàng xỉn ở 2 góc hàm trên và hàm dưới (giống hệt ảnh Wiki)
+                val toothColor = Color(0.92f, 0.84f, 0.42f, 1f)
+                shapeRenderer.color = toothColor
+                // Răng nanh hàm trên
+                shapeRenderer.rect(faceX - 6.8f, faceY - 1.8f, 2.8f, 2.6f)
+                shapeRenderer.rect(faceX + 3.0f, faceY - 1.8f, 2.8f, 2.6f)
+                // Răng nanh hàm dưới
+                shapeRenderer.rect(faceX - 6.8f, faceY - 6.2f, 3.0f, 3.0f)
+                shapeRenderer.rect(faceX + 2.8f, faceY - 6.2f, 3.0f, 3.0f)
             }
 
-            // 26. SKELETON: Chiến binh bộ xương trắng có viền đen, khiên đồng, kiếm cong
+            // =================================================================
+            // 26. SKELETON
+            // Bộ xương trắng ngà có viền đen rõ nét, hốc mắt đen, xương sườn ngang, cầm kiếm cong Scimitar
+            // =================================================================
             EnemyType.SKELETON -> {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 10f, p.y - 12f, 20f, 6f)
 
+                // Viền đen hộp sọ, xương sườn và chân xương
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.rect(p.x - 5f, p.y - 10f, 10f, 12f)
-                shapeRenderer.circle(p.x, p.y + 6f, 8.2f)
+                shapeRenderer.rect(p.x - 5.5f, p.y - 11.5f, 4f, 5.5f)
+                shapeRenderer.rect(p.x + 1.5f, p.y - 11.5f, 4f, 5.5f)
+                shapeRenderer.rect(p.x - 6.5f, p.y - 7.5f, 13f, 10.5f)
+                shapeRenderer.circle(p.x, p.y + 6f, 8.8f)
 
-                shapeRenderer.color = Color(0.94f, 0.92f, 0.86f, 1f)
-                shapeRenderer.rect(p.x - 2f, p.y - 8f, 4f, 10f)
-                shapeRenderer.rectLine(p.x - 5f, p.y - 2f, p.x + 5f, p.y - 2f, 2.2f)
-                shapeRenderer.rectLine(p.x - 4.5f, p.y - 5f, p.x + 4.5f, p.y - 5f, 2.2f)
-                shapeRenderer.circle(p.x, p.y + 6f, 6.6f)
+                // Xương trắng ngà (Ivory Bone)
+                val boneColor = Color(0.94f, 0.90f, 0.78f, 1f)
+                shapeRenderer.color = boneColor
+                shapeRenderer.rect(p.x - 4.2f, p.y - 10.5f, 2f, 4f)
+                shapeRenderer.rect(p.x + 2.2f, p.y - 10.5f, 2f, 4f)
+                // Cột sống & 2 dải xương sườn ngang
+                shapeRenderer.rect(p.x - 1.5f, p.y - 7f, 3f, 9f)
+                shapeRenderer.rect(p.x - 5f, p.y - 1.5f, 10f, 2f)
+                shapeRenderer.rect(p.x - 4.5f, p.y - 4.5f, 9f, 2f)
 
+                // Hộp sọ lớn & Hốc mắt đen sâu
+                shapeRenderer.circle(p.x, p.y + 6f, 7.2f)
+                shapeRenderer.rect(p.x - 4f, p.y + 0.5f, 8f, 3.5f)
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.circle(p.x - 2.5f, p.y + 6f, 1.9f)
-                shapeRenderer.circle(p.x + 2.5f, p.y + 6f, 1.9f)
+                shapeRenderer.circle(p.x - 2.6f, p.y + 5.8f, 2.0f)
+                shapeRenderer.circle(p.x + 2.6f, p.y + 5.8f, 2.0f)
+                shapeRenderer.rectLine(p.x - 5.5f, p.y + 8f, p.x - 1f, p.y + 7f, 1.5f)
+                shapeRenderer.rectLine(p.x + 5.5f, p.y + 8f, p.x + 1f, p.y + 7f, 1.5f)
 
+                // Thanh kiếm cong Scimitar bản rộng cầm ngang trước bụng (chuẩn ảnh mẫu)
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.circle(p.x - 7.5f, p.y - 2f, 6.2f)
-                shapeRenderer.color = Color(0.75f, 0.48f, 0.20f, 1f)
-                shapeRenderer.circle(p.x - 7.5f, p.y - 2f, 4.6f)
+                shapeRenderer.rect(p.x - 7f, p.y - 6.5f, 16f, 5f)
+                shapeRenderer.triangle(p.x + 9f, p.y - 1.5f, p.x + 9f, p.y - 6.5f, p.x + 14.5f, p.y - 0.5f)
+                shapeRenderer.color = Color(0.85f, 0.65f, 0.20f, 1f)
+                shapeRenderer.rect(p.x - 5.8f, p.y - 5.2f, 3f, 2.6f)
+                shapeRenderer.color = Color.WHITE
+                shapeRenderer.rect(p.x - 2.8f, p.y - 5.2f, 11.5f, 2.6f)
+                shapeRenderer.triangle(p.x + 8.7f, p.y - 2.6f, p.x + 8.7f, p.y - 5.2f, p.x + 13f, p.y - 1.5f)
             }
 
-            // 27. SKELETON_KNIGHT: Kị sĩ xương đội mũ sắt, khiên sắt, kiếm dài
+            // =================================================================
+            // 27. SKELETON_KNIGHT
+            // Chiến binh xương đội mũ sắt chóp nhọn có thanh che mũi, đeo khiên tròn đen viền bạc, cầm kiếm cong
+            // =================================================================
             EnemyType.SKELETON_KNIGHT -> {
                 shapeRenderer.color = SHADOW
-                shapeRenderer.ellipse(p.x - 11f, p.y - 12f, 22f, 6.5f)
+                shapeRenderer.ellipse(p.x - 11f, p.y - 12.5f, 22f, 6.5f)
 
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.rect(p.x - 7.5f, p.y - 10f, 15f, 13f)
-                shapeRenderer.circle(p.x, p.y + 6.5f, 8.8f)
+                shapeRenderer.rect(p.x - 6f, p.y - 11.5f, 4.5f, 5.5f)
+                shapeRenderer.rect(p.x + 1.5f, p.y - 11.5f, 4.5f, 5.5f)
+                shapeRenderer.rect(p.x - 7.5f, p.y - 8f, 15f, 11f)
+                shapeRenderer.circle(p.x, p.y + 6f, 9.2f)
+                shapeRenderer.triangle(p.x - 3f, p.y + 13.5f, p.x + 3f, p.y + 13.5f, p.x, p.y + 18.5f)
 
-                shapeRenderer.color = Color(0.45f, 0.48f, 0.54f, 1f)
-                shapeRenderer.rect(p.x - 6f, p.y - 8.5f, 12f, 10.5f)
-                shapeRenderer.color = Color(0.94f, 0.92f, 0.86f, 1f)
-                shapeRenderer.circle(p.x, p.y + 6f, 7f)
-                shapeRenderer.color = Color(0.36f, 0.40f, 0.46f, 1f)
-                shapeRenderer.rect(p.x - 7f, p.y + 6.5f, 14f, 6f)
-                shapeRenderer.rect(p.x - 1.5f, p.y + 3f, 3f, 5f)
+                // Xương trắng ngà
+                val boneColor = Color(0.94f, 0.90f, 0.78f, 1f)
+                shapeRenderer.color = boneColor
+                shapeRenderer.rect(p.x - 4.5f, p.y - 10.5f, 2.2f, 4f)
+                shapeRenderer.rect(p.x + 2.3f, p.y - 10.5f, 2.2f, 4f)
+                shapeRenderer.rect(p.x - 5f, p.y - 2f, 10f, 2f)
+                shapeRenderer.rect(p.x - 4.5f, p.y - 5f, 9f, 2f)
+                shapeRenderer.circle(p.x, p.y + 4.8f, 7.2f)
 
+                // Hốc mắt đen
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.circle(p.x - 3.2f, p.y + 5f, 1.8f)
-                shapeRenderer.circle(p.x + 3.2f, p.y + 5f, 1.8f)
+                shapeRenderer.circle(p.x - 2.8f, p.y + 4.8f, 2.0f)
+                shapeRenderer.circle(p.x + 2.8f, p.y + 4.8f, 2.0f)
 
+                // Mũ sắt chóp nhọn có thanh che mũi dọc
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.circle(p.x - 8.5f, p.y - 2f, 6.8f)
-                shapeRenderer.color = Color(0.62f, 0.66f, 0.72f, 1f)
-                shapeRenderer.circle(p.x - 8.5f, p.y - 2f, 5.2f)
+                shapeRenderer.arc(p.x, p.y + 6f, 9.2f, 0f, 180f)
+                shapeRenderer.rect(p.x - 9f, p.y + 5.8f, 18f, 2f)
+                shapeRenderer.color = Color(0.58f, 0.62f, 0.68f, 1f)
+                shapeRenderer.arc(p.x, p.y + 6.5f, 7.6f, 0f, 180f)
+                shapeRenderer.triangle(p.x - 2f, p.y + 13.5f, p.x + 2f, p.y + 13.5f, p.x, p.y + 17f)
+                shapeRenderer.rect(p.x - 1.2f, p.y + 2.5f, 2.4f, 5f)
+
+                // Khiên tròn đen viền bạc bên hông phải
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.circle(p.x + 6.5f, p.y - 3f, 6.8f)
+                shapeRenderer.color = Color(0.75f, 0.78f, 0.82f, 1f)
+                shapeRenderer.circle(p.x + 6.5f, p.y - 3f, 5.4f)
+                shapeRenderer.color = Color(0.25f, 0.26f, 0.28f, 1f)
+                shapeRenderer.circle(p.x + 6.5f, p.y - 3f, 3.8f)
+
+                // Kiếm cong Scimitar trắng cầm ngang
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.rect(p.x - 8f, p.y - 6.5f, 15f, 4.8f)
+                shapeRenderer.color = Color.WHITE
+                shapeRenderer.rect(p.x - 5.5f, p.y - 5.3f, 11.5f, 2.5f)
             }
 
-            // 28. DEMON_SPAWN: Quỷ đỏ địa ngục có sừng cong, đuôi mũi tên, mắt vàng
+            // =================================================================
+            // 28. DEMON_SPAWN
+            // Quỷ đỏ cam có 2 sừng trắng ngắn, mắt vàng giận dữ, cầm đoản đao bạc ngang bụng
+            // =================================================================
             EnemyType.DEMON_SPAWN -> {
                 shapeRenderer.color = SHADOW
-                shapeRenderer.ellipse(p.x - 11f, p.y - 12f, 22f, 6.5f)
+                shapeRenderer.ellipse(p.x - 10f, p.y - 12f, 20f, 6f)
 
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.rect(p.x - 8f, p.y - 9f, 16f, 12f)
-                shapeRenderer.circle(p.x, p.y + 5.5f, 9f)
-                shapeRenderer.triangle(p.x - 6f, p.y + 8f, p.x - 12f, p.y + 17f, p.x - 2f, p.y + 11f)
-                shapeRenderer.triangle(p.x + 6f, p.y + 8f, p.x + 12f, p.y + 17f, p.x + 2f, p.y + 11f)
+                shapeRenderer.rect(p.x - 6f, p.y - 11f, 4.5f, 5f)
+                shapeRenderer.rect(p.x + 1.5f, p.y - 11f, 4.5f, 5f)
+                shapeRenderer.rect(p.x - 7.5f, p.y - 8f, 15f, 11.5f)
+                shapeRenderer.circle(p.x, p.y + 4.5f, 8.8f)
+                // 2 Sừng trắng ngắn trên đầu
+                shapeRenderer.triangle(p.x - 6f, p.y + 8f, p.x - 10.5f, p.y + 15.5f, p.x - 2f, p.y + 11f)
+                shapeRenderer.triangle(p.x + 6f, p.y + 8f, p.x + 10.5f, p.y + 15.5f, p.x + 2f, p.y + 11f)
 
-                shapeRenderer.color = Color(0.86f, 0.20f, 0.16f, 1f)
-                shapeRenderer.rect(p.x - 6.5f, p.y - 7.5f, 13f, 10f)
-                shapeRenderer.circle(p.x, p.y + 5.5f, 7.4f)
+                // Da quỷ đỏ cam rực
+                shapeRenderer.color = Color(0.76f, 0.22f, 0.08f, 1f)
+                shapeRenderer.rect(p.x - 6f, p.y - 7f, 12f, 9f)
+                shapeRenderer.color = Color(0.88f, 0.32f, 0.10f, 1f)
+                shapeRenderer.circle(p.x, p.y + 4.5f, 7.2f)
 
-                shapeRenderer.color = Color(0.24f, 0.18f, 0.18f, 1f)
-                shapeRenderer.triangle(p.x - 5.5f, p.y + 8.5f, p.x - 10.5f, p.y + 15.5f, p.x - 2.5f, p.y + 11f)
-                shapeRenderer.triangle(p.x + 5.5f, p.y + 8.5f, p.x + 10.5f, p.y + 15.5f, p.x + 2.5f, p.y + 11f)
+                // Sừng trắng ngà & Mắt vàng sáng
+                shapeRenderer.color = Color(0.96f, 0.92f, 0.80f, 1f)
+                shapeRenderer.triangle(p.x - 5.5f, p.y + 8.5f, p.x - 9.2f, p.y + 14.2f, p.x - 2.5f, p.y + 10.8f)
+                shapeRenderer.triangle(p.x + 5.5f, p.y + 8.5f, p.x + 9.2f, p.y + 14.2f, p.x + 2.5f, p.y + 10.8f)
 
-                shapeRenderer.color = Color(1f, 0.92f, 0.18f, 1f)
-                shapeRenderer.circle(p.x - 2.8f, p.y + 6f, 1.7f)
-                shapeRenderer.circle(p.x + 2.8f, p.y + 6f, 1.7f)
+                shapeRenderer.color = Color(1f, 0.92f, 0.20f, 1f)
+                shapeRenderer.circle(p.x - 2.6f, p.y + 5f, 1.7f)
+                shapeRenderer.circle(p.x + 2.6f, p.y + 5f, 1.7f)
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.rectLine(p.x - 5.5f, p.y + 7.2f, p.x - 1f, p.y + 5.8f, 1.6f)
+                shapeRenderer.rectLine(p.x + 5.5f, p.y + 7.2f, p.x + 1f, p.y + 5.8f, 1.6f)
+
+                // Đoản đao bạc cầm ngang trước bụng (chuẩn ảnh mẫu)
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.rect(p.x - 6f, p.y - 5.5f, 13f, 4.5f)
+                shapeRenderer.color = Color(0.88f, 0.92f, 0.96f, 1f)
+                shapeRenderer.rect(p.x - 4.5f, p.y - 4.3f, 10f, 2.3f)
             }
 
-            // 29. DEMON_HOUND: Chó săn địa ngục đỏ rực, gai lửa vàng cam trên lưng
+            // =================================================================
+            // 29. DEMON_HOUND
+            // Chó săn địa ngục 4 chân màu đỏ cam, lưng gai nhọn, cặp sừng trắng lớn chúc về phía trước
+            // =================================================================
             EnemyType.DEMON_HOUND -> {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 14f, p.y - 11f, 28f, 6.5f)
 
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.ellipse(p.x - 13f, p.y - 6.5f, 25f, 13.5f)
-                shapeRenderer.circle(p.x + 8.5f, p.y + 2f, 7.8f)
+                shapeRenderer.rect(p.x - 10.5f, p.y - 9.5f, 4f, 6.5f)
+                shapeRenderer.rect(p.x - 5f, p.y - 9.5f, 4f, 6.5f)
+                shapeRenderer.rect(p.x + 2f, p.y - 9.5f, 4f, 6.5f)
+                shapeRenderer.rect(p.x + 7f, p.y - 9.5f, 4f, 6.5f)
+                shapeRenderer.ellipse(p.x - 13f, p.y - 6f, 24f, 13f)
+                shapeRenderer.triangle(p.x - 9f, p.y + 3f, p.x - 6f, p.y + 11f, p.x - 2f, p.y + 3f)
+                shapeRenderer.triangle(p.x - 4f, p.y + 4f, p.x, p.y + 12f, p.x + 4f, p.y + 4f)
+                shapeRenderer.circle(p.x + 8f, p.y + 1.5f, 7.5f)
+                // Sừng trắng lớn trên đầu chó săn địa ngục
+                shapeRenderer.triangle(p.x + 5f, p.y + 6f, p.x + 15f, p.y + 11f, p.x + 9f, p.y + 2f)
 
-                shapeRenderer.color = Color(0.76f, 0.18f, 0.14f, 1f)
-                shapeRenderer.ellipse(p.x - 11.5f, p.y - 5f, 22f, 10.5f)
-                shapeRenderer.circle(p.x + 8.5f, p.y + 2f, 6.2f)
+                // Thân đỏ cam sẫm & Gai lưng
+                shapeRenderer.color = Color(0.78f, 0.26f, 0.08f, 1f)
+                shapeRenderer.rect(p.x - 9.3f, p.y - 8f, 2.2f, 5f)
+                shapeRenderer.rect(p.x + 3.2f, p.y - 8f, 2.2f, 5f)
+                shapeRenderer.ellipse(p.x - 11.5f, p.y - 4.5f, 21f, 10f)
+                shapeRenderer.color = Color(0.90f, 0.36f, 0.12f, 1f)
+                shapeRenderer.triangle(p.x - 8f, p.y + 3f, p.x - 6f, p.y + 9.5f, p.x - 3f, p.y + 3f)
+                shapeRenderer.triangle(p.x - 3f, p.y + 4f, p.x, p.y + 10.5f, p.x + 3f, p.y + 4f)
+                shapeRenderer.circle(p.x + 8f, p.y + 1.5f, 5.8f)
 
-                shapeRenderer.color = Color(1f, 0.65f, 0.12f, 1f)
-                shapeRenderer.triangle(p.x - 8f, p.y + 3.5f, p.x - 5f, p.y + 11.5f, p.x - 2f, p.y + 3.5f)
-                shapeRenderer.triangle(p.x - 2f, p.y + 4f, p.x + 1f, p.y + 13f, p.x + 4f, p.y + 4f)
-                shapeRenderer.color = Color.YELLOW
-                shapeRenderer.circle(p.x + 10f, p.y + 3.2f, 1.7f)
+                // Sừng trắng ngà & Mắt vàng sáng
+                shapeRenderer.color = Color(0.96f, 0.92f, 0.78f, 1f)
+                shapeRenderer.triangle(p.x + 5.5f, p.y + 5.5f, p.x + 13.5f, p.y + 9.8f, p.x + 8.8f, p.y + 2.5f)
+                shapeRenderer.color = Color(1f, 0.92f, 0.20f, 1f)
+                shapeRenderer.circle(p.x + 10f, p.y + 2f, 1.6f)
             }
 
-            // 30. DEMON_LORD: Chúa quỷ khổng lồ giáp dung nham, sừng đại quỷ
+            // =================================================================
+            // 30. DEMON_LORD
+            // Chúa quỷ đỏ cam vạm vỡ, sừng trắng lớn, đeo cầu vai vàng, đai vàng và huy chương vàng trước ngực
+            // =================================================================
             EnemyType.DEMON_LORD -> {
                 shapeRenderer.color = SHADOW
-                shapeRenderer.ellipse(p.x - 17f, p.y - 16f, 34f, 9f)
+                shapeRenderer.ellipse(p.x - 15f, p.y - 15f, 30f, 8f)
 
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.circle(p.x, p.y, 17f)
-                shapeRenderer.rect(p.x - 14f, p.y - 13f, 28f, 16f)
-                shapeRenderer.circle(p.x, p.y + 11f, 11f)
-                shapeRenderer.triangle(p.x - 8f, p.y + 13f, p.x - 21f, p.y + 26f, p.x - 3f, p.y + 18f)
-                shapeRenderer.triangle(p.x + 8f, p.y + 13f, p.x + 21f, p.y + 26f, p.x + 3f, p.y + 18f)
+                shapeRenderer.rect(p.x - 8.5f, p.y - 14f, 6.5f, 6f)
+                shapeRenderer.rect(p.x + 2f, p.y - 14f, 6.5f, 6f)
+                shapeRenderer.circle(p.x, p.y - 1f, 13.5f)
+                shapeRenderer.rect(p.x - 11.5f, p.y - 10f, 23f, 14f)
+                shapeRenderer.circle(p.x - 11.5f, p.y + 2f, 6.5f)
+                shapeRenderer.circle(p.x + 11.5f, p.y + 2f, 6.5f)
+                shapeRenderer.circle(p.x, p.y + 8f, 9.8f)
+                // Cặp sừng trắng lớn trên đỉnh đầu
+                shapeRenderer.triangle(p.x - 7f, p.y + 11f, p.x - 15f, p.y + 21f, p.x - 2f, p.y + 14.5f)
+                shapeRenderer.triangle(p.x + 7f, p.y + 11f, p.x + 15f, p.y + 21f, p.x + 2f, p.y + 14.5f)
 
-                shapeRenderer.color = Color(0.68f, 0.16f, 0.12f, 1f)
-                shapeRenderer.circle(p.x, p.y, 15f)
-                shapeRenderer.rect(p.x - 12f, p.y - 11f, 24f, 14f)
-                shapeRenderer.circle(p.x, p.y + 11f, 9.2f)
+                // Thân cơ bắp đỏ cam & Quần sẫm
+                shapeRenderer.color = Color(0.45f, 0.16f, 0.10f, 1f)
+                shapeRenderer.rect(p.x - 9.5f, p.y - 9f, 19f, 5f)
+                shapeRenderer.color = Color(0.86f, 0.28f, 0.08f, 1f)
+                shapeRenderer.rect(p.x - 9.5f, p.y - 4f, 19f, 8f)
+                shapeRenderer.circle(p.x, p.y + 8f, 8f)
 
-                shapeRenderer.color = Color(0.22f, 0.18f, 0.18f, 1f)
-                shapeRenderer.rect(p.x - 9.5f, p.y - 7f, 19f, 12f)
-                shapeRenderer.color = Color(1f, 0.55f, 0.08f, 1f)
-                shapeRenderer.rectLine(p.x - 7f, p.y + 3f, p.x + 7f, p.y - 3f, 2.2f)
-                shapeRenderer.rectLine(p.x - 6f, p.y - 3f, p.x + 6f, p.y + 3f, 2.2f)
+                // Giáp vai vàng cam, đai ngực và Huy chương vàng giữa ngực (chuẩn ảnh mẫu)
+                shapeRenderer.color = Color(0.96f, 0.68f, 0.14f, 1f)
+                shapeRenderer.circle(p.x - 11f, p.y + 2f, 4.8f)
+                shapeRenderer.circle(p.x + 11f, p.y + 2f, 4.8f)
+                shapeRenderer.rect(p.x - 9.5f, p.y - 4.5f, 19f, 2.2f)
+                shapeRenderer.circle(p.x, p.y - 0.5f, 3.2f)
 
-                shapeRenderer.color = Color(1f, 0.92f, 0.18f, 1f)
-                shapeRenderer.circle(p.x - 3.5f, p.y + 12f, 2.2f)
-                shapeRenderer.circle(p.x + 3.5f, p.y + 12f, 2.2f)
+                // Sừng trắng ngà & Mắt vàng dữ tợn
+                shapeRenderer.color = Color(0.96f, 0.92f, 0.80f, 1f)
+                shapeRenderer.triangle(p.x - 6.5f, p.y + 11.5f, p.x - 13.5f, p.y + 19.5f, p.x - 2.5f, p.y + 14f)
+                shapeRenderer.triangle(p.x + 6.5f, p.y + 11.5f, p.x + 13.5f, p.y + 19.5f, p.x + 2.5f, p.y + 14f)
+
+                shapeRenderer.color = Color(1f, 0.92f, 0.20f, 1f)
+                shapeRenderer.circle(p.x - 2.8f, p.y + 8.5f, 1.8f)
+                shapeRenderer.circle(p.x + 2.8f, p.y + 8.5f, 1.8f)
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.rectLine(p.x - 6f, p.y + 11f, p.x - 1f, p.y + 9.2f, 1.8f)
+                shapeRenderer.rectLine(p.x + 6f, p.y + 11f, p.x + 1f, p.y + 9.2f, 1.8f)
             }
 
-            // 31. DEMON_IMP: Tiểu quỷ đỏ có cánh dơi
+            // =================================================================
+            // 31. DEMON_IMP
+            // Tiểu quỷ bay màu đỏ cam, xòe đôi cánh dơi lớn có xương cánh sáng, sừng trắng, chân vuốt
+            // =================================================================
             EnemyType.DEMON_IMP -> {
                 shapeRenderer.color = SHADOW
                 shapeRenderer.ellipse(p.x - 10f, p.y - 14f, 20f, 6f)
 
+                // Viền đen đôi cánh dơi xòe rộng, thân, đầu và sừng
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.triangle(p.x - 3f, p.y + 2f, p.x - 19f, p.y + 14f, p.x - 11f, p.y - 5f)
-                shapeRenderer.triangle(p.x + 3f, p.y + 2f, p.x + 19f, p.y + 14f, p.x + 11f, p.y - 5f)
-                shapeRenderer.circle(p.x, p.y, 8.5f)
-                shapeRenderer.circle(p.x, p.y + 5.5f, 7f)
+                shapeRenderer.triangle(p.x - 2f, p.y + 3f, p.x - 21f, p.y + 16f, p.x - 12f, p.y - 4f)
+                shapeRenderer.triangle(p.x + 2f, p.y + 3f, p.x + 21f, p.y + 16f, p.x + 12f, p.y - 4f)
+                shapeRenderer.rectLine(p.x - 3f, p.y - 5f, p.x - 5f, p.y - 11f, 3.2f)
+                shapeRenderer.rectLine(p.x + 3f, p.y - 5f, p.x + 5f, p.y - 11f, 3.2f)
+                shapeRenderer.circle(p.x, p.y - 1f, 7.5f)
+                shapeRenderer.circle(p.x, p.y + 5.5f, 7.2f)
+                shapeRenderer.triangle(p.x - 5f, p.y + 8f, p.x - 9f, p.y + 15f, p.x - 1.5f, p.y + 10f)
+                shapeRenderer.triangle(p.x + 5f, p.y + 8f, p.x + 9f, p.y + 15f, p.x + 1.5f, p.y + 10f)
 
-                shapeRenderer.color = Color(0.85f, 0.30f, 0.10f, 1f)
-                shapeRenderer.triangle(p.x - 3f, p.y + 1.5f, p.x - 17f, p.y + 12.5f, p.x - 10f, p.y - 4f)
-                shapeRenderer.triangle(p.x + 3f, p.y + 1.5f, p.x + 17f, p.y + 12.5f, p.x + 10f, p.y - 4f)
+                // Màng cánh dơi đỏ cam
+                shapeRenderer.color = Color(0.76f, 0.24f, 0.08f, 1f)
+                shapeRenderer.triangle(p.x - 2f, p.y + 2.5f, p.x - 19f, p.y + 14.5f, p.x - 11f, p.y - 2.5f)
+                shapeRenderer.triangle(p.x + 2f, p.y + 2.5f, p.x + 19f, p.y + 14.5f, p.x + 11f, p.y - 2.5f)
+                shapeRenderer.color = Color(0.95f, 0.46f, 0.14f, 1f)
+                shapeRenderer.rectLine(p.x - 3f, p.y + 3f, p.x - 18f, p.y + 14f, 1.8f)
+                shapeRenderer.rectLine(p.x + 3f, p.y + 3f, p.x + 18f, p.y + 14f, 1.8f)
 
-                shapeRenderer.color = Color(0.92f, 0.22f, 0.16f, 1f)
-                shapeRenderer.circle(p.x, p.y, 6.8f)
-                shapeRenderer.circle(p.x, p.y + 5.5f, 5.5f)
-                shapeRenderer.color = Color.YELLOW
-                shapeRenderer.circle(p.x - 2.2f, p.y + 6f, 1.4f)
-                shapeRenderer.circle(p.x + 2.2f, p.y + 6f, 1.4f)
+                // Thân & Đầu tiểu quỷ
+                shapeRenderer.color = Color(0.88f, 0.32f, 0.10f, 1f)
+                shapeRenderer.circle(p.x, p.y - 1f, 5.8f)
+                shapeRenderer.circle(p.x, p.y + 5.5f, 5.6f)
+
+                // Sừng trắng & Mắt vàng
+                shapeRenderer.color = Color(0.96f, 0.92f, 0.80f, 1f)
+                shapeRenderer.triangle(p.x - 4.5f, p.y + 8.5f, p.x - 7.8f, p.y + 13.8f, p.x - 2f, p.y + 10f)
+                shapeRenderer.triangle(p.x + 4.5f, p.y + 8.5f, p.x + 7.8f, p.y + 13.8f, p.x + 2f, p.y + 10f)
+                shapeRenderer.color = Color(1f, 0.92f, 0.20f, 1f)
+                shapeRenderer.circle(p.x - 2f, p.y + 5.8f, 1.4f)
+                shapeRenderer.circle(p.x + 2f, p.y + 5.8f, 1.4f)
             }
 
-            // 32. MAGMA_ELEMENTAL: Khổng lồ đá núi lửa rực cháy dung nham
+            // =================================================================
+            // 32. MAGMA_ELEMENTAL
+            // Người đá núi lửa đen xám góc cạnh, các đường nứt dung nham cam-vàng rực cháy khắp người
+            // =================================================================
             EnemyType.MAGMA_ELEMENTAL -> {
                 shapeRenderer.color = SHADOW
-                shapeRenderer.ellipse(p.x - 20f, p.y - 18f, 40f, 10f)
+                shapeRenderer.ellipse(p.x - 19f, p.y - 17f, 38f, 10f)
 
+                // Viền đen khối đá góc cạnh
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.circle(p.x, p.y + 1f, 22f)
-                shapeRenderer.color = Color(0.24f, 0.19f, 0.18f, 1f)
-                shapeRenderer.circle(p.x, p.y + 1f, 19.5f)
+                shapeRenderer.rect(p.x - 13f, p.y - 15f, 10f, 9f)
+                shapeRenderer.rect(p.x + 3f, p.y - 15f, 10f, 9f)
+                shapeRenderer.circle(p.x, p.y + 1f, 18f)
+                shapeRenderer.circle(p.x - 14f, p.y + 3f, 10f)
+                shapeRenderer.circle(p.x + 14f, p.y + 3f, 10f)
+                shapeRenderer.circle(p.x, p.y + 12f, 11f)
 
-                shapeRenderer.color = Color(0.96f, 0.38f, 0.05f, 1f)
-                shapeRenderer.circle(p.x, p.y + 1f, 13.5f)
-                shapeRenderer.color = Color(1f, 0.86f, 0.20f, 1f)
-                shapeRenderer.circle(p.x, p.y + 1f, 8f)
+                // Lớp nền dung nham cam vàng rực cháy bên trong
+                shapeRenderer.color = Color(0.98f, 0.45f, 0.06f, 1f)
+                shapeRenderer.circle(p.x, p.y + 1f, 16f)
+                shapeRenderer.circle(p.x - 13.5f, p.y + 3f, 8.2f)
+                shapeRenderer.circle(p.x + 13.5f, p.y + 3f, 8.2f)
+                shapeRenderer.circle(p.x, p.y + 12f, 9.2f)
 
-                shapeRenderer.color = Color(0.18f, 0.15f, 0.16f, 1f)
-                shapeRenderer.rect(p.x - 18f, p.y - 11f, 9f, 11f)
-                shapeRenderer.rect(p.x + 9f, p.y - 11f, 9f, 11f)
-                shapeRenderer.rect(p.x - 8f, p.y + 11f, 16f, 9f)
+                // Các tảng đá núi lửa đen xám xếp chồng lên nhau để lộ khe nứt dung nham (chuẩn ảnh mẫu)
+                val rockDark = Color(0.24f, 0.22f, 0.22f, 1f)
+                val rockMid = Color(0.34f, 0.31f, 0.30f, 1f)
+                shapeRenderer.color = rockDark
+                shapeRenderer.rect(p.x - 11.5f, p.y - 13.5f, 7f, 7f)
+                shapeRenderer.rect(p.x + 4.5f, p.y - 13.5f, 7f, 7f)
+                shapeRenderer.circle(p.x - 6f, p.y + 4f, 7.5f)
+                shapeRenderer.circle(p.x + 6f, p.y + 4f, 7.5f)
+                shapeRenderer.circle(p.x, p.y - 5f, 7f)
+                shapeRenderer.circle(p.x - 14f, p.y + 2f, 6.8f)
+                shapeRenderer.circle(p.x + 14f, p.y + 2f, 6.8f)
+                shapeRenderer.circle(p.x, p.y + 12.5f, 7.8f)
 
-                shapeRenderer.color = Color.YELLOW
-                shapeRenderer.circle(p.x - 4.5f, p.y + 14f, 2.4f)
-                shapeRenderer.circle(p.x + 4.5f, p.y + 14f, 2.4f)
+                shapeRenderer.color = rockMid
+                shapeRenderer.circle(p.x - 6f, p.y + 5f, 4.5f)
+                shapeRenderer.circle(p.x + 5f, p.y + 5f, 4.5f)
+
+                // Mạch dung nham vàng rực chạy giữa ngực & Đôi mắt lửa vàng
+                shapeRenderer.color = Color(1f, 0.78f, 0.15f, 1f)
+                shapeRenderer.rectLine(p.x - 7f, p.y + 7f, p.x, p.y + 1f, 2.2f)
+                shapeRenderer.rectLine(p.x + 7f, p.y + 7f, p.x, p.y + 1f, 2.2f)
+                shapeRenderer.rectLine(p.x, p.y + 1f, p.x - 3f, p.y - 8f, 2.0f)
+                shapeRenderer.rectLine(p.x, p.y + 1f, p.x + 4f, p.y - 7f, 2.0f)
+
+                shapeRenderer.color = Color(1f, 0.92f, 0.20f, 1f)
+                shapeRenderer.circle(p.x - 3.2f, p.y + 12f, 1.8f)
+                shapeRenderer.circle(p.x + 3.2f, p.y + 12f, 1.8f)
             }
 
-            // 33. NECROMANCER: Pháp sư chiêu hồn áo choàng đen, trượng đầu lâu lửa xanh
+            // =================================================================
+            // 33. NECROMANCER
+            // Áo choàng trùm đầu màu xanh đen thẫm có đường viền vàng ở gấu áo và vành mũ, mắt xanh lá phát sáng
+            // =================================================================
             EnemyType.NECROMANCER -> {
                 shapeRenderer.color = SHADOW
-                shapeRenderer.ellipse(p.x - 11f, p.y - 12f, 22f, 6.5f)
+                shapeRenderer.ellipse(p.x - 11f, p.y - 12.5f, 22f, 6.5f)
 
+                // Viền đen áo choàng trùm đầu
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.rect(p.x - 9f, p.y - 10.5f, 18f, 16f)
-                shapeRenderer.circle(p.x, p.y + 6.5f, 9f)
+                shapeRenderer.triangle(p.x - 10.5f, p.y - 11f, p.x + 10.5f, p.y - 11f, p.x, p.y + 12f)
+                shapeRenderer.rect(p.x - 8.5f, p.y - 11f, 17f, 14f)
+                shapeRenderer.circle(p.x, p.y + 5.5f, 8.8f)
 
-                shapeRenderer.color = Color(0.18f, 0.20f, 0.25f, 1f)
-                shapeRenderer.rect(p.x - 7.5f, p.y - 9f, 15f, 14f)
-                shapeRenderer.circle(p.x, p.y + 6.5f, 7.2f)
+                // Áo choàng xanh đen thẫm
+                shapeRenderer.color = Color(0.20f, 0.23f, 0.30f, 1f)
+                shapeRenderer.triangle(p.x - 9f, p.y - 9.5f, p.x + 9f, p.y - 9.5f, p.x, p.y + 10f)
+                shapeRenderer.rect(p.x - 7f, p.y - 9.5f, 14f, 12.5f)
+                shapeRenderer.circle(p.x, p.y + 5.5f, 7.2f)
 
+                // Đường viền vàng dọc theo gấu áo và vành mũ trùm đầu (chuẩn ảnh mẫu)
+                shapeRenderer.color = Color(0.92f, 0.78f, 0.20f, 1f)
+                shapeRenderer.rect(p.x - 8.5f, p.y - 9.8f, 17f, 2.2f)
+                shapeRenderer.circle(p.x, p.y + 5f, 5.8f)
+
+                // Hốc mũ tối thẫm & Đôi mắt xanh lá ma mị phát sáng
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.rectLine(p.x - 11.5f, p.y - 9.5f, p.x - 11.5f, p.y + 15f, 4f)
-                shapeRenderer.color = Color(0.45f, 0.30f, 0.16f, 1f)
-                shapeRenderer.rectLine(p.x - 11.5f, p.y - 9f, p.x - 11.5f, p.y + 14f, 2.2f)
-                shapeRenderer.color = Color(0.25f, 0.96f, 0.42f, 1f)
-                shapeRenderer.circle(p.x - 11.5f, p.y + 16f, 4.5f)
-                shapeRenderer.circle(p.x - 2.5f, p.y + 7f, 1.7f)
-                shapeRenderer.circle(p.x + 2.5f, p.y + 7f, 1.7f)
+                shapeRenderer.circle(p.x, p.y + 4.8f, 4.5f)
+                shapeRenderer.color = Color(0.35f, 0.98f, 0.25f, 1f)
+                shapeRenderer.circle(p.x - 1.8f, p.y + 5.2f, 1.5f)
+                shapeRenderer.circle(p.x + 1.8f, p.y + 5.2f, 1.5f)
             }
 
             // 34. VEZNAN: Boss Vez'nan dạng 1
@@ -1257,32 +1610,206 @@ object EnemyRenderer {
                 shapeRenderer.circle(p.x + 3.2f, p.y + 13f, 2f)
             }
 
-            // 35. VEZNAN_DEMON: Boss Vez'nan dạng 2 (Đại quỷ đỏ có cánh)
+            // =================================================================
+            // 35. VEZNAN_DEMON: BOSS VEZ'NAN DẠNG 2
+            // Cánh dơi nâu sẫm khổng lồ, tay cơ bắp, ngực vàng kem đính ngọc đỏ hình thoi,
+            // sừng ngà cong vút, mắt vàng xếch và miệng nhe 2 nanh trắng lớn
+            // =================================================================
             EnemyType.VEZNAN_DEMON -> {
+                // 1. Bóng đổ lớn dưới chân
                 shapeRenderer.color = SHADOW
-                shapeRenderer.ellipse(p.x - 26f, p.y - 22f, 52f, 14f)
+                shapeRenderer.ellipse(p.x - 26f, p.y - 25f, 52f, 14f)
 
-                shapeRenderer.color = Color(0.38f, 0.20f, 0.12f, 1f)
-                shapeRenderer.triangle(p.x - 12f, p.y + 5f, p.x - 36f, p.y + 36f, p.x - 28f, p.y - 12f)
-                shapeRenderer.triangle(p.x + 12f, p.y + 5f, p.x + 36f, p.y + 36f, p.x + 28f, p.y - 12f)
+                // 2. ĐÔI CÁNH ĐẠI QUỶ NÂU SẪM PHÍA SAU (Vươn cao có móc nhọn & rủ xuống chân)
+                for (side in listOf(-1f, 1f)) {
+                    // Viền đen của cánh
+                    shapeRenderer.color = OUTLINE
+                    shapeRenderer.triangle(
+                        p.x + side * 8f, p.y + 14f,
+                        p.x + side * 34f, p.y + 26f,
+                        p.x + side * 38f, p.y - 18f
+                    )
+                    shapeRenderer.triangle(
+                        p.x + side * 8f, p.y + 14f,
+                        p.x + side * 38f, p.y - 18f,
+                        p.x + side * 16f, p.y - 16f
+                    )
+                    // Đầu móc nhọn trên đỉnh cánh
+                    shapeRenderer.circle(p.x + side * 31f, p.y + 21f, 6.5f)
 
+                    // Xương cánh nâu đậm
+                    shapeRenderer.color = Color(0.32f, 0.15f, 0.07f, 1f)
+                    shapeRenderer.triangle(
+                        p.x + side * 9f, p.y + 13f,
+                        p.x + side * 32f, p.y + 24f,
+                        p.x + side * 35f, p.y - 15f
+                    )
+                    shapeRenderer.circle(p.x + side * 30f, p.y + 20f, 4.8f)
+
+                    // Màng cánh trong nâu đỏ sẫm
+                    shapeRenderer.color = Color(0.44f, 0.20f, 0.09f, 1f)
+                    shapeRenderer.triangle(
+                        p.x + side * 10f, p.y + 10f,
+                        p.x + side * 31f, p.y + 17f,
+                        p.x + side * 33f, p.y - 14f
+                    )
+                    shapeRenderer.triangle(
+                        p.x + side * 10f, p.y + 10f,
+                        p.x + side * 33f, p.y - 14f,
+                        p.x + side * 17f, p.y - 14f
+                    )
+                }
+
+                // 3. HAI CHÂN TRỤ & HAI CÁNH TAY CƠ BẮP KHỔNG LỒ (Lớp viền đen)
                 shapeRenderer.color = OUTLINE
-                shapeRenderer.circle(p.x, p.y, 23.5f)
-                shapeRenderer.rect(p.x - 17.5f, p.y - 21f, 35f, 26f)
-                shapeRenderer.circle(p.x, p.y + 20f, 15.5f)
+                // Chân trái & phải
+                shapeRenderer.rect(p.x - 13.5f, p.y - 23f, 11.5f, 15f)
+                shapeRenderer.rect(p.x + 2f, p.y - 23f, 11.5f, 15f)
+                shapeRenderer.ellipse(p.x - 14.5f, p.y - 24.5f, 13f, 6.5f)
+                shapeRenderer.ellipse(p.x + 1.5f, p.y - 24.5f, 13f, 6.5f)
 
-                shapeRenderer.color = Color(0.78f, 0.26f, 0.12f, 1f)
-                shapeRenderer.circle(p.x, p.y, 21.5f)
-                shapeRenderer.rect(p.x - 15.5f, p.y - 19.5f, 31f, 23.5f)
-                shapeRenderer.circle(p.x, p.y + 20f, 13.5f)
+                // Thân giữa
+                shapeRenderer.circle(p.x, p.y + 2f, 19.5f)
+                shapeRenderer.rect(p.x - 15f, p.y - 14f, 30f, 22f)
 
-                shapeRenderer.color = Color(0.90f, 0.88f, 0.80f, 1f)
-                shapeRenderer.triangle(p.x - 12f, p.y + 22f, p.x - 22f, p.y + 38f, p.x - 6f, p.y + 28f)
-                shapeRenderer.triangle(p.x + 12f, p.y + 22f, p.x + 22f, p.y + 38f, p.x + 6f, p.y + 28f)
+                // Vai & Hai cánh tay cơ bắp cuồn cuộn hai bên
+                shapeRenderer.circle(p.x - 17f, p.y + 5f, 11.5f)
+                shapeRenderer.circle(p.x + 17f, p.y + 5f, 11.5f)
+                shapeRenderer.circle(p.x - 20f, p.y - 5f, 11f)
+                shapeRenderer.circle(p.x + 20f, p.y - 5f, 11f)
+                shapeRenderer.rect(p.x - 28f, p.y - 12f, 15f, 16f)
+                shapeRenderer.rect(p.x + 13f, p.y - 12f, 15f, 16f)
 
-                shapeRenderer.color = Color(1f, 0.95f, 0.2f, 1f)
-                shapeRenderer.circle(p.x - 5f, p.y + 21f, 3f)
-                shapeRenderer.circle(p.x + 5f, p.y + 21f, 3f)
+                // 4. TÔ MÀU DA ĐỎ CAM ĐỊA NGỤC CHO CHÂN, THÂN & CÁNH TAY
+                val skinDark = Color(0.62f, 0.20f, 0.06f, 1f)
+                val skinBase = Color(0.76f, 0.26f, 0.08f, 1f)
+                val skinLight = Color(0.88f, 0.36f, 0.11f, 1f)
+
+                // Chân
+                shapeRenderer.color = skinDark
+                shapeRenderer.rect(p.x - 11.5f, p.y - 21.5f, 8f, 13f)
+                shapeRenderer.rect(p.x + 3.5f, p.y - 21.5f, 8f, 13f)
+
+                // Thân
+                shapeRenderer.color = skinBase
+                shapeRenderer.circle(p.x, p.y + 2f, 17f)
+                shapeRenderer.rect(p.x - 13f, p.y - 12.5f, 26f, 19f)
+
+                // Bắp vai & Cánh tay + Nắm đấm lớn
+                shapeRenderer.color = skinLight
+                shapeRenderer.circle(p.x - 16.5f, p.y + 5.5f, 9.2f)
+                shapeRenderer.circle(p.x + 16.5f, p.y + 5.5f, 9.2f)
+                shapeRenderer.color = skinBase
+                shapeRenderer.circle(p.x - 19.5f, p.y - 5f, 8.8f)
+                shapeRenderer.circle(p.x + 19.5f, p.y - 5f, 8.8f)
+                shapeRenderer.rect(p.x - 25.5f, p.y - 10f, 11.5f, 12f)
+                shapeRenderer.rect(p.x + 14f, p.y - 10f, 11.5f, 12f)
+
+                // Đốm cơ bắp trên vai
+                shapeRenderer.color = skinDark
+                shapeRenderer.circle(p.x - 19f, p.y + 4f, 2.2f)
+                shapeRenderer.circle(p.x + 19f, p.y + 4f, 2.2f)
+                shapeRenderer.circle(p.x + 21f, p.y - 2f, 2.5f)
+
+                // 5. MẢNG NGỰC VÀNG KEM RĂNG CƯA (CHEST PATCH CHUẨN ẢNH GỐC)
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.triangle(p.x - 14f, p.y + 8f, p.x + 14f, p.y + 8f, p.x, p.y - 13.5f)
+                shapeRenderer.triangle(p.x - 15f, p.y + 3f, p.x + 15f, p.y + 3f, p.x, p.y - 8f)
+                shapeRenderer.triangle(p.x - 11f, p.y - 2f, p.x + 11f, p.y - 2f, p.x, p.y - 13.5f)
+
+                shapeRenderer.color = Color(0.84f, 0.72f, 0.38f, 1f)
+                shapeRenderer.triangle(p.x - 12f, p.y + 7f, p.x + 12f, p.y + 7f, p.x, p.y - 11.5f)
+                shapeRenderer.triangle(p.x - 13f, p.y + 3f, p.x + 13f, p.y + 3f, p.x, p.y - 6.5f)
+                shapeRenderer.triangle(p.x - 9f, p.y - 2f, p.x + 9f, p.y - 2f, p.x, p.y - 11.5f)
+
+                shapeRenderer.color = Color(0.95f, 0.88f, 0.55f, 1f)
+                shapeRenderer.triangle(p.x - 10f, p.y + 6.5f, p.x + 10f, p.y + 6.5f, p.x, p.y - 7f)
+
+                // 6. VIÊN NGỌC ĐỎ CAM HÌNH THOI ĐÍNH GIỮA NGỰC
+                val gemY = p.y + 1.5f
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.triangle(p.x - 5.8f, gemY, p.x + 5.8f, gemY, p.x, gemY + 7.2f)
+                shapeRenderer.triangle(p.x - 5.8f, gemY, p.x + 5.8f, gemY, p.x, gemY - 7.2f)
+
+                shapeRenderer.color = Color(0.86f, 0.20f, 0.05f, 1f)
+                shapeRenderer.triangle(p.x - 4.2f, gemY, p.x + 4.2f, gemY, p.x, gemY + 5.4f)
+                shapeRenderer.triangle(p.x - 4.2f, gemY, p.x + 4.2f, gemY, p.x, gemY - 5.4f)
+
+                shapeRenderer.color = Color(1f, 0.58f, 0.15f, 1f)
+                shapeRenderer.triangle(p.x - 2.8f, gemY + 0.5f, p.x + 1.5f, gemY + 0.5f, p.x - 0.5f, gemY + 4.2f)
+                shapeRenderer.color = Color(1f, 0.90f, 0.65f, 1f)
+                shapeRenderer.circle(p.x - 1.2f, gemY + 2.0f, 1.1f)
+
+                // 7. CẶP SỪNG ĐẠI QUỶ NGÀ VÀNG CONG VÚT TRÊN ĐỈNH ĐẦU
+                for (side in listOf(-1f, 1f)) {
+                    shapeRenderer.color = OUTLINE
+                    shapeRenderer.triangle(
+                        p.x + side * 7f, p.y + 18f,
+                        p.x + side * 19f, p.y + 24f,
+                        p.x + side * 15f, p.y + 36f
+                    )
+                    shapeRenderer.circle(p.x + side * 12f, p.y + 22f, 5.5f)
+
+                    shapeRenderer.color = Color(0.94f, 0.88f, 0.62f, 1f)
+                    shapeRenderer.triangle(
+                        p.x + side * 8f, p.y + 19f,
+                        p.x + side * 17f, p.y + 24f,
+                        p.x + side * 14.5f, p.y + 34f
+                    )
+                    shapeRenderer.circle(p.x + side * 11.5f, p.y + 22f, 3.8f)
+
+                    // Đốm sẫm ở gốc sừng giống ảnh gốc
+                    shapeRenderer.color = Color(0.45f, 0.32f, 0.16f, 1f)
+                    shapeRenderer.circle(p.x + side * 11.5f, p.y + 21f, 1.3f)
+                    shapeRenderer.circle(p.x + side * 13.5f, p.y + 23.5f, 1.1f)
+                }
+
+                // 8. ĐẦU ĐẠI QUỶ, MẮT VÀNG XẾCH & MIỆNG NHE 2 RĂNG NANH LỚN
+                val headY = p.y + 15.5f
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.circle(p.x, headY, 12.5f)
+                shapeRenderer.rect(p.x - 10.5f, headY - 7f, 21f, 10f)
+
+                shapeRenderer.color = skinBase
+                shapeRenderer.circle(p.x, headY, 10.5f)
+                shapeRenderer.rect(p.x - 8.8f, headY - 5.5f, 17.6f, 8.5f)
+                shapeRenderer.color = skinLight
+                shapeRenderer.circle(p.x, headY + 2f, 8f)
+
+                // Nếp nhăn dữ tợn trên trán
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.rectLine(p.x - 4.5f, headY + 6.5f, p.x + 4.5f, headY + 6.5f, 1.6f)
+                shapeRenderer.rectLine(p.x - 3f, headY + 8.8f, p.x + 3f, headY + 8.8f, 1.4f)
+
+                // Đôi mắt vàng xếch ngược giận dữ & Chân mày chữ V đậm
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.circle(p.x - 4.5f, headY + 1.5f, 2.8f)
+                shapeRenderer.circle(p.x + 4.5f, headY + 1.5f, 2.8f)
+                shapeRenderer.color = Color(1f, 0.92f, 0.15f, 1f)
+                shapeRenderer.circle(p.x - 4.5f, headY + 1.5f, 1.9f)
+                shapeRenderer.circle(p.x + 4.5f, headY + 1.5f, 1.9f)
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.rectLine(p.x - 8.5f, headY + 4.2f, p.x - 1.5f, headY + 2.2f, 2.2f)
+                shapeRenderer.rectLine(p.x + 8.5f, headY + 4.2f, p.x + 1.5f, headY + 2.2f, 2.2f)
+
+                // Hốc miệng gầm gừ & 2 Răng nanh trắng lớn cắm xuống hai bên mép
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.rect(p.x - 6.5f, headY - 6.5f, 13f, 5.2f)
+                shapeRenderer.color = Color(0.28f, 0.08f, 0.05f, 1f)
+                shapeRenderer.rect(p.x - 5.2f, headY - 5.5f, 10.4f, 3.5f)
+
+                // Răng nhỏ ở giữa hàm
+                shapeRenderer.color = Color(0.92f, 0.88f, 0.72f, 1f)
+                shapeRenderer.triangle(p.x - 2.5f, headY - 2f, p.x - 0.5f, headY - 2f, p.x - 1.5f, headY - 4.5f)
+                shapeRenderer.triangle(p.x + 0.5f, headY - 2f, p.x + 2.5f, headY - 2f, p.x + 1.5f, headY - 4.5f)
+
+                // 2 Răng nanh đại (Fangs) dài nhọn hai bên mép
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.triangle(p.x - 8f, headY - 1.5f, p.x - 3.5f, headY - 1.5f, p.x - 6f, headY - 8.5f)
+                shapeRenderer.triangle(p.x + 3.5f, headY - 1.5f, p.x + 8f, headY - 1.5f, p.x + 6f, headY - 8.5f)
+                shapeRenderer.color = Color(0.98f, 0.95f, 0.82f, 1f)
+                shapeRenderer.triangle(p.x - 7f, headY - 1.8f, p.x - 4.2f, headY - 1.8f, p.x - 5.8f, headY - 7.2f)
+                shapeRenderer.triangle(p.x + 4.2f, headY - 1.8f, p.x + 7f, headY - 1.8f, p.x + 5.8f, headY - 7.2f)
             }
         }
 

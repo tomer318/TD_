@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector2
 import com.game.td.map.Level10TheWastes
+import com.game.td.renderers.MapRenderer
 
 object Level10MapRenderer {
 
@@ -98,6 +99,14 @@ object Level10MapRenderer {
         drawDeadTree(shapeRenderer, gPos.x - 48f, gPos.y + 18f)
         drawDeadTree(shapeRenderer, gPos.x + 44f, gPos.y + 26f)
         drawDeadTree(shapeRenderer, 700f, 110f)
+
+        // 5. VÒNG TRÒN PHÒNG THỦ & 2 CỜ HIỆU LINIREA TẠI CỔNG BẮC (X = 370F)
+        MapRenderer.drawDefensePoint(
+            sr = shapeRenderer,
+            crestX = 370f, crestY = 650f,
+            flag1X = 326f, flag1Y = 646f,
+            flag2X = 414f, flag2Y = 646f
+        )
     }
 
     private fun drawPath(sr: ShapeRenderer, pts: List<Vector2>, width: Float) {

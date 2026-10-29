@@ -19,12 +19,14 @@ import com.game.td.managers.SaveManager
 import com.game.td.managers.SoundManager
 import com.game.td.map.*
 import com.game.td.renderers.EncyclopediaRenderer
+import com.game.td.renderers.MissionPopupRenderer
 import com.game.td.renderers.UpgradeRenderer
 import com.game.td.renderers.WorldMapRenderer
 
 class WorldMapScreen(
     private val onStartLevel: (LevelData, GameDifficulty, GameMode) -> Unit = { _, _, _ -> },
-    private val onOpenUpgrades: () -> Unit = {}
+    private val onOpenUpgrades: () -> Unit = {},
+    private val onReturnToMainMenu: () -> Unit = {}
 ) : ScreenAdapter() {
 
     private val camera = OrthographicCamera()
@@ -83,6 +85,53 @@ class WorldMapScreen(
         return 12
     }
 
+    private fun launchSelectedMission() {
+        selectedLevelData?.let { baseData ->
+            val finalData = when (currentGameMode) {
+                GameMode.CAMPAIGN -> baseData
+                GameMode.HEROIC -> {
+                    val (hWaves, startG) = when (selectedLevelNumber) {
+                        1 -> Pair(Level1Southport.heroicWaves, 170)
+                        2 -> Pair(Level2Farmlands.heroicWaves, 250)
+                        3 -> Pair(Level3Pagras.heroicWaves, 310)
+                        4 -> Pair(Level4TwinRivers.heroicWaves, Level4TwinRivers.heroicStartingGold)
+                        5 -> Pair(Level5Silveroak.heroicWaves, Level5Silveroak.heroicStartingGold)
+                        6 -> Pair(Level6Citadel.heroicWaves, Level6Citadel.heroicStartingGold)
+                        7 -> Pair(Level7ColdstepMines.heroicWaves, 1000)
+                        8 -> Pair(Level8IcewindPass.heroicWaves, Level8IcewindPass.heroicStartingGold)
+                        9 -> Pair(Level9StormcloudTemple.heroicWaves, Level9StormcloudTemple.heroicStartingGold)
+                        10 -> Pair(Level10TheWastes.heroicWaves, Level10TheWastes.heroicStartingGold)
+                        11 -> Pair(Level11ForsakenValley.heroicWaves, Level11ForsakenValley.heroicStartingGold)
+                        12 -> Pair(Level12TheDarkTower.heroicWaves, Level12TheDarkTower.heroicStartingGold)
+                        else -> Pair(baseData.waves, baseData.startingGold)
+                    }
+                    baseData.copy(startingLives = 1, startingGold = startG, waves = hWaves)
+                }
+                GameMode.IRON -> {
+                    val (iWaves, startG) = when (selectedLevelNumber) {
+                        1 -> Pair(Level1Southport.ironWaves, 265)
+                        2 -> Pair(Level2Farmlands.ironWaves, 220)
+                        3 -> Pair(Level3Pagras.ironWaves, 500)
+                        4 -> Pair(Level4TwinRivers.ironWaves, Level4TwinRivers.ironStartingGold)
+                        5 -> Pair(Level5Silveroak.ironWaves, Level5Silveroak.ironStartingGold)
+                        6 -> Pair(Level6Citadel.ironWaves, Level6Citadel.ironStartingGold)
+                        7 -> Pair(Level7ColdstepMines.ironWaves, 1200)
+                        8 -> Pair(Level8IcewindPass.ironWaves, Level8IcewindPass.ironStartingGold)
+                        9 -> Pair(Level9StormcloudTemple.ironWaves, Level9StormcloudTemple.ironStartingGold)
+                        10 -> Pair(Level10TheWastes.ironWaves, Level10TheWastes.ironStartingGold)
+                        11 -> Pair(Level11ForsakenValley.ironWaves, Level11ForsakenValley.ironStartingGold)
+                        12 -> Pair(Level12TheDarkTower.ironWaves, Level12TheDarkTower.ironStartingGold)
+                        else -> Pair(baseData.waves, baseData.startingGold)
+                    }
+                    baseData.copy(startingLives = 1, startingGold = startG, waves = iWaves)
+                }
+            }
+            onStartLevel(finalData, currentDifficulty, currentGameMode)
+        }
+        isPopupOpen = false
+        activeFlaggedIndex = -1
+    }
+
     override fun show() {
         SoundManager.init()
         SoundManager.playMapMusic()
@@ -108,113 +157,39 @@ class WorldMapScreen(
                     return true
                 }
 
+                // GỌI MISSIONPOPUPRENDERER ĐỂ XỬ LÝ TƯƠNG TÁC TRONG BẢNG CHI TIẾT MÀN CHƠI
                 if (isPopupOpen) {
-                    val cX = Config.WORLD_WIDTH / 2f
-                    val cY = Config.WORLD_HEIGHT / 2f
-
-                    if (Vector2(cX + 245f, cY + 165f).dst(x, y) <= 25f) {
-                        SoundManager.playClick()
-                        isPopupOpen = false
-                        activeFlaggedIndex = -1
-                        return true
-                    }
-
-                    if (x in (cX - 230f)..(cX - 70f) && y in (cY - 120f)..(cY - 80f)) {
-                        SoundManager.playClick()
-                        currentDifficulty = when (currentDifficulty) {
-                            GameDifficulty.CASUAL -> GameDifficulty.NORMAL
-                            GameDifficulty.NORMAL -> GameDifficulty.VETERAN
-                            GameDifficulty.VETERAN -> GameDifficulty.CASUAL
-                        }
-                        return true
-                    }
-
-                    val levelStars = SaveManager.getLevelStars(selectedLevelNumber)
-                    val isChallengeUnlocked = levelStars >= 3
-
-                    if (Vector2(cX - 180f, cY - 145f).dst(x, y) <= 24f) {
-                        SoundManager.playTowerPreview()
-                        currentGameMode = GameMode.CAMPAIGN
-                        return true
-                    }
-
-                    if (Vector2(cX - 120f, cY - 145f).dst(x, y) <= 24f) {
-                        if (isChallengeUnlocked) {
-                            SoundManager.playTowerPreview()
-                            currentGameMode = GameMode.HEROIC
-                        } else {
-                            SoundManager.playClick()
-                        }
-                        return true
-                    }
-
-                    if (Vector2(cX - 60f, cY - 145f).dst(x, y) <= 24f) {
-                        if (isChallengeUnlocked) {
-                            SoundManager.playTowerPreview()
-                            currentGameMode = GameMode.IRON
-                        } else {
-                            SoundManager.playClick()
-                        }
-                        return true
-                    }
-
-                    if (x in (cX + 110f)..(cX + 240f) && y in (cY - 150f)..(cY - 95f)) {
-                        SoundManager.playBattleStart()
-                        selectedLevelData?.let { baseData ->
-                            val finalData = when (currentGameMode) {
-                                GameMode.CAMPAIGN -> baseData
-                                GameMode.HEROIC -> {
-                                    val (hWaves, startG) = when (selectedLevelNumber) {
-                                        1 -> Pair(Level1Southport.heroicWaves, 170)
-                                        2 -> Pair(Level2Farmlands.heroicWaves, 250)
-                                        3 -> Pair(Level3Pagras.heroicWaves, 310)
-                                        4 -> Pair(Level4TwinRivers.heroicWaves, Level4TwinRivers.heroicStartingGold)
-                                        5 -> Pair(Level5Silveroak.heroicWaves, Level5Silveroak.heroicStartingGold)
-                                        6 -> Pair(Level6Citadel.heroicWaves, Level6Citadel.heroicStartingGold)
-                                        7 -> Pair(Level7ColdstepMines.heroicWaves, 1000)
-                                        8 -> Pair(Level8IcewindPass.heroicWaves, Level8IcewindPass.heroicStartingGold)
-                                        9 -> Pair(Level9StormcloudTemple.heroicWaves, Level9StormcloudTemple.heroicStartingGold)
-                                        10 -> Pair(Level10TheWastes.heroicWaves, Level10TheWastes.heroicStartingGold)
-                                        11 -> Pair(Level11ForsakenValley.heroicWaves, Level11ForsakenValley.heroicStartingGold)
-                                        12 -> Pair(Level12TheDarkTower.heroicWaves, Level12TheDarkTower.heroicStartingGold)
-                                        else -> Pair(baseData.waves, baseData.startingGold)
-                                    }
-                                    baseData.copy(startingLives = 1, startingGold = startG, waves = hWaves)
-                                }
-                                GameMode.IRON -> {
-                                    val (iWaves, startG) = when (selectedLevelNumber) {
-                                        1 -> Pair(Level1Southport.ironWaves, 265)
-                                        2 -> Pair(Level2Farmlands.ironWaves, 220)
-                                        3 -> Pair(Level3Pagras.ironWaves, 500)
-                                        4 -> Pair(Level4TwinRivers.ironWaves, Level4TwinRivers.ironStartingGold)
-                                        5 -> Pair(Level5Silveroak.ironWaves, Level5Silveroak.ironStartingGold)
-                                        6 -> Pair(Level6Citadel.ironWaves, Level6Citadel.ironStartingGold)
-                                        7 -> Pair(Level7ColdstepMines.ironWaves, 1200)
-                                        8 -> Pair(Level8IcewindPass.ironWaves, Level8IcewindPass.ironStartingGold)
-                                        9 -> Pair(Level9StormcloudTemple.ironWaves, Level9StormcloudTemple.ironStartingGold)
-                                        10 -> Pair(Level10TheWastes.ironWaves, Level10TheWastes.ironStartingGold)
-                                        11 -> Pair(Level11ForsakenValley.ironWaves, Level11ForsakenValley.ironStartingGold)
-                                        12 -> Pair(Level12TheDarkTower.ironWaves, Level12TheDarkTower.ironStartingGold)
-                                        else -> Pair(baseData.waves, baseData.startingGold)
-                                    }
-                                    baseData.copy(startingLives = 1, startingGold = startG, waves = iWaves)
-                                }
-                            }
-                            onStartLevel(finalData, currentDifficulty, currentGameMode)
-                        }
-                        isPopupOpen = false
-                        activeFlaggedIndex = -1
-                        return true
-                    }
-                    return true
+                    return MissionPopupRenderer.handleTouch(
+                        x = x,
+                        y = y,
+                        selectedLevelNumber = selectedLevelNumber,
+                        currentDifficulty = currentDifficulty,
+                        currentGameMode = currentGameMode,
+                        onUpdateDifficulty = { currentDifficulty = it },
+                        onUpdateGameMode = { currentGameMode = it },
+                        onClosePopup = {
+                            isPopupOpen = false
+                            activeFlaggedIndex = -1
+                        },
+                        onStartBattle = { launchSelectedMission() }
+                    )
                 }
 
+                // BẤM NÚT BẬT/TẮT ÂM THANH Ở GÓC TRÊN TRÁI
                 if (x in 55f..150f && y in (Config.WORLD_HEIGHT - 85f)..(Config.WORLD_HEIGHT - 35f)) {
                     SoundManager.toggleAudio()
                     SoundManager.playClick()
                     return true
                 }
 
+                // BẤM NÚT QUAY VỀ MAIN MENU Ở GÓC DƯỚI TRÁI
+                if (x in 50f..205f && y in 36f..120f) {
+                    SoundManager.playClick()
+                    onReturnToMainMenu()
+                    return true
+                }
+
+                // BẤM NÚT UPGRADES
                 if (x in 610f..770f && y in 36f..130f) {
                     SoundManager.playTowerPreview()
                     UpgradeRenderer.open()
@@ -222,6 +197,7 @@ class WorldMapScreen(
                     return true
                 }
 
+                // BẤM NÚT ENCYCLOPEDIA
                 if (x in 790f..965f && y in 36f..130f) {
                     SoundManager.playTowerPreview()
                     EncyclopediaRenderer.open()

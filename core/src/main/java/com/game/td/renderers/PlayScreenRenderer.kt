@@ -115,11 +115,22 @@ object PlayScreenRenderer {
             shapeRenderer, batch, font, smallFont, waveManager, currentLevel.allPaths
         )
 
-        val maxLevel = when {
-            currentLevel.levelNumber == 0 -> 4
-            currentLevel.levelNumber == 5 -> if (waveManager.currentWaveDisplay >= 5 || gameMode != GameMode.CAMPAIGN) 4 else 3
-            currentLevel.levelNumber >= 6 -> 4
-            else -> currentLevel.maxTowerLevel
+        val hasAnyTowerBuilt = engine.getEntitiesFor(Family.all(TowerComponent::class.java).get()).size() > 0
+        TutorialRenderer.renderMapHints(
+            sr = shapeRenderer,
+            batch = batch,
+            smallFont = smallFont,
+            hasAnyTowerBuilt = hasAnyTowerBuilt,
+            waveManager = waveManager
+        )
+
+        val maxLevel = when (currentLevel.levelNumber) {
+            0 -> 4
+            1 -> 1
+            2, 3 -> 2
+            4 -> 3
+            5 -> if (waveManager.currentWaveDisplay >= 5 || gameMode != GameMode.CAMPAIGN) 4 else 3
+            else -> 4
         }
 
         GameUIRenderer.renderWheelMenu(
@@ -194,10 +205,23 @@ object PlayScreenRenderer {
                 1
             }
             GameUIRenderer.renderVictoryDialog(
-                shapeRenderer, batch, font, smallFont, earnedStars,
-                isChallengeMode = (gameMode != GameMode.CAMPAIGN)
+                shapeRenderer = shapeRenderer,
+                batch = batch,
+                font = font,
+                smallFont = smallFont,
+                earnedStars = earnedStars,
+                isChallengeMode = (gameMode != GameMode.CAMPAIGN),
+                gameMode = gameMode
             )
         }
+
+        // 6. VẼ BẢNG HƯỚNG DẪN CÁCH CHƠI (INSTRUCTIONS) & MỞ KHÓA SPELL (NEW SPECIAL AVAILABLE!)
+        TutorialRenderer.renderPopups(
+            sr = shapeRenderer,
+            batch = batch,
+            font = font,
+            smallFont = smallFont
+        )
     }
 
     private fun renderEntities(

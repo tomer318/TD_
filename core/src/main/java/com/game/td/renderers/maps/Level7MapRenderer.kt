@@ -89,8 +89,71 @@ object Level7MapRenderer {
         for (x in 860..1220 step 45) {
             drawPineTree(shapeRenderer, x.toFloat(), 40f)
         }
+
+        // 7. VÒNG TRÒN PHÒNG THỦ DƯỚI ĐẤT & 2 CỜ HIỆU LINIREA TẠI LỐI THOÁT MÀN 7
+        drawDefensePointForPath(shapeRenderer, mainPath)
     }
 
+    private fun drawDefensePointForPath(sr: ShapeRenderer, path: List<Vector2>) {
+        if (path.size < 2) return
+        var idx = path.size - 1
+        while (idx > 0 && (path[idx].x !in 65f..1215f || path[idx].y !in 62f..658f)) {
+            idx--
+        }
+        val center = path[idx]
+        val prev = path[(idx - 1).coerceAtLeast(0)]
+        val dir = Vector2(center).sub(prev)
+        if (dir.isZero) dir.set(0f, -1f) else dir.nor()
+        val normal = Vector2(-dir.y, dir.x)
+
+        sr.color = Color(0.18f, 0.48f, 0.82f, 0.55f)
+        sr.ellipse(center.x - 28f, center.y - 19f, 56f, 38f)
+        sr.color = Color(0.52f, 0.84f, 1f, 0.70f)
+        sr.ellipse(center.x - 22f, center.y - 15f, 44f, 30f)
+        sr.color = Color(0.86f, 0.89f, 0.93f, 0.92f)
+        sr.ellipse(center.x - 16f, center.y - 11f, 32f, 22f)
+        sr.color = Color(0.22f, 0.56f, 0.88f, 0.70f)
+        sr.rect(center.x - 7f, center.y - 2f, 14f, 9f)
+        sr.triangle(center.x - 7f, center.y - 2f, center.x + 7f, center.y - 2f, center.x, center.y - 9f)
+
+        val f1 = Vector2(center).add(Vector2(normal).scl(40f))
+        val f2 = Vector2(center).add(Vector2(normal).scl(-40f))
+        if (f1.y >= f2.y) {
+            drawLinireaBanner(sr, f1.x, f1.y)
+            drawLinireaBanner(sr, f2.x, f2.y)
+        } else {
+            drawLinireaBanner(sr, f2.x, f2.y)
+            drawLinireaBanner(sr, f1.x, f1.y)
+        }
+    }
+
+    private fun drawLinireaBanner(sr: ShapeRenderer, x: Float, y: Float) {
+        val outline = Color(0.12f, 0.09f, 0.07f, 1f)
+        sr.color = Color(0f, 0f, 0f, 0.25f)
+        sr.ellipse(x - 10f, y - 5f, 20f, 8f)
+
+        sr.color = outline
+        sr.rect(x - 2.2f, y - 2f, 4.4f, 40f)
+        sr.circle(x, y + 39f, 3.2f)
+        sr.rect(x - 12f, y + 31f, 24f, 4f)
+        sr.color = Color(0.55f, 0.36f, 0.18f, 1f)
+        sr.rect(x - 1.2f, y, 2.4f, 37f)
+        sr.color = Color(0.95f, 0.78f, 0.20f, 1f)
+        sr.circle(x, y + 39f, 2f)
+
+        sr.color = outline
+        sr.rect(x - 10f, y + 15f, 20f, 17f)
+        sr.triangle(x - 10f, y + 15f, x + 10f, y + 15f, x, y + 6f)
+        sr.color = Color(0.18f, 0.52f, 0.88f, 1f)
+        sr.rect(x - 8.5f, y + 16f, 17f, 15f)
+        sr.triangle(x - 8.5f, y + 16f, x + 8.5f, y + 16f, x, y + 8f)
+
+        sr.color = Color(0.82f, 0.94f, 1f, 1f)
+        sr.rect(x - 4.5f, y + 19f, 9f, 8f)
+        sr.triangle(x - 4.5f, y + 19f, x + 4.5f, y + 19f, x, y + 14f)
+        sr.color = Color(0.18f, 0.52f, 0.88f, 1f)
+        sr.circle(x, y + 23f, 2f)
+    }
     private fun drawPathStrip(sr: ShapeRenderer, pts: List<Vector2>, width: Float) {
         val radius = width / 2f
         for (i in 0 until pts.size - 1) {

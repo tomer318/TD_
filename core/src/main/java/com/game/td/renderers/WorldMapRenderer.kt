@@ -1,8 +1,6 @@
 package com.game.td.renderers
 
-import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
@@ -53,7 +51,6 @@ object WorldMapRenderer {
         shapeRenderer.rect(25f, 25f, Config.WORLD_WIDTH - 50f, 6f)
         shapeRenderer.rect(25f, Config.WORLD_HEIGHT - 31f, Config.WORLD_WIDTH - 50f, 6f)
 
-        // Họa tiết núi non trang trí mờ trên bản đồ cổ
         drawMapTerrainDecorations(shapeRenderer)
 
         // 2. ĐƯỜNG HÀNH QUÂN NÉT ĐỨT GIỮA CÁC MÀN CHƠI
@@ -122,7 +119,8 @@ object WorldMapRenderer {
         shapeRenderer.circle(78f, Config.WORLD_HEIGHT - 58f, 14f)
         shapeRenderer.circle(122f, Config.WORLD_HEIGHT - 58f, 14f)
 
-        // 5. NÚT UPGRADES & NÚT ENCYCLOPEDIA
+        // 5. NÚT QUAY VỀ MAIN MENU, UPGRADES & ENCYCLOPEDIA
+        drawMainMenuMapButton(shapeRenderer, 55f, 42f, 145f, 38f)
         drawUpgradesMapButton(shapeRenderer, 615f, 42f, 150f, 38f)
         drawEncyclopediaMapButton(shapeRenderer, 795f, 42f, 165f, 38f)
         shapeRenderer.end()
@@ -166,6 +164,7 @@ object WorldMapRenderer {
         GameUIRenderer.drawOutlinedText(batch, smallFont, soundLabel, 73f, Config.WORLD_HEIGHT - 52f, Color.WHITE)
         GameUIRenderer.drawOutlinedText(batch, smallFont, musicLabel, 116f, Config.WORLD_HEIGHT - 52f, Color.WHITE)
 
+        GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "MAIN MENU", 55f, 42f, 145f, 38f, Color.WHITE)
         GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "UPGRADES", 615f, 42f, 150f, 38f, Color.WHITE)
         GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "ENCYCLOPEDIA", 795f, 42f, 165f, 38f, Color.WHITE)
 
@@ -177,9 +176,10 @@ object WorldMapRenderer {
         smallFont.draw(batch, "SANDBOX", sandboxNode.x - 45f, sandboxNode.y + 44f)
         batch.end()
 
+        // GỌI FILE RIÊNG MISSIONPOPUPRENDERER ĐỂ VẼ BẢNG CHI TIẾT MÀN CHƠI
         if (isPopupOpen) {
-            renderMissionPopup(
-                shapeRenderer = shapeRenderer,
+            MissionPopupRenderer.render(
+                sr = shapeRenderer,
                 batch = batch,
                 titleFont = titleFont,
                 font = font,
@@ -199,6 +199,28 @@ object WorldMapRenderer {
         if (isEncyclopediaOpen) {
             EncyclopediaRenderer.render(shapeRenderer, batch, titleFont, font, smallFont)
         }
+    }
+
+    private fun drawMainMenuMapButton(sr: ShapeRenderer, x: Float, y: Float, w: Float, h: Float) {
+        val cx = x + w / 2f
+        val iconY = y + h + 18f
+
+        sr.color = Color(0.24f, 0.18f, 0.12f, 1f)
+        sr.circle(cx, iconY, 19f)
+        sr.color = Color(0.76f, 0.62f, 0.32f, 1f)
+        sr.circle(cx, iconY, 16f)
+        sr.color = Color(0.32f, 0.24f, 0.16f, 1f)
+        sr.circle(cx, iconY, 12.5f)
+        sr.color = Color(0.98f, 0.84f, 0.22f, 1f)
+        sr.rect(cx - 2f, iconY - 3.5f, 10f, 7f)
+        sr.triangle(cx - 10f, iconY, cx - 1f, iconY + 8.5f, cx - 1f, iconY - 8.5f)
+
+        sr.color = Color(0.55f, 0.52f, 0.44f, 1f)
+        sr.rect(x - 3f, y - 3f, w + 6f, h + 6f)
+        sr.color = Color(0.24f, 0.20f, 0.16f, 1f)
+        sr.rect(x, y, w, h)
+        sr.color = Color(0.32f, 0.27f, 0.21f, 1f)
+        sr.rect(x + 4f, y + 4f, w - 8f, h - 8f)
     }
 
     private fun drawCompletedShieldBanner(
@@ -413,193 +435,5 @@ object WorldMapRenderer {
         for (off in offsets) {
             drawStarDirect(sr, x + off, y, 6.5f, true)
         }
-    }
-
-    private fun renderMissionPopup(
-        shapeRenderer: ShapeRenderer,
-        batch: SpriteBatch,
-        titleFont: BitmapFont,
-        font: BitmapFont,
-        smallFont: BitmapFont,
-        selectedLevelData: LevelData?,
-        selectedLevelName: String,
-        selectedLevelNumber: Int,
-        currentDifficulty: GameDifficulty,
-        currentGameMode: GameMode
-    ) {
-        val cX = Config.WORLD_WIDTH / 2f
-        val cY = Config.WORLD_HEIGHT / 2f
-
-        val boxX = cX - 235f
-        val boxY = cY - 70f
-        val boxW = 160f
-        val boxH = 150f
-
-        val headerW = 340f
-        val headerH = 40f
-        val headerX = cX - headerW / 2f
-        val headerY = cY + 145f
-
-        Gdx.gl.glEnable(GL20.GL_BLEND)
-        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA)
-
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        shapeRenderer.color = Color(0f, 0f, 0f, 0.65f)
-        shapeRenderer.rect(0f, 0f, Config.WORLD_WIDTH, Config.WORLD_HEIGHT)
-
-        shapeRenderer.color = Color(0.18f, 0.15f, 0.12f, 0.98f)
-        shapeRenderer.rect(cX - 260f, cY - 170f, 520f, 355f)
-
-        shapeRenderer.color = Color(0.78f, 0.65f, 0.38f, 1f)
-        shapeRenderer.rect(headerX, headerY, headerW, headerH)
-
-        shapeRenderer.color = Color(0.24f, 0.23f, 0.25f, 1f)
-        shapeRenderer.rect(boxX, boxY, boxW, boxH)
-
-        selectedLevelData?.let { level ->
-            val allPaths = level.allPaths
-
-            fun mapToPreview(worldPos: Vector2): Vector2 {
-                val px = boxX + (worldPos.x / Config.WORLD_WIDTH) * boxW
-                val py = boxY + (worldPos.y / Config.WORLD_HEIGHT) * boxH
-                return Vector2(px, py)
-            }
-
-            shapeRenderer.color = Color(0.35f, 0.34f, 0.36f, 1f)
-            for (path in allPaths) {
-                for (i in 0 until path.size - 1) {
-                    shapeRenderer.rectLine(mapToPreview(path[i]), mapToPreview(path[i + 1]), 10f)
-                }
-                for (w in path) shapeRenderer.circle(mapToPreview(w).x, mapToPreview(w).y, 5f)
-            }
-
-            shapeRenderer.color = Color(0.65f, 0.62f, 0.55f, 1f)
-            for (path in allPaths) {
-                for (i in 0 until path.size - 1) {
-                    shapeRenderer.rectLine(mapToPreview(path[i]), mapToPreview(path[i + 1]), 7f)
-                }
-                for (w in path) shapeRenderer.circle(mapToPreview(w).x, mapToPreview(w).y, 3.5f)
-            }
-
-            for (spot in level.towerSpots) {
-                val sp = mapToPreview(spot)
-                shapeRenderer.color = Color(0.48f, 0.45f, 0.38f, 1f)
-                shapeRenderer.circle(sp.x, sp.y, 5f)
-                shapeRenderer.color = Color(0.68f, 0.62f, 0.50f, 1f)
-                shapeRenderer.circle(sp.x, sp.y, 3.5f)
-            }
-        }
-
-        val diffBtnX = cX - 230f
-        val diffBtnY = cY - 110f
-        val diffBtnW = 150f
-        val diffBtnH = 32f
-
-        if (currentGameMode == GameMode.CAMPAIGN) {
-            val diffBg = when (currentDifficulty) {
-                GameDifficulty.CASUAL -> Color(0.20f, 0.65f, 0.25f, 1f)
-                GameDifficulty.NORMAL -> Color(0.85f, 0.58f, 0.15f, 1f)
-                GameDifficulty.VETERAN -> Color(0.80f, 0.20f, 0.15f, 1f)
-            }
-            shapeRenderer.color = diffBg
-            shapeRenderer.rect(diffBtnX, diffBtnY, diffBtnW, diffBtnH)
-        }
-
-        val levelStars = SaveManager.getLevelStars(selectedLevelNumber)
-        val isChallengeUnlocked = levelStars >= 3
-
-        shapeRenderer.color = if (currentGameMode == GameMode.CAMPAIGN) Color.GOLD else Color.DARK_GRAY
-        shapeRenderer.circle(cX - 180f, cY - 145f, 20f)
-        shapeRenderer.color = Color(0.2f, 0.5f, 0.85f, 1f)
-        shapeRenderer.circle(cX - 180f, cY - 145f, 16f)
-
-        shapeRenderer.color = if (currentGameMode == GameMode.HEROIC) Color.GOLD else Color.DARK_GRAY
-        shapeRenderer.circle(cX - 120f, cY - 145f, 20f)
-        shapeRenderer.color = if (isChallengeUnlocked) Color(0.85f, 0.35f, 0.15f, 1f) else Color(0.3f, 0.3f, 0.35f, 1f)
-        shapeRenderer.circle(cX - 120f, cY - 145f, 16f)
-
-        shapeRenderer.color = if (currentGameMode == GameMode.IRON) Color.GOLD else Color.DARK_GRAY
-        shapeRenderer.circle(cX - 60f, cY - 145f, 20f)
-        shapeRenderer.color = if (isChallengeUnlocked) Color(0.55f, 0.58f, 0.62f, 1f) else Color(0.3f, 0.3f, 0.35f, 1f)
-        shapeRenderer.circle(cX - 60f, cY - 145f, 16f)
-
-        val battleBtnX = cX + 110f
-        val battleBtnY = cY - 150f
-        val battleBtnW = 130f
-        val battleBtnH = 48f
-
-        shapeRenderer.color = Color(0.20f, 0.45f, 0.75f, 1f)
-        shapeRenderer.rect(battleBtnX, battleBtnY, battleBtnW, battleBtnH)
-
-        shapeRenderer.color = Color(0.75f, 0.20f, 0.15f, 1f)
-        shapeRenderer.circle(cX + 245f, cY + 165f, 16f)
-        shapeRenderer.end()
-
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-        shapeRenderer.color = Color.GOLD
-        shapeRenderer.rect(cX - 260f, cY - 170f, 520f, 355f)
-        shapeRenderer.rect(headerX, headerY, headerW, headerH)
-        shapeRenderer.rect(boxX, boxY, boxW, boxH)
-        shapeRenderer.rect(battleBtnX, battleBtnY, battleBtnW, battleBtnH)
-        shapeRenderer.circle(cX + 245f, cY + 165f, 16f)
-        shapeRenderer.end()
-
-        batch.begin()
-        titleFont.color = Color(0.20f, 0.12f, 0.05f, 1f)
-        val titleTargetY = headerY + (headerH + titleFont.capHeight) / 2f
-        titleFont.draw(batch, selectedLevelName, headerX, titleTargetY, headerW, Align.center, false)
-
-        titleFont.color = Color.WHITE
-        titleFont.draw(batch, "X", cX + 245f - 8f, cY + 165f + titleFont.capHeight / 2f)
-
-        if (currentGameMode == GameMode.CAMPAIGN) {
-            smallFont.color = Color.WHITE
-            val diffTargetY = diffBtnY + (diffBtnH + smallFont.capHeight) / 2f
-            smallFont.draw(batch, "DIFF: ${currentDifficulty.name}", diffBtnX, diffTargetY, diffBtnW, Align.center, false)
-        }
-
-        font.color = Color.WHITE
-        val modeIconY = (cY - 145f) + font.capHeight / 2f
-        font.draw(batch, "C", cX - 180f - 20f, modeIconY, 40f, Align.center, false)
-        font.draw(batch, if (isChallengeUnlocked) "H" else "X", cX - 120f - 20f, modeIconY, 40f, Align.center, false)
-        font.draw(batch, if (isChallengeUnlocked) "I" else "X", cX - 60f - 20f, modeIconY, 40f, Align.center, false)
-
-        font.color = Color(1f, 0.85f, 0.2f, 1f)
-        val modeTitle = when (currentGameMode) {
-            GameMode.CAMPAIGN -> "CAMPAIGN"
-            GameMode.HEROIC -> "HEROIC CHALLENGE (1 LIFE)"
-            GameMode.IRON -> "IRON CHALLENGE (1 LIFE)"
-        }
-        font.draw(batch, modeTitle, cX - 55f, cY + 124f)
-
-        smallFont.color = Color(0.96f, 0.96f, 0.92f, 1f)
-        when (currentGameMode) {
-            GameMode.CAMPAIGN -> {
-                smallFont.draw(batch, "Classic multi-wave invasion.", cX - 55f, cY + 84f)
-                smallFont.draw(batch, "Hold the path with standard rules.", cX - 55f, cY + 56f)
-                val stars = SaveManager.getLevelStars(selectedLevelNumber)
-                smallFont.color = Color(1f, 0.92f, 0.25f, 1f)
-                smallFont.draw(batch, "RECORD: $stars / 3 STARS", cX - 55f, cY + 20f)
-            }
-            GameMode.HEROIC -> {
-                smallFont.draw(batch, "Elite waves. Only 1 life point!", cX - 55f, cY + 84f)
-                smallFont.draw(batch, "Victory rewards +1 Extra Star.", cX - 55f, cY + 56f)
-                val isDone = SaveManager.isHeroicCompleted(selectedLevelNumber)
-                smallFont.color = if (isDone) Color(0.3f, 0.95f, 0.4f, 1f) else Color(1f, 0.92f, 0.25f, 1f)
-                smallFont.draw(batch, if (isDone) "COMPLETED (+1 STAR)" else "NOT COMPLETED", cX - 55f, cY + 20f)
-            }
-            GameMode.IRON -> {
-                smallFont.draw(batch, "Massive wave! Only 1 life point!", cX - 55f, cY + 84f)
-                smallFont.draw(batch, "Victory rewards +1 Extra Star.", cX - 55f, cY + 56f)
-                val isDone = SaveManager.isIronCompleted(selectedLevelNumber)
-                smallFont.color = if (isDone) Color(0.3f, 0.95f, 0.4f, 1f) else Color(1f, 0.92f, 0.25f, 1f)
-                smallFont.draw(batch, if (isDone) "COMPLETED (+1 STAR)" else "NOT COMPLETED", cX - 55f, cY + 20f)
-            }
-        }
-
-        val battleTargetY = battleBtnY + (battleBtnH + font.capHeight) / 2f
-        font.color = Color.WHITE
-        font.draw(batch, "TO BATTLE!", battleBtnX, battleTargetY, battleBtnW, Align.center, false)
-        batch.end()
     }
 }

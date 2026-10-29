@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector2
 import com.game.td.map.Level11ForsakenValley
+import com.game.td.renderers.MapRenderer
 
 object Level11MapRenderer {
 
@@ -126,6 +127,14 @@ object Level11MapRenderer {
         shapeRenderer.rect(mPos.x - 12f, mPos.y - 64f, 24f, 28f)
         shapeRenderer.color = Color(1f, 0.86f, 0.22f, 1f)
         shapeRenderer.rect(mPos.x - 5f, mPos.y - 60f, 10f, 20f)
+
+        // 5. VÒNG TRÒN PHÒNG THỦ & 2 CỜ HIỆU LINIREA TẠI CỔNG BẮC (X = 640F)
+        MapRenderer.drawDefensePoint(
+            sr = shapeRenderer,
+            crestX = 640f, crestY = 650f,
+            flag1X = 596f, flag1Y = 646f,
+            flag2X = 684f, flag2Y = 646f
+        )
     }
 
     private fun drawPath(sr: ShapeRenderer, pts: List<Vector2>, width: Float) {

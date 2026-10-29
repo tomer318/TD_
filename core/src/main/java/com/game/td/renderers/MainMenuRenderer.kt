@@ -76,6 +76,99 @@ object MainMenuRenderer {
     }
 
     // =========================================================================
+    // HÀM DÙNG CHUNG: VẼ BIỂU TƯỢNG HEROIC (KHIÊN CÁNH ĐẠI BÀNG VÀNG) & IRON (GĂNG TAY THÉP)
+    // =========================================================================
+    fun drawHeroicEmblem(sr: ShapeRenderer, cx: Float, cy: Float, scale: Float = 1f) {
+        val s = scale
+        // Đôi cánh vàng 3 tầng xòe rộng hai bên khiên
+        sr.color = OUTLINE
+        sr.triangle(cx - 6f * s, cy + 4f * s, cx - 20f * s, cy + 12f * s, cx - 15f * s, cy - 2f * s)
+        sr.triangle(cx - 6f * s, cy - 1f * s, cx - 18f * s, cy + 4f * s, cx - 12f * s, cy - 8f * s)
+        sr.triangle(cx + 6f * s, cy + 4f * s, cx + 20f * s, cy + 12f * s, cx + 15f * s, cy - 2f * s)
+        sr.triangle(cx + 6f * s, cy - 1f * s, cx + 18f * s, cy + 4f * s, cx + 12f * s, cy - 8f * s)
+
+        sr.color = Color(0.98f, 0.82f, 0.16f, 1f)
+        sr.triangle(cx - 6f * s, cy + 4f * s, cx - 18.5f * s, cy + 10.5f * s, cx - 14f * s, cy - 1f * s)
+        sr.triangle(cx - 6f * s, cy, cx - 16.5f * s, cy + 3.5f * s, cx - 11.5f * s, cy - 6.5f * s)
+        sr.triangle(cx - 5f * s, cy - 4f * s, cx - 13f * s, cy - 2f * s, cx - 9f * s, cy - 10f * s)
+
+        sr.triangle(cx + 6f * s, cy + 4f * s, cx + 18.5f * s, cy + 10.5f * s, cx + 14f * s, cy - 1f * s)
+        sr.triangle(cx + 6f * s, cy, cx + 16.5f * s, cy + 3.5f * s, cx + 11.5f * s, cy - 6.5f * s)
+        sr.triangle(cx + 5f * s, cy - 4f * s, cx + 13f * s, cy - 2f * s, cx + 9f * s, cy - 10f * s)
+
+        // Viền đen của khiên trung tâm
+        sr.color = OUTLINE
+        sr.rect(cx - 8.5f * s, cy - 2f * s, 17f * s, 11.5f * s)
+        sr.triangle(cx - 8.5f * s, cy - 2f * s, cx + 8.5f * s, cy - 2f * s, cx, cy - 13f * s)
+
+        // Khung khiên bạc sáng
+        sr.color = Color(0.86f, 0.90f, 0.95f, 1f)
+        sr.rect(cx - 7f * s, cy - 1f * s, 14f * s, 9.5f * s)
+        sr.triangle(cx - 7f * s, cy - 1f * s, cx + 7f * s, cy - 1f * s, cx, cy - 11f * s)
+
+        // Lòng khiên thép xanh đậm chia 2 nửa sáng/tối
+        sr.color = Color(0.32f, 0.56f, 0.82f, 1f)
+        sr.rect(cx - 5f * s, cy, 5f * s, 7.5f * s)
+        sr.triangle(cx - 5f * s, cy, cx, cy, cx, cy - 8.5f * s)
+        sr.color = Color(0.20f, 0.40f, 0.65f, 1f)
+        sr.rect(cx, cy, 5f * s, 7.5f * s)
+        sr.triangle(cx, cy, cx + 5f * s, cy, cx, cy - 8.5f * s)
+
+        // Sống kiếm bạc dọc giữa khiên
+        sr.color = Color.WHITE
+        sr.rect(cx - 1f * s, cy - 6.5f * s, 2f * s, 13.5f * s)
+    }
+
+    fun drawIronGauntletEmblem(sr: ShapeRenderer, cx: Float, cy: Float, scale: Float = 1f) {
+        val s = scale
+        // 1. Viền đen toàn bộ găng tay thép (Nắm đấm giơ thẳng đứng)
+        sr.color = OUTLINE
+        // Cổ tay giáp loe nhẹ ở dưới
+        sr.triangle(cx - 9.5f * s, cy - 13f * s, cx + 9.5f * s, cy - 13f * s, cx - 7.5f * s, cy - 3f * s)
+        sr.triangle(cx + 9.5f * s, cy - 13f * s, cx - 7.5f * s, cy - 3f * s, cx + 7.5f * s, cy - 3f * s)
+        // Bàn tay nắm chặt ở trên
+        sr.rect(cx - 9f * s, cy - 4f * s, 18f * s, 13f * s)
+        // 4 khớp ngón tay gồ lên trên đỉnh nắm đấm
+        for (i in 0..3) {
+            val kx = cx - 6.3f * s + i * 4.2f * s
+            sr.circle(kx, cy + 9f * s, 3.2f * s)
+        }
+        // Ngón cái gập ngang phía trước
+        sr.rect(cx - 10.5f * s, cy - 1f * s, 12f * s, 6.5f * s)
+
+        // 2. Lớp thép cổ tay giáp (Wrist Cuff)
+        sr.color = Color(0.45f, 0.48f, 0.54f, 1f)
+        sr.rect(cx - 7.2f * s, cy - 11.5f * s, 14.4f * s, 7.5f * s)
+        sr.color = Color(0.68f, 0.72f, 0.78f, 1f)
+        sr.rect(cx - 6.5f * s, cy - 6.5f * s, 13f * s, 2.2f * s)
+        // 3 đinh tán cổ tay
+        sr.color = OUTLINE
+        sr.circle(cx - 4f * s, cy - 9f * s, 1.1f * s)
+        sr.circle(cx, cy - 9f * s, 1.1f * s)
+        sr.circle(cx + 4f * s, cy - 9f * s, 1.1f * s)
+
+        // 3. Lòng nắm đấm thép & 4 ngón tay gập xuống
+        sr.color = Color(0.60f, 0.65f, 0.72f, 1f)
+        sr.rect(cx - 7.5f * s, cy - 3f * s, 15f * s, 10.5f * s)
+
+        for (i in 0..3) {
+            val fx = cx - 7.2f * s + i * 3.7f * s
+            sr.color = Color(0.78f, 0.82f, 0.88f, 1f)
+            sr.rect(fx, cy + 2.5f * s, 3.0f * s, 6.5f * s)
+            sr.circle(fx + 1.5f * s, cy + 8.8f * s, 1.8f * s)
+            // Khe đốt ngón tay
+            sr.color = OUTLINE
+            sr.rect(fx, cy + 5.2f * s, 3.0f * s, 1.2f * s)
+        }
+
+        // 4. Ngón cái bọc thép kẹp ngang bên dưới 4 ngón
+        sr.color = OUTLINE
+        sr.rect(cx - 9f * s, cy - 1.5f * s, 11f * s, 5.2f * s)
+        sr.color = Color(0.84f, 0.88f, 0.94f, 1f)
+        sr.rect(cx - 7.8f * s, cy - 0.5f * s, 9f * s, 3.4f * s)
+    }
+
+    // =========================================================================
     // LỚP 1: BẦU TRỜI CHUYỂN SẮC, MÂY TRẮNG, MƯA TÊN & ĐÀN GARGOYLE BAY LƯỢN
     // =========================================================================
     private fun drawSkyAndClouds(sr: ShapeRenderer) {
@@ -473,58 +566,35 @@ object MainMenuRenderer {
     }
 
     // =========================================================================
-    // LỚP 6: BIỂU TƯỢNG LOA/NHẠC, FACEBOOK/TWITTER & CUỘN GIẤY GÓC TRÊN
+    // LỚP 6: CHỈ GIỮ LẠI NÚT LOA (SOUND) & NHẠC (MUSIC) Ở GÓC TRÊN TRÁI
     // =========================================================================
     private fun drawTopCornerDecorations(sr: ShapeRenderer) {
         val topY = Config.WORLD_HEIGHT - 42f
-
         val audioOn = SoundManager.isSoundEnabled
+
         sr.color = OUTLINE
         sr.circle(52f, topY, 18f)
         sr.circle(102f, topY, 18f)
         sr.color = if (audioOn) Color(0.82f, 0.78f, 0.68f, 1f) else Color(0.75f, 0.25f, 0.20f, 1f)
         sr.circle(52f, topY, 14.5f)
         sr.circle(102f, topY, 14.5f)
-
-        drawRoundedBadge(sr, 34f, topY - 82f, 52f, 52f, Color(0.36f, 0.52f, 0.76f, 1f))
-        drawRoundedBadge(sr, 34f, topY - 144f, 52f, 52f, Color(0.48f, 0.78f, 0.92f, 1f))
-
-        val sx = Config.WORLD_WIDTH - 115f
-        val sy = Config.WORLD_HEIGHT - 65f
-        sr.color = OUTLINE
-        sr.rect(sx - 48f, sy - 22f, 96f, 44f)
-        sr.circle(sx + 38f, sy, 22f)
-        sr.color = Color(0.84f, 0.72f, 0.46f, 1f)
-        sr.rect(sx - 44f, sy - 18f, 88f, 36f)
-        sr.circle(sx + 38f, sy, 18f)
-        sr.color = Color(0.45f, 0.30f, 0.14f, 1f)
-        sr.circle(sx + 38f, sy, 9f)
-        sr.color = Color(0.92f, 0.90f, 0.85f, 1f)
-        sr.rect(sx - 12f, sy - 20f, 22f, 40f)
-    }
-
-    private fun drawRoundedBadge(sr: ShapeRenderer, x: Float, y: Float, w: Float, h: Float, fill: Color) {
-        sr.color = OUTLINE
-        sr.rect(x - 2.5f, y - 2.5f, w + 5f, h + 5f)
-        sr.color = fill
-        sr.rect(x, y, w, h)
-        sr.color = Color(1f, 1f, 1f, 0.22f)
-        sr.rect(x + 3f, y + h - 10f, w - 6f, 7f)
     }
 
     // =========================================================================
-    // LỚP 7: KHIÊN BIỂU TƯỢNG KINGDOM RUSH & HAI BẢNG GỖ TREO DÂY XÍCH
+    // LỚP 7: DÂY XÍCH NỐI LIỀN TỪ ĐÁY BIỂN "RUSH" XUỐNG NÚT START & CREDITS
     // =========================================================================
     private fun drawHangingStartAndCreditsButtons(sr: ShapeRenderer, cX: Float) {
+        // Hai sợi dây xích nối thẳng từ mặt dưới biển RUSH (y = 460f) xuống nút START (y = 295f)
         for (chainX in listOf(cX - 88f, cX + 80f)) {
             sr.color = OUTLINE
-            sr.rect(chainX - 3f, 295f, 14f, 95f)
+            sr.rect(chainX - 3f, 295f, 14f, 165f)
             sr.color = Color(0.62f, 0.65f, 0.70f, 1f)
-            for (cy in 300..380 step 16) {
-                sr.rect(chainX, cy.toFloat(), 8f, 11f)
+            for (cy in 300..448 step 14) {
+                sr.rect(chainX, cy.toFloat(), 8f, 10f)
             }
         }
 
+        // Hai đoạn xích ngắn nối từ đáy nút START xuống nút CREDITS
         for (chainX in listOf(cX - 66f, cX + 58f)) {
             sr.color = OUTLINE
             sr.rect(chainX - 2f, 182f, 12f, 34f)
@@ -628,7 +698,7 @@ object MainMenuRenderer {
     }
 
     // =========================================================================
-    // LỚP 8: VẼ CHỮ LOGO 3D "KINGDOM RUSH", NÚT START/CREDITS & CÁC NHÃN GÓC
+    // LỚP 8: VẼ CHỮ LOGO 3D "KINGDOM RUSH", NÚT START/CREDITS & NHÃN ÂM THANH
     // =========================================================================
     private fun drawLogoAndMenuTexts(
         batch: SpriteBatch,
@@ -672,10 +742,6 @@ object MainMenuRenderer {
         GameUIRenderer.drawOutlinedText(batch, smallFont, sText, 47f, topY + 6f, Color.WHITE)
         GameUIRenderer.drawOutlinedText(batch, smallFont, mText, 96f, topY + 6f, Color.WHITE)
 
-        GameUIRenderer.drawBadgeCenteredText(batch, titleFont, "f", 34f, topY - 82f, 52f, 52f, Color.WHITE)
-        GameUIRenderer.drawBadgeCenteredText(batch, titleFont, "t", 34f, topY - 144f, 52f, 52f, Color.WHITE)
-        GameUIRenderer.drawOutlinedText(batch, titleFont, "1", Config.WORLD_WIDTH - 122f, Config.WORLD_HEIGHT - 38f, Color(0.92f, 0.22f, 0.15f, 1f))
-
         if (!isSlotPopupOpen && !isCreditsPopupOpen) {
             GameUIRenderer.drawBadgeCenteredText(
                 batch, titleFont, "START",
@@ -693,7 +759,7 @@ object MainMenuRenderer {
     }
 
     // =========================================================================
-    // LỚP 9: BẢNG CHỌN PHẦN LƯU GAME "LOCAL SAVE"
+    // LỚP 9: BẢNG CHỌN PHẦN LƯU GAME "LOCAL SAVE" VỚI ICON HEROIC & IRON CHUẨN
     // =========================================================================
     private fun renderLocalSavePopup(
         shapeRenderer: ShapeRenderer,
@@ -773,6 +839,7 @@ object MainMenuRenderer {
         }
         shapeRenderer.end()
 
+        // Vẽ 3 biểu tượng: Ngôi Sao Vàng, Khiên Cánh Đại Bàng (Heroic) và Nắm Đấm Thép (Iron)
         for (i in 1..3) {
             val cardY = startY - (i - 1) * 114f
             val cardX = cX - cardW / 2f
@@ -780,23 +847,8 @@ object MainMenuRenderer {
                 GameUIRenderer.drawStar(shapeRenderer, cardX + 32f, cardY - 15f, 11f, true)
 
                 shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-                val shX = cardX + 152f
-                val shY = cardY - 15f
-                shapeRenderer.color = Color(0.95f, 0.75f, 0.15f, 1f)
-                shapeRenderer.circle(shX, shY + 3f, 11f)
-                shapeRenderer.triangle(shX - 11f, shY + 3f, shX + 11f, shY + 3f, shX, shY - 11f)
-                shapeRenderer.color = Color(0.72f, 0.76f, 0.82f, 1f)
-                shapeRenderer.circle(shX, shY + 3f, 7.5f)
-                shapeRenderer.triangle(shX - 7.5f, shY + 3f, shX + 7.5f, shY + 3f, shX, shY - 7.5f)
-
-                val fistX = cardX + 245f
-                val fistY = cardY - 15f
-                shapeRenderer.color = OUTLINE
-                shapeRenderer.rect(fistX - 9f, fistY - 10f, 18f, 20f)
-                shapeRenderer.color = Color(0.68f, 0.72f, 0.78f, 1f)
-                shapeRenderer.rect(fistX - 7f, fistY - 8f, 14f, 16f)
-                shapeRenderer.color = OUTLINE
-                shapeRenderer.rect(fistX - 7f, fistY + 1f, 14f, 2f)
+                drawHeroicEmblem(shapeRenderer, cardX + 154f, cardY - 14f, 1.05f)
+                drawIronGauntletEmblem(shapeRenderer, cardX + 246f, cardY - 15f, 1.05f)
                 shapeRenderer.end()
             }
         }
@@ -820,11 +872,13 @@ object MainMenuRenderer {
             val hasSave = SaveManager.hasData(i)
 
             if (hasSave) {
-                val (campStars, chalStars, totalStars) = SaveManager.getSlotStats(i)
+                val (_, _, totalStars) = SaveManager.getSlotStats(i)
+                val (heroicCount, ironCount) = getSlotHeroicAndIronCounts(i)
+
                 GameUIRenderer.drawOutlinedText(batch, italicFont, "SLOT $i", cardX + 20f, cardY + 26f, Color.WHITE)
                 GameUIRenderer.drawOutlinedText(batch, font, "$totalStars/60", cardX + 50f, cardY - 8f, Color(1f, 0.90f, 0.25f, 1f))
-                GameUIRenderer.drawOutlinedText(batch, font, "$campStars", cardX + 172f, cardY - 8f, Color.WHITE)
-                GameUIRenderer.drawOutlinedText(batch, font, "$chalStars", cardX + 265f, cardY - 8f, Color.WHITE)
+                GameUIRenderer.drawOutlinedText(batch, font, "$heroicCount", cardX + 178f, cardY - 8f, Color.WHITE)
+                GameUIRenderer.drawOutlinedText(batch, font, "$ironCount", cardX + 266f, cardY - 8f, Color.WHITE)
             } else {
                 GameUIRenderer.drawBadgeCenteredText(
                     batch, font, "NEW GAME",
@@ -834,6 +888,21 @@ object MainMenuRenderer {
             }
         }
         batch.end()
+    }
+
+    private fun getSlotHeroicAndIronCounts(slot: Int): Pair<Int, Int> {
+        return try {
+            val p = Gdx.app.getPreferences("kr_save_slot_$slot")
+            var h = 0
+            var ir = 0
+            for (lvl in 1..12) {
+                if (p.getBoolean("heroic_lvl_$lvl", false)) h++
+                if (p.getBoolean("iron_lvl_$lvl", false)) ir++
+            }
+            Pair(h, ir)
+        } catch (e: Exception) {
+            Pair(0, 0)
+        }
     }
 
     // =========================================================================

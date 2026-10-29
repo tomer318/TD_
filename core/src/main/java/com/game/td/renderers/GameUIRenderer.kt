@@ -332,57 +332,563 @@ object GameUIRenderer {
         font: BitmapFont,
         smallFont: BitmapFont,
         earnedStars: Int,
-        isChallengeMode: Boolean = false
+        isChallengeMode: Boolean = false,
+        gameMode: com.game.td.managers.GameMode = if (isChallengeMode) com.game.td.managers.GameMode.HEROIC else com.game.td.managers.GameMode.CAMPAIGN
     ) {
         val cX = Config.WORLD_WIDTH / 2f
-        val cY = Config.WORLD_HEIGHT / 2f
+        val crestY = 450f
+        val outline = Color(0.12f, 0.09f, 0.07f, 1f)
+
+        com.badlogic.gdx.Gdx.gl.glEnable(com.badlogic.gdx.graphics.GL20.GL_BLEND)
+        com.badlogic.gdx.Gdx.gl.glBlendFunc(
+            com.badlogic.gdx.graphics.GL20.GL_SRC_ALPHA,
+            com.badlogic.gdx.graphics.GL20.GL_ONE_MINUS_SRC_ALPHA
+        )
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        shapeRenderer.color = Color(0f, 0f, 0f, 0.65f)
+        // Lớp phủ mờ nhẹ làm nổi bật huy hiệu Chiến Thắng
+        shapeRenderer.color = Color(0f, 0f, 0f, 0.35f)
         shapeRenderer.rect(0f, 0f, Config.WORLD_WIDTH, Config.WORLD_HEIGHT)
 
-        shapeRenderer.color = Color(0.18f, 0.14f, 0.10f, 0.98f)
-        shapeRenderer.rect(cX - 220f, cY - 140f, 440f, 280f)
+        // =====================================================================
+        // 1. HAI SỢI DÂY XÍCH SẮT & 2 BẢNG GỖ "CONTINUE" / "RESTART" PHÍA DƯỚI
+        // =====================================================================
+        for (chainX in listOf(cX - 88f, cX + 80f)) {
+            shapeRenderer.color = outline
+            shapeRenderer.rect(chainX - 3f, 202f, 14f, 115f)
+            shapeRenderer.color = Color(0.66f, 0.69f, 0.74f, 1f)
+            for (cy in 208..304 step 14) {
+                shapeRenderer.rect(chainX, cy.toFloat(), 8f, 10f)
+            }
 
-        shapeRenderer.color = Color(0.80f, 0.20f, 0.15f, 1f)
-        shapeRenderer.rect(cX - 160f, cY + 110f, 320f, 42f)
+            shapeRenderer.color = outline
+            shapeRenderer.rect(chainX - 3f, 102f, 14f, 44f)
+            shapeRenderer.color = Color(0.66f, 0.69f, 0.74f, 1f)
+            shapeRenderer.rect(chainX, 108f, 8f, 10f)
+            shapeRenderer.rect(chainX, 124f, 8f, 10f)
+        }
 
-        shapeRenderer.color = Color(0.20f, 0.50f, 0.85f, 1f)
-        shapeRenderer.rect(cX - 120f, cY - 115f, 240f, 46f)
-        shapeRenderer.end()
+        drawVictoryPlaqueButton(shapeRenderer, cX - 125f, 140f, 250f, 68f)
+        drawVictoryPlaqueButton(shapeRenderer, cX - 115f, 46f, 230f, 62f)
 
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Line)
-        shapeRenderer.color = Color.GOLD
-        shapeRenderer.rect(cX - 220f, cY - 140f, 440f, 280f)
-        shapeRenderer.rect(cX - 160f, cY + 110f, 320f, 42f)
-        shapeRenderer.rect(cX - 120f, cY - 115f, 240f, 46f)
-        shapeRenderer.end()
+        // =====================================================================
+        // 2. HAI THANH ĐẠI KIẾM BẮT CHÉO & DẢI LỤA ĐỎ CAM PHÍA SAU HUY HIỆU
+        // =====================================================================
+        for (side in listOf(-1f, 1f)) {
+            // Dải lụa cam-đỏ uốn vòng từ chuôi kiếm
+            shapeRenderer.color = outline
+            shapeRenderer.circle(cX + side * 124f, crestY + 84f, 30f)
+            shapeRenderer.color = Color(0.88f, 0.30f, 0.06f, 1f)
+            shapeRenderer.circle(cX + side * 124f, crestY + 84f, 25f)
+            shapeRenderer.color = Color(0.24f, 0.20f, 0.14f, 1f)
+            shapeRenderer.circle(cX + side * 114f, crestY + 80f, 16f)
 
-        val starCenterY = cY + 25f
-        if (isChallengeMode) {
-            drawStar(shapeRenderer, cX, starCenterY, 34f, true)
-            drawStar(shapeRenderer, cX + 92f, cY - 49f, 9.5f, true)
-        } else {
-            val starSpacing = 68f
-            for (i in 0 until 3) {
-                val starX = cX + (i - 1) * starSpacing
-                val isFilled = (i < earnedStars)
-                val radius = if (i == 1) 28f else 23f
-                drawStar(shapeRenderer, starX, starCenterY, radius, isFilled)
+            // Chuôi đại kiếm nâu bọc núm vàng ở góc trên
+            val hiltX = cX + side * 96f
+            val hiltY = crestY + 148f
+            shapeRenderer.color = outline
+            shapeRenderer.rectLine(cX + side * 42f, crestY + 86f, hiltX, hiltY, 32f)
+            shapeRenderer.circle(hiltX + side * 5f, hiltY + 5f, 19f)
+            shapeRenderer.color = Color(0.46f, 0.28f, 0.18f, 1f)
+            shapeRenderer.rectLine(cX + side * 42f, crestY + 86f, hiltX, hiltY, 24f)
+            shapeRenderer.color = Color(0.98f, 0.80f, 0.14f, 1f)
+            shapeRenderer.circle(hiltX + side * 5f, hiltY + 5f, 14f)
+            shapeRenderer.color = Color(1f, 0.95f, 0.55f, 1f)
+            shapeRenderer.circle(hiltX + side * 2f, hiltY + 8f, 5.5f)
+
+            // Mũi kiếm thép trắng bạc nhô ra ở góc dưới đáy khiên
+            shapeRenderer.color = outline
+            shapeRenderer.triangle(
+                cX + side * 52f, crestY - 105f,
+                cX + side * 104f, crestY - 105f,
+                cX + side * 90f, crestY - 165f
+            )
+            shapeRenderer.color = Color(0.90f, 0.94f, 0.98f, 1f)
+            shapeRenderer.triangle(
+                cX + side * 58f, crestY - 108f,
+                cX + side * 96f, crestY - 108f,
+                cX + side * 86f, crestY - 155f
+            )
+            shapeRenderer.color = Color(0.70f, 0.76f, 0.82f, 1f)
+            shapeRenderer.triangle(
+                cX + side * 75f, crestY - 108f,
+                cX + side * 96f, crestY - 108f,
+                cX + side * 86f, crestY - 155f
+            )
+        }
+
+        // =====================================================================
+        // 3. VẼ BIỂU TƯỢNG TRUNG TÂM THEO TỪNG CHẾ ĐỘ (CAMPAIGN / HEROIC / IRON)
+        // =====================================================================
+        when (gameMode) {
+            com.game.td.managers.GameMode.CAMPAIGN -> {
+                // --- HÌNH 2: KHIÊN TRÒN GỖ VIỀN THÉP & PHÙ ĐIÊU SƯ TỬ CÓ CÁNH ---
+                shapeRenderer.color = outline
+                shapeRenderer.triangle(cX - 24f, crestY - 125f, cX + 24f, crestY - 125f, cX, crestY - 168f)
+                shapeRenderer.color = Color(0.78f, 0.80f, 0.84f, 1f)
+                shapeRenderer.triangle(cX - 18f, crestY - 128f, cX + 18f, crestY - 128f, cX, crestY - 158f)
+
+                // Vành khiên thép tròn
+                shapeRenderer.color = outline
+                shapeRenderer.circle(cX, crestY, 138f)
+                shapeRenderer.color = Color(0.82f, 0.84f, 0.88f, 1f)
+                shapeRenderer.circle(cX, crestY, 130f)
+                shapeRenderer.color = Color(0.55f, 0.57f, 0.62f, 1f)
+                shapeRenderer.circle(cX, crestY, 113f)
+                shapeRenderer.color = outline
+                shapeRenderer.circle(cX, crestY, 107f)
+
+                // Mặt gỗ nâu sẫm ghép dọc bên trong lòng khiên
+                shapeRenderer.color = Color(0.32f, 0.22f, 0.14f, 1f)
+                shapeRenderer.circle(cX, crestY, 102f)
+                shapeRenderer.color = Color(0.22f, 0.14f, 0.08f, 1f)
+                for (px in -75..75 step 30) {
+                    shapeRenderer.rect(cX + px - 2f, crestY - 94f, 4f, 188f)
+                }
+
+                // Phù điêu Đầu Sư Tử Có Cánh bằng bạc trên đỉnh vành khiên
+                val lionY = crestY + 124f
+                shapeRenderer.color = outline
+                shapeRenderer.triangle(cX, lionY + 18f, cX - 22f, lionY + 10f, cX, lionY + 34f)
+                shapeRenderer.triangle(cX, lionY + 18f, cX + 22f, lionY + 10f, cX, lionY + 34f)
+                for (side in listOf(-1f, 1f)) {
+                    shapeRenderer.triangle(cX + side * 12f, lionY + 8f, cX + side * 66f, lionY + 20f, cX + side * 52f, lionY + 2f)
+                    shapeRenderer.triangle(cX + side * 12f, lionY + 2f, cX + side * 58f, lionY + 8f, cX + side * 44f, lionY - 8f)
+                    shapeRenderer.triangle(cX + side * 10f, lionY - 4f, cX + side * 46f, lionY - 2f, cX + side * 34f, lionY - 15f)
+                }
+                shapeRenderer.circle(cX, lionY, 21f)
+
+                // Tô màu bạc sáng cho cánh và bờm sư tử
+                shapeRenderer.color = Color(0.88f, 0.90f, 0.94f, 1f)
+                shapeRenderer.triangle(cX - 16f, lionY + 12f, cX + 16f, lionY + 12f, cX, lionY + 28f)
+                for (side in listOf(-1f, 1f)) {
+                    shapeRenderer.triangle(cX + side * 14f, lionY + 7f, cX + side * 60f, lionY + 17f, cX + side * 48f, lionY + 3f)
+                    shapeRenderer.triangle(cX + side * 14f, lionY + 1f, cX + side * 52f, lionY + 6f, cX + side * 40f, lionY - 6f)
+                    shapeRenderer.triangle(cX + side * 12f, lionY - 4f, cX + side * 42f, lionY - 2f, cX + side * 30f, lionY - 12f)
+                }
+                shapeRenderer.circle(cX, lionY, 17f)
+                shapeRenderer.color = Color(0.62f, 0.65f, 0.70f, 1f)
+                shapeRenderer.circle(cX, lionY - 1f, 13f)
+                shapeRenderer.color = Color(0.88f, 0.90f, 0.94f, 1f)
+                shapeRenderer.rect(cX - 4f, lionY - 4f, 8f, 10f)
+                // Mắt và mũi sư tử điêu khắc
+                shapeRenderer.color = outline
+                shapeRenderer.rectLine(cX - 8f, lionY + 5f, cX - 3f, lionY + 3f, 2.2f)
+                shapeRenderer.rectLine(cX + 8f, lionY + 5f, cX + 3f, lionY + 3f, 2.2f)
+                shapeRenderer.triangle(cX - 4f, lionY - 4f, cX + 4f, lionY - 4f, cX, lionY - 8f)
+            }
+
+            com.game.td.managers.GameMode.HEROIC -> {
+                // --- HÌNH 3: ĐÔI CÁNH ĐẠI BÀNG VÀNG SẮC NÉT & KHIÊN HIỆP SĨ THÉP ---
+                for (side in listOf(-1f, 1f)) {
+                    val wingFeathers = listOf(
+                        // (baseX, baseY, tipX, tipY, lowX, lowY)
+                        floatArrayOf(side * 65f, crestY + 95f, side * 162f, crestY + 182f, side * 128f, crestY + 98f),
+                        floatArrayOf(side * 78f, crestY + 55f, side * 196f, crestY + 128f, side * 155f, crestY + 48f),
+                        floatArrayOf(side * 82f, crestY + 12f, side * 206f, crestY + 62f, side * 162f, crestY - 8f),
+                        floatArrayOf(side * 75f, crestY - 25f, side * 188f, crestY + 4f, side * 140f, crestY - 45f)
+                    )
+                    for (wf in wingFeathers) {
+                        val bx = cX + wf[0]; val by = wf[1]
+                        val tx = cX + wf[2]; val ty = wf[3]
+                        val lx = cX + wf[4]; val ly = wf[5]
+
+                        // Viền nâu đen dày bao ngoài từng chiếc lông vũ
+                        shapeRenderer.color = outline
+                        shapeRenderer.triangle(bx, by + 26f, bx, by - 22f, tx + side * 6f, ty + 6f)
+                        shapeRenderer.triangle(bx, by - 22f, tx + side * 6f, ty + 6f, lx + side * 6f, ly - 6f)
+
+                        // Lớp cam đậm phía dưới lông vũ
+                        shapeRenderer.color = Color(0.92f, 0.44f, 0.05f, 1f)
+                        shapeRenderer.triangle(bx, by + 18f, bx, by - 16f, tx, ty)
+                        shapeRenderer.triangle(bx, by - 16f, tx, ty, lx, ly)
+
+                        // Lớp vàng rực ở giữa lông vũ
+                        shapeRenderer.color = Color(1f, 0.82f, 0.12f, 1f)
+                        shapeRenderer.triangle(bx + side * 12f, by + 14f, bx + side * 12f, by - 6f, tx - side * 4f, ty - 2f)
+
+                        // Mũi lông vũ ánh trắng vàng sáng lấp lánh
+                        shapeRenderer.color = Color(1f, 0.97f, 0.72f, 1f)
+                        shapeRenderer.triangle(
+                            tx - side * 42f, ty - 14f,
+                            tx - side * 18f, ty - 34f,
+                            tx - side * 2f, ty - 2f
+                        )
+                    }
+                }
+
+                // Khiên Hiệp Sĩ Heater Shield lớn ở chính giữa
+                shapeRenderer.color = outline
+                shapeRenderer.triangle(cX - 124f, crestY + 105f, cX + 124f, crestY + 105f, cX, crestY + 162f)
+                shapeRenderer.rect(cX - 124f, crestY - 35f, 248f, 140f)
+                shapeRenderer.triangle(cX - 124f, crestY - 35f, cX + 124f, crestY - 35f, cX, crestY - 165f)
+
+                shapeRenderer.color = Color(0.88f, 0.90f, 0.94f, 1f)
+                shapeRenderer.triangle(cX - 114f, crestY + 100f, cX + 114f, crestY + 100f, cX, crestY + 152f)
+                shapeRenderer.rect(cX - 114f, crestY - 32f, 228f, 132f)
+                shapeRenderer.triangle(cX - 114f, crestY - 32f, cX + 114f, crestY - 32f, cX, crestY - 154f)
+
+                shapeRenderer.color = Color(0.38f, 0.45f, 0.54f, 1f)
+                shapeRenderer.triangle(cX - 86f, crestY + 82f, cX, crestY + 82f, cX, crestY + 122f)
+                shapeRenderer.rect(cX - 86f, crestY - 25f, 86f, 107f)
+                shapeRenderer.triangle(cX - 86f, crestY - 25f, cX, crestY - 25f, cX, crestY - 118f)
+
+                shapeRenderer.color = Color(0.52f, 0.60f, 0.70f, 1f)
+                shapeRenderer.triangle(cX, crestY + 82f, cX + 86f, crestY + 82f, cX, crestY + 122f)
+                shapeRenderer.rect(cX, crestY - 25f, 86f, 107f)
+                shapeRenderer.triangle(cX, crestY - 25f, cX + 86f, crestY - 25f, cX, crestY - 118f)
+
+                val rivets = listOf(
+                    Vector2(0f, crestY + 134f),
+                    Vector2(-96f, crestY + 92f),
+                    Vector2(96f, crestY + 92f),
+                    Vector2(-75f, crestY - 68f),
+                    Vector2(75f, crestY - 68f),
+                    Vector2(0f, crestY - 132f)
+                )
+                for (r in rivets) {
+                    shapeRenderer.color = Color(0.45f, 0.48f, 0.52f, 1f)
+                    shapeRenderer.circle(cX + r.x, r.y, 9.5f)
+                    shapeRenderer.color = Color(0.95f, 0.97f, 1f, 1f)
+                    shapeRenderer.circle(cX + r.x - 1.5f, r.y + 1.5f, 6.5f)
+                }
+            }
+
+            com.game.td.managers.GameMode.IRON -> {
+                // --- HÌNH 4: GĂNG TAY SẮT / NẮM ĐẤM THÉP KHỔNG LỒ (CHUẨN ẢNH GỐC) ---
+                val steelDark = Color(0.40f, 0.43f, 0.46f, 1f)
+                val steelMid = Color(0.56f, 0.60f, 0.64f, 1f)
+                val steelLight = Color(0.76f, 0.80f, 0.84f, 1f)
+                val steelWhite = Color(0.95f, 0.97f, 1f, 1f)
+
+                // A. CỔ TAY GIÁP THÉP PHÍA DƯỚI BĂNG RÔN (Loe nhẹ, đáy cong bầu, có vệt sáng bạc bên phải)
+                shapeRenderer.color = outline
+                shapeRenderer.ellipse(cX - 114f, crestY - 162f, 228f, 76f)
+                shapeRenderer.triangle(
+                    cX - 96f, crestY - 40f,
+                    cX + 96f, crestY - 40f,
+                    cX - 112f, crestY - 126f
+                )
+                shapeRenderer.triangle(
+                    cX + 96f, crestY - 40f,
+                    cX - 112f, crestY - 126f,
+                    cX + 112f, crestY - 126f
+                )
+
+                // Nền thép xám đậm bên trái & giữa cổ tay
+                shapeRenderer.color = steelDark
+                shapeRenderer.ellipse(cX - 104f, crestY - 153f, 208f, 62f)
+                shapeRenderer.rect(cX - 96f, crestY - 126f, 192f, 84f)
+
+                // Mảng thép trung gian
+                shapeRenderer.color = steelMid
+                shapeRenderer.rect(cX - 42f, crestY - 146f, 132f, 102f)
+
+                // Dải phản quang bạc trắng dọc bên phải cổ tay giáp
+                shapeRenderer.color = steelLight
+                shapeRenderer.rect(cX + 8f, crestY - 145f, 68f, 100f)
+                shapeRenderer.color = steelWhite
+                shapeRenderer.rect(cX + 26f, crestY - 142f, 30f, 94f)
+
+                // Rãnh khớp ngang trên cổ tay giáp & các vết xước chiến trường
+                shapeRenderer.color = outline
+                shapeRenderer.rectLine(cX - 98f, crestY - 68f, cX + 98f, crestY - 68f, 6f)
+                shapeRenderer.rectLine(cX - 102f, crestY - 96f, cX + 102f, crestY - 96f, 6.5f)
+                shapeRenderer.circle(cX - 15f, crestY - 118f, 4.5f)
+                shapeRenderer.circle(cX - 6f, crestY - 132f, 3.2f)
+                shapeRenderer.rect(cX - 55f, crestY - 86f, 18f, 6f)
+
+                // B. KHỐI NẮM ĐẤM THÉP PHÍA TRÊN BĂNG RÔN (3 Bậc ngón tay gập + Ngón cái lớn kẹp ngang)
+                // 1. Viền đen tổng thể của 3 bậc ngón tay từ trái lên đỉnh phải
+                shapeRenderer.color = outline
+                // Ngón út/áp út bên trái (thấp nhất, nghiêng vào trong)
+                shapeRenderer.circle(cX - 64f, crestY + 94f, 30f)
+                shapeRenderer.rect(cX - 94f, crestY + 42f, 56f, 54f)
+                // Ngón giữa (cao vừa, ở giữa-trái)
+                shapeRenderer.circle(cX - 28f, crestY + 126f, 36f)
+                shapeRenderer.rect(cX - 64f, crestY + 45f, 70f, 82f)
+                // Đỉnh khớp ngón trỏ (cao nhất, ở giữa-phải)
+                shapeRenderer.circle(cX + 22f, crestY + 142f, 40f)
+                shapeRenderer.rect(cX - 18f, crestY + 55f, 80f, 88f)
+                // Khối mu bàn tay bên phải
+                shapeRenderer.circle(cX + 52f, crestY + 86f, 38f)
+
+                // 2. Tô màu thép và mảng sáng 3D cho Ngón Út/Áp Út (Trái)
+                shapeRenderer.color = steelDark
+                shapeRenderer.circle(cX - 64f, crestY + 94f, 22f)
+                shapeRenderer.rect(cX - 86f, crestY + 45f, 42f, 50f)
+                shapeRenderer.color = steelLight
+                shapeRenderer.circle(cX - 68f, crestY + 96f, 14f)
+                shapeRenderer.rect(cX - 82f, crestY + 52f, 20f, 44f)
+                shapeRenderer.color = steelWhite
+                shapeRenderer.circle(cX - 71f, crestY + 98f, 8f)
+
+                // Rãnh đen ngăn cách giữa ngón bên trái và ngón giữa
+                shapeRenderer.color = outline
+                shapeRenderer.rectLine(cX - 56f, crestY + 52f, cX - 60f, crestY + 114f, 7f)
+
+                // 3. Tô màu thép và mảng sáng 3D cho Ngón Giữa
+                shapeRenderer.color = steelMid
+                shapeRenderer.circle(cX - 28f, crestY + 126f, 28f)
+                shapeRenderer.rect(cX - 54f, crestY + 48f, 52f, 78f)
+                shapeRenderer.color = steelLight
+                shapeRenderer.circle(cX - 33f, crestY + 128f, 20f)
+                shapeRenderer.rect(cX - 50f, crestY + 62f, 26f, 66f)
+                shapeRenderer.color = steelWhite
+                shapeRenderer.circle(cX - 36f, crestY + 132f, 12f)
+                shapeRenderer.rect(cX - 48f, crestY + 75f, 14f, 55f)
+
+                // Rãnh đen ngăn cách giữa ngón giữa và đỉnh ngón trỏ
+                shapeRenderer.color = outline
+                shapeRenderer.rectLine(cX - 10f, crestY + 95f, cX - 14f, crestY + 150f, 7.5f)
+
+                // 4. Tô màu thép và mảng sáng 3D cho Đỉnh Ngón Trỏ (Cao nhất)
+                shapeRenderer.color = steelMid
+                shapeRenderer.circle(cX + 22f, crestY + 142f, 31f)
+                shapeRenderer.rect(cX - 6f, crestY + 95f, 56f, 48f)
+                shapeRenderer.color = steelLight
+                shapeRenderer.circle(cX + 20f, crestY + 146f, 23f)
+                shapeRenderer.color = steelWhite
+                shapeRenderer.ellipse(cX - 1f, crestY + 138f, 42f, 24f)
+
+                // 5. NGÓN CÁI BỌC THÉP KHỔNG LỒ GẬP NGANG PHÍA TRƯỚC (Đúng chuẩn Hình 4)
+                val thumbX = cX - 18f
+                val thumbY = crestY + 46f
+                val thumbW = 96f
+                val thumbH = 76f
+
+                // Viền đen đậm bao quanh ngón cái kẹp ngang
+                shapeRenderer.color = outline
+                shapeRenderer.circle(thumbX + 24f, thumbY + thumbH / 2f, thumbH / 2f + 7f)
+                shapeRenderer.circle(thumbX + thumbW - 22f, thumbY + thumbH / 2f - 4f, thumbH / 2f + 5f)
+                shapeRenderer.rect(thumbX + 18f, thumbY - 7f, thumbW - 36f, thumbH + 14f)
+
+                // Bóng tối đậm dưới đáy ngón cái
+                shapeRenderer.color = Color(0.28f, 0.30f, 0.33f, 1f)
+                shapeRenderer.circle(thumbX + 24f, thumbY + thumbH / 2f, thumbH / 2f)
+                shapeRenderer.circle(thumbX + thumbW - 22f, thumbY + thumbH / 2f - 4f, thumbH / 2f - 2f)
+                shapeRenderer.rect(thumbX + 18f, thumbY, thumbW - 36f, thumbH)
+
+                // Thân thép sáng của ngón cái
+                shapeRenderer.color = steelLight
+                shapeRenderer.circle(thumbX + 26f, thumbY + thumbH / 2f + 4f, thumbH / 2f - 6f)
+                shapeRenderer.circle(thumbX + thumbW - 22f, thumbY + thumbH / 2f, thumbH / 2f - 7f)
+                shapeRenderer.rect(thumbX + 22f, thumbY + 10f, thumbW - 42f, thumbH - 12f)
+
+                // Vệt phản quang trắng sáng trên mặt trên ngón cái
+                shapeRenderer.color = steelWhite
+                shapeRenderer.ellipse(thumbX + 16f, thumbY + thumbH - 28f, thumbW - 34f, 22f)
+
+                // Các đốm xước thép xám đậm đặc trưng trên ngón cái (giống hệt Hình 4)
+                shapeRenderer.color = steelDark
+                shapeRenderer.ellipse(thumbX + 22f, thumbY + 34f, 18f, 10f)
+                shapeRenderer.circle(thumbX + 48f, thumbY + 28f, 3.5f)
+                shapeRenderer.circle(thumbX + 16f, thumbY + 22f, 3f)
             }
         }
 
+        // =====================================================================
+        // 4. DẢI BĂNG RÔN VÀNG & VẼ CHỮ VECTOR "VICTORY" SẮC NÉT 100%
+        // =====================================================================
+        for (side in listOf(-1f, 1f)) {
+            shapeRenderer.color = outline
+            shapeRenderer.rect(cX + side * 145f - (if (side < 0) 95f else 0f), crestY - 68f, 95f, 82f)
+            shapeRenderer.color = Color(0.70f, 0.54f, 0.20f, 1f)
+            shapeRenderer.rect(cX + side * 142f - (if (side < 0) 88f else 0f), crestY - 62f, 88f, 70f)
+            shapeRenderer.color = Color(0.18f, 0.24f, 0.12f, 1f)
+            shapeRenderer.triangle(
+                cX + side * 235f, crestY - 10f,
+                cX + side * 235f, crestY - 45f,
+                cX + side * 208f, crestY - 27f
+            )
+
+            // Đuôi dải lụa cam-đỏ lớn uốn cong vút lên ở dưới băng rôn
+            val tailCx = cX + side * 135f
+            val tailCy = crestY - 72f
+            shapeRenderer.color = outline
+            shapeRenderer.circle(tailCx, tailCy, 44f)
+            shapeRenderer.triangle(
+                tailCx - side * 38f, tailCy - 28f,
+                tailCx - side * 5f, tailCy + 12f,
+                tailCx - side * 62f, tailCy + 34f
+            )
+            shapeRenderer.color = Color(0.88f, 0.30f, 0.06f, 1f)
+            shapeRenderer.circle(tailCx, tailCy, 38f)
+            shapeRenderer.color = Color(0.96f, 0.42f, 0.10f, 1f)
+            shapeRenderer.triangle(
+                tailCx - side * 32f, tailCy - 22f,
+                tailCx - side * 6f, tailCy + 6f,
+                tailCx - side * 54f, tailCy + 26f
+            )
+        }
+
+        val bannerW = 360f
+        val bannerH = 104f
+        val bannerX = cX - bannerW / 2f
+        val bannerY = crestY - 42f
+
+        shapeRenderer.color = outline
+        shapeRenderer.rect(bannerX - 6f, bannerY - 6f, bannerW + 12f, bannerH + 12f)
+        shapeRenderer.color = Color(0.82f, 0.67f, 0.28f, 1f)
+        shapeRenderer.rect(bannerX, bannerY, bannerW, bannerH)
+        shapeRenderer.color = Color(0.94f, 0.80f, 0.38f, 1f)
+        shapeRenderer.rect(bannerX + 8f, bannerY + 10f, bannerW - 16f, bannerH - 18f)
+        shapeRenderer.color = Color(0.98f, 0.88f, 0.48f, 1f)
+        shapeRenderer.rect(bannerX + 14f, bannerY + bannerH - 22f, bannerW - 28f, 14f)
+
+        // Các vết rách chữ V cổ điển dọc theo mép trên băng rôn
+        shapeRenderer.color = outline
+        for (nx in listOf(-110f, -35f, 55f, 125f)) {
+            shapeRenderer.triangle(
+                cX + nx - 7f, bannerY + bannerH + 4f,
+                cX + nx + 7f, bannerY + bannerH + 4f,
+                cX + nx, bannerY + bannerH - 11f
+            )
+        }
+
+        // VẼ CHỮ VECTOR "V I C T O R Y" SẮC NÉT TUYỆT ĐỐI (KHÔNG BAO GIỜ BỊ MỜ/VỠ HẠT)
+        drawCrispVictoryVectorText(
+            sr = shapeRenderer,
+            cX = cX + 2.5f,
+            centerY = bannerY + 50f - 2.5f,
+            textColor = Color(1f, 0.93f, 0.58f, 0.85f),
+            bannerBgColor = Color(0.94f, 0.80f, 0.38f, 1f)
+        )
+        drawCrispVictoryVectorText(
+            sr = shapeRenderer,
+            cX = cX,
+            centerY = bannerY + 50f,
+            textColor = Color(0.24f, 0.16f, 0.07f, 1f),
+            bannerBgColor = Color(0.94f, 0.80f, 0.38f, 1f)
+        )
+
+        shapeRenderer.end()
+
+        // =====================================================================
+        // 5. VẼ 1-3 NGÔI SAO VÀNG TRONG LÒNG KHIÊN CHO CHẾ ĐỘ CAMPAIGN (HÌNH 2)
+        // =====================================================================
+        if (gameMode == com.game.td.managers.GameMode.CAMPAIGN) {
+            val starY = crestY - 76f
+            val starSpacing = 46f
+            for (i in 0 until 3) {
+                val starX = cX + (i - 1) * starSpacing
+                val starOffsetY = if (i == 1) starY - 5f else starY
+                val isFilled = (i < earnedStars)
+                drawStar(shapeRenderer, starX, starOffsetY, 21f, isFilled)
+            }
+        }
+
+        // =====================================================================
+        // 6. VẼ CHỮ "CONTINUE" & "RESTART" TRÊN 2 BẢNG GỖ
+        // =====================================================================
         batch.begin()
-        drawOutlinedText(batch, font, "VICTORY!", cX - 48f, cY + 138f, Color.WHITE)
+        val oldScaleX = font.data.scaleX
+        val oldScaleY = font.data.scaleY
 
-        val victorySub = if (isChallengeMode) "CHALLENGE CLEARED WITH HONORS!" else "STAGE CLEARED WITH HONORS!"
-        drawOutlinedText(batch, smallFont, victorySub, cX - 130f, cY - 20f, Color(0.95f, 0.95f, 0.90f, 1f))
+        font.data.setScale(1.80f)
+        drawBadgeCenteredText(batch, font, "CONTINUE", cX - 125f, 140f, 250f, 68f, Color(0.94f, 0.95f, 0.98f, 1f))
+        font.data.setScale(1.65f)
+        drawBadgeCenteredText(batch, font, "RESTART", cX - 115f, 46f, 230f, 62f, Color(0.94f, 0.95f, 0.98f, 1f))
 
-        val starsText = if (isChallengeMode) "EXTRA STAR EARNED: +1" else "STARS EARNED: $earnedStars / 3"
-        drawOutlinedText(batch, smallFont, starsText, if (isChallengeMode) cX - 95f else cX - 75f, cY - 45f, Color.GOLD)
-
-        drawOutlinedText(batch, font, "CONTINUE", cX - 44f, cY - 86f, Color.WHITE)
+        font.data.setScale(oldScaleX, oldScaleY)
         batch.end()
+    }
+
+    // HÀM VẼ CHỮ VECTOR "VICTORY" UỐN VÒM CỰC NÉT THEO PHONG CÁCH KINGDOM RUSH
+    private fun drawCrispVictoryVectorText(
+        sr: ShapeRenderer,
+        cX: Float,
+        centerY: Float,
+        textColor: Color,
+        bannerBgColor: Color
+    ) {
+        sr.color = textColor
+
+        // 1. Chữ 'V' (Nghiêng nhẹ sang trái ở đầu băng rôn)
+        val vx = cX - 132f
+        val vy = centerY - 5f
+        sr.rectLine(vx - 16f, vy + 24f, vx - 1f, vy - 24f, 11.5f)
+        sr.rectLine(vx + 14f, vy + 26f, vx - 1f, vy - 24f, 11.5f)
+
+        // 2. Chữ 'I'
+        val ix = cX - 88f
+        val iy = centerY - 1f
+        sr.rectLine(ix - 2f, iy + 25f, ix + 1f, iy - 23f, 12f)
+
+        // 3. Chữ 'C'
+        val cxLetter = cX - 48f
+        val cyLetter = centerY + 2f
+        sr.circle(cxLetter, cyLetter, 23f)
+        sr.color = bannerBgColor
+        sr.circle(cxLetter + 3f, cyLetter, 11.5f)
+        sr.rect(cxLetter + 4f, cyLetter - 9f, 22f, 18f)
+        sr.color = textColor
+
+        // 4. Chữ 'T' (Đỉnh vòm ở chính giữa băng rôn)
+        val tx = cX - 4f
+        val ty = centerY + 4f
+        sr.rectLine(tx - 19f, ty + 19f, tx + 19f, ty + 19f, 11.5f)
+        sr.rectLine(tx, ty + 20f, tx, ty - 24f, 12f)
+
+        // 5. Chữ 'O'
+        val ox = cX + 42f
+        val oy = centerY + 2f
+        sr.circle(ox, oy, 23f)
+        sr.color = bannerBgColor
+        sr.circle(ox, oy, 10.5f)
+        sr.color = textColor
+
+        // 6. Chữ 'R'
+        val rx = cX + 88f
+        val ry = centerY - 1f
+        sr.rectLine(rx - 12f, ry + 24f, rx - 14f, ry - 23f, 11.5f)
+        sr.circle(rx - 2f, ry + 9f, 14.5f)
+        sr.color = bannerBgColor
+        sr.circle(rx - 3f, ry + 9f, 5.5f)
+        sr.color = textColor
+        sr.rectLine(rx - 3f, ry + 1f, rx + 13f, ry - 23f, 11f)
+
+        // 7. Chữ 'Y' (Nghiêng nhẹ sang phải ở cuối băng rôn)
+        val yx = cX + 132f
+        val yy = centerY - 5f
+        sr.rectLine(yx - 14f, yy + 26f, yx - 1f, yy + 2f, 11f)
+        sr.rectLine(yx + 16f, yy + 23f, yx - 1f, yy + 2f, 11f)
+        sr.rectLine(yx - 1f, yy + 5f, yx - 4f, yy - 24f, 11.5f)
+    }
+
+    private fun drawVictoryPlaqueButton(sr: ShapeRenderer, x: Float, y: Float, w: Float, h: Float) {
+        val outline = Color(0.12f, 0.09f, 0.07f, 1f)
+        sr.color = Color(0f, 0f, 0f, 0.45f)
+        sr.rect(x - 5f, y - 6f, w + 10f, h + 8f)
+        sr.color = outline
+        sr.rect(x - 4f, y - 4f, w + 8f, h + 8f)
+
+        sr.color = Color(0.56f, 0.58f, 0.62f, 1f)
+        sr.rect(x, y, w, h)
+
+        sr.color = Color(0.28f, 0.20f, 0.14f, 1f)
+        sr.rect(x + 6f, y + 6f, w - 12f, h - 12f)
+        sr.color = Color(0.36f, 0.26f, 0.18f, 1f)
+        sr.rect(x + 10f, y + 10f, w - 20f, h - 20f)
+        sr.color = Color(0.20f, 0.14f, 0.09f, 1f)
+        sr.rect(x + 12f, y + h / 2f - 2f, w - 24f, 3f)
+
+        val bSize = 16f
+        val corners = listOf(
+            Vector2(x - 2f, y + h - bSize + 2f),
+            Vector2(x + w - bSize + 2f, y + h - bSize + 2f),
+            Vector2(x - 2f, y - 2f),
+            Vector2(x + w - bSize + 2f, y - 2f)
+        )
+        for (c in corners) {
+            sr.color = outline
+            sr.rect(c.x - 1.5f, c.y - 1.5f, bSize + 3f, bSize + 3f)
+            sr.color = Color(0.72f, 0.75f, 0.78f, 1f)
+            sr.rect(c.x, c.y, bSize, bSize)
+            sr.color = outline
+            sr.circle(c.x + 4.5f, c.y + 4.5f, 1.8f)
+            sr.circle(c.x + bSize - 4.5f, c.y + bSize - 4.5f, 1.8f)
+        }
     }
 
     fun drawStar(shapeRenderer: ShapeRenderer, centerX: Float, centerY: Float, outerRadius: Float, isFilled: Boolean) {
@@ -428,6 +934,11 @@ object GameUIRenderer {
         shapeRenderer.end()
     }
 
+    // Hàm phụ trợ để TutorialRenderer vẽ thẻ Spell mẫu trong khung ảnh Polaroid
+    fun drawSpellCardPreview(sr: ShapeRenderer, cx: Float, cy: Float, isFireSpell: Boolean) {
+        drawSpellCard(sr, cx, cy, isReady = true, isSelected = false, isFireSpell = isFireSpell, isUnlocked = true)
+    }
+
     fun renderSpellUI(
         shapeRenderer: ShapeRenderer,
         batch: SpriteBatch,
@@ -439,10 +950,14 @@ object GameUIRenderer {
     ) {
         val fireCenter = Vector2(48f, 44f)
         val reinfCenter = Vector2(112f, 44f)
-        val isFireReady = rainOfFireCooldown <= 0f
-        val isReinfReady = reinforcementCooldown <= 0f
-        val isFireSelected = (selectedSpell == ActiveSpell.RAIN_OF_FIRE)
-        val isReinfSelected = (selectedSpell == ActiveSpell.REINFORCEMENTS)
+
+        val isFireUnlocked = TutorialRenderer.isRainOfFireUnlocked
+        val isReinfUnlocked = TutorialRenderer.isReinforcementsUnlocked
+
+        val isFireReady = isFireUnlocked && rainOfFireCooldown <= 0f
+        val isReinfReady = isReinfUnlocked && reinforcementCooldown <= 0f
+        val isFireSelected = isFireUnlocked && (selectedSpell == ActiveSpell.RAIN_OF_FIRE)
+        val isReinfSelected = isReinfUnlocked && (selectedSpell == ActiveSpell.REINFORCEMENTS)
 
         com.badlogic.gdx.Gdx.gl.glEnable(com.badlogic.gdx.graphics.GL20.GL_BLEND)
         com.badlogic.gdx.Gdx.gl.glBlendFunc(
@@ -458,7 +973,6 @@ object GameUIRenderer {
         val dockW = 140f
         val dockH = 50f
 
-        // Bóng đổ và viền thép ngoài của bệ đỡ
         shapeRenderer.color = Color(0.08f, 0.08f, 0.10f, 0.85f)
         shapeRenderer.rect(dockX - 3f, dockY - 2f, dockW + 6f, dockH + 5f)
         shapeRenderer.color = Color(0.46f, 0.48f, 0.50f, 1f)
@@ -468,7 +982,6 @@ object GameUIRenderer {
         shapeRenderer.color = Color(0.28f, 0.25f, 0.22f, 1f)
         shapeRenderer.rect(dockX + 6f, dockY + 6f, dockW - 12f, dockH - 12f)
 
-        // 4 miếng ốp sắt vát góc đính đinh tán ở 4 góc bệ đỡ
         val dockCorners = listOf(
             Vector2(dockX - 2f, dockY + dockH - 12f),
             Vector2(dockX + dockW - 12f, dockY + dockH - 12f),
@@ -483,7 +996,6 @@ object GameUIRenderer {
             shapeRenderer.circle(c.x + 10f, c.y + 10f, 1.5f)
         }
 
-        // Mũi giáo bạc trang trí ở giữa đáy 2 thẻ
         shapeRenderer.color = Color(0.72f, 0.75f, 0.80f, 1f)
         shapeRenderer.triangle(74f, dockY + 4f, 86f, dockY + 4f, 80f, dockY + 13f)
 
@@ -494,7 +1006,8 @@ object GameUIRenderer {
             cy = fireCenter.y,
             isReady = isFireReady,
             isSelected = isFireSelected,
-            isFireSpell = true
+            isFireSpell = true,
+            isUnlocked = isFireUnlocked
         )
 
         // 3. VẼ THẺ SPELL 2: REINFORCEMENTS (GỌI LÍNH TIẾP VIỆN)
@@ -504,21 +1017,22 @@ object GameUIRenderer {
             cy = reinfCenter.y,
             isReady = isReinfReady,
             isSelected = isReinfSelected,
-            isFireSpell = false
+            isFireSpell = false,
+            isUnlocked = isReinfUnlocked
         )
 
         shapeRenderer.end()
 
-        // 4. VẼ SỐ GIÂY HỒI CHIÊU & DÒNG HƯỚNG DẪN KHI ĐANG CHỌN SPELL
+        // 4. VẼ SỐ GIÂY HỒI CHIÊU & DÒNG HƯỚN DẪN KHI ĐANG CHỌN SPELL
         batch.begin()
-        if (!isFireReady) {
+        if (isFireUnlocked && !isFireReady) {
             drawBadgeCenteredText(
                 batch, smallFont, "${rainOfFireCooldown.toInt()}s",
                 fireCenter.x - 20f, fireCenter.y - 8f, 40f, 20f, Color.WHITE
             )
         }
 
-        if (!isReinfReady) {
+        if (isReinfUnlocked && !isReinfReady) {
             drawBadgeCenteredText(
                 batch, smallFont, "${reinforcementCooldown.toInt()}s",
                 reinfCenter.x - 20f, reinfCenter.y - 8f, 40f, 20f, Color.WHITE
@@ -547,45 +1061,58 @@ object GameUIRenderer {
         cy: Float,
         isReady: Boolean,
         isSelected: Boolean,
-        isFireSpell: Boolean
+        isFireSpell: Boolean,
+        isUnlocked: Boolean = true
     ) {
         val cardW = 44f
         val cardH = 54f
         val left = cx - cardW / 2f
         val bottom = cy - cardH / 2f
 
-        // Hào quang vàng rực bên ngoài khi người chơi đang bấm chọn kỹ năng để nhắm
-        if (isSelected) {
+        if (isUnlocked && isSelected) {
             sr.color = Color(1f, 0.92f, 0.20f, 0.55f)
             sr.rect(left - 5f, bottom - 5f, cardW + 10f, cardH + 10f)
             sr.circle(cx, bottom - 1f, 12f)
-        } else if (isReady) {
-            // Hào quang xanh băng dịu tỏa ra khi kỹ năng đã hồi xong sẵn sàng chiến đấu
+        } else if (isUnlocked && isReady) {
             sr.color = Color(0.25f, 0.90f, 1f, 0.28f)
             sr.rect(left - 3f, bottom - 3f, cardW + 6f, cardH + 6f)
         }
 
-        // Khung viền kim loại của thẻ Spell
         sr.color = Color(0.14f, 0.13f, 0.12f, 1f)
         sr.rect(left - 1.5f, bottom - 1.5f, cardW + 3f, cardH + 3f)
 
-        sr.color = if (isReady) Color(0.48f, 0.45f, 0.36f, 1f) else Color(0.30f, 0.30f, 0.32f, 1f)
+        sr.color = if (isUnlocked && isReady) Color(0.48f, 0.45f, 0.36f, 1f) else Color(0.32f, 0.31f, 0.29f, 1f)
         sr.rect(left, bottom, cardW, cardH)
 
-        // Vòm đầu thẻ và bệ đỡ ngọc dưới đáy thẻ
-        sr.color = if (isReady) Color(0.62f, 0.58f, 0.48f, 1f) else Color(0.38f, 0.38f, 0.40f, 1f)
+        sr.color = if (isUnlocked && isReady) Color(0.62f, 0.58f, 0.48f, 1f) else Color(0.40f, 0.39f, 0.36f, 1f)
         sr.rect(cx - 16f, bottom + cardH - 3f, 32f, 5f)
         sr.circle(cx, bottom + 3f, 9f)
 
-        // Vùng tranh bên trong thẻ (32x40)
         val artX = cx - 16f
         val artY = cy - 17f
         val artW = 32f
         val artH = 38f
 
-        if (isFireSpell) {
+        if (!isUnlocked) {
+            // --- KHI SPELL ĐANG BỊ KHÓA: VẼ CỬA ĐÁ ĐÓNG KÍN KHẮC HOA VĂN CHỮ S CHUẨN GAME GỐC ---
+            sr.color = Color(0.46f, 0.45f, 0.42f, 1f)
+            sr.rect(artX, artY, artW, artH)
+            // Khe dọc chia đôi 2 cánh cửa đá
+            sr.color = Color(0.22f, 0.20f, 0.18f, 1f)
+            sr.rect(cx - 1f, artY, 2f, artH)
+            // Hoa văn chữ S chạm chìm trên 2 cánh cửa đá
+            sr.color = Color(0.34f, 0.33f, 0.30f, 1f)
+            for (doorSide in listOf(-8f, 8f)) {
+                val dx = cx + doorSide
+                sr.circle(dx, cy + 5f, 4.2f)
+                sr.circle(dx, cy - 5f, 4.2f)
+                sr.color = Color(0.46f, 0.45f, 0.42f, 1f)
+                sr.circle(dx, cy + 5f, 2.2f)
+                sr.circle(dx, cy - 5f, 2.2f)
+                sr.color = Color(0.34f, 0.33f, 0.30f, 1f)
+            }
+        } else if (isFireSpell) {
             // --- HÌNH ẢNH SPELL 1: MƯA THIÊN THẠCH (RAIN OF FIRE) ---
-            // Nền lửa chuyển sắc cam - đỏ - vàng
             sr.color = Color(0.78f, 0.18f, 0.04f, 1f)
             sr.rect(artX, artY, artW, artH)
             sr.color = Color(0.94f, 0.38f, 0.05f, 1f)
@@ -593,20 +1120,17 @@ object GameUIRenderer {
             sr.color = Color(0.98f, 0.56f, 0.08f, 1f)
             sr.rect(artX, artY, artW, artH * 0.38f)
 
-            // Các vệt sáng lửa lao chéo từ trên phải xuống dưới trái
             sr.color = Color(1f, 0.85f, 0.25f, 0.85f)
             sr.rectLine(cx + 14f, cy + 18f, cx - 2f, cy - 2f, 3.2f)
             sr.rectLine(cx + 6f, cy + 19f, cx - 12f, cy - 3f, 1.8f)
             sr.rectLine(cx + 15f, cy + 6f, cx + 2f, cy - 12f, 1.8f)
 
-            // Đuôi lửa rực sáng của viên thiên thạch chính
             sr.color = Color(1f, 0.72f, 0.12f, 1f)
             sr.triangle(cx - 9f, cy - 2f, cx + 6f, cy - 11f, cx + 14f, cy + 16f)
             sr.color = Color(1f, 0.94f, 0.38f, 1f)
             sr.triangle(cx - 6f, cy - 2f, cx + 4f, cy - 8f, cx + 11f, cy + 12f)
             sr.circle(cx - 1f, cy - 3f, 9.5f)
 
-            // Lõi đá thiên thạch nâu đen gồ ghề ở giữa
             sr.color = Color(0.28f, 0.16f, 0.08f, 1f)
             sr.circle(cx - 2f, cy - 4f, 7.2f)
             sr.circle(cx + 2f, cy - 2f, 5.2f)
@@ -614,14 +1138,12 @@ object GameUIRenderer {
             sr.color = Color(0.18f, 0.10f, 0.05f, 1f)
             sr.circle(cx - 3f, cy - 5f, 4.5f)
 
-            // Các mảnh thiên thạch nhỏ bay kèm xung quanh
             sr.color = Color(0.25f, 0.14f, 0.06f, 1f)
             sr.circle(cx - 10f, cy + 11f, 2.2f)
             sr.circle(cx + 10f, cy + 2f, 2.0f)
             sr.circle(cx + 9f, cy - 12f, 1.6f)
         } else {
             // --- HÌNH ẢNH SPELL 2: GỌI LÍNH (REINFORCEMENTS - SONG KIẾM CHÉO) ---
-            // Nền xanh da trời tỏa sáng ở tâm
             sr.color = Color(0.16f, 0.58f, 0.82f, 1f)
             sr.rect(artX, artY, artW, artH)
             sr.color = Color(0.32f, 0.78f, 0.96f, 1f)
@@ -629,31 +1151,26 @@ object GameUIRenderer {
             sr.color = Color(0.75f, 0.96f, 1f, 1f)
             sr.circle(cx, cy + 2f, 11.5f)
 
-            // Viền đen tạo khối cho 2 thanh kiếm bắt chéo
             sr.color = Color(0.12f, 0.16f, 0.20f, 1f)
             sr.rectLine(cx - 12f, cy - 12f, cx + 11f, cy + 14f, 7.5f)
             sr.rectLine(cx + 12f, cy - 12f, cx - 11f, cy + 14f, 7.5f)
 
-            // Lưỡi kiếm thứ 1 (Trái dưới -> Phải trên)
             sr.color = Color(0.88f, 0.92f, 0.96f, 1f)
             sr.rectLine(cx - 4f, cy - 3f, cx + 10f, cy + 13f, 5.2f)
             sr.triangle(cx + 6.5f, cy + 14.5f, cx + 11.5f, cy + 9.5f, cx + 13.5f, cy + 16.5f)
             sr.color = Color(0.62f, 0.68f, 0.75f, 1f)
             sr.rectLine(cx - 4f, cy - 3f, cx + 9f, cy + 12f, 1.6f)
 
-            // Lưỡi kiếm thứ 2 (Phải dưới -> Trái trên)
             sr.color = Color(0.94f, 0.97f, 1f, 1f)
             sr.rectLine(cx + 4f, cy - 3f, cx - 10f, cy + 13f, 5.2f)
             sr.triangle(cx - 6.5f, cy + 14.5f, cx - 11.5f, cy + 9.5f, cx - 13.5f, cy + 16.5f)
             sr.color = Color(0.65f, 0.72f, 0.78f, 1f)
             sr.rectLine(cx + 4f, cy - 3f, cx - 9f, cy + 12f, 1.6f)
 
-            // Tay cầm bọc da nâu & chuôi kiếm vàng của cả 2 thanh kiếm
             sr.color = Color(0.48f, 0.26f, 0.10f, 1f)
             sr.rectLine(cx - 11f, cy - 11f, cx - 5f, cy - 4f, 4.2f)
             sr.rectLine(cx + 11f, cy - 11f, cx + 5f, cy - 4f, 4.2f)
 
-            // Thanh chắn chữ thập (Crossguard) và núm chuôi kiếm bằng vàng
             sr.color = Color(0.96f, 0.74f, 0.14f, 1f)
             sr.rectLine(cx - 9.5f, cy - 1.5f, cx - 1.5f, cy - 8.5f, 3.2f)
             sr.rectLine(cx + 9.5f, cy - 1.5f, cx + 1.5f, cy - 8.5f, 3.2f)
@@ -661,18 +1178,15 @@ object GameUIRenderer {
             sr.circle(cx + 11f, cy - 11f, 2.8f)
         }
 
-        // Nếu đang hồi chiêu -> Phủ lớp tối mờ lên mặt tranh
-        if (!isReady) {
+        if (isUnlocked && !isReady) {
             sr.color = Color(0.04f, 0.04f, 0.06f, 0.68f)
             sr.rect(artX, artY, artW, artH)
         }
 
-        // 4. HỆ THỐNG ĐÈN NĂNG LƯỢNG XANH BĂNG (SÁNG RỰC KHI HỒI XONG NHƯ HÌNH 1)
-        val gemOuterColor = if (isReady) Color(0.20f, 0.88f, 1f, 1f) else Color(0.20f, 0.22f, 0.24f, 1f)
-        val gemInnerColor = if (isReady) Color.WHITE else Color(0.30f, 0.32f, 0.35f, 1f)
+        val gemOuterColor = if (isUnlocked && isReady) Color(0.20f, 0.88f, 1f, 1f) else Color(0.22f, 0.26f, 0.30f, 1f)
+        val gemInnerColor = if (isUnlocked && isReady) Color.WHITE else Color(0.32f, 0.42f, 0.50f, 1f)
 
-        // A. Thanh năng lượng trên đỉnh thẻ
-        if (isReady) {
+        if (isUnlocked && isReady) {
             sr.color = Color(0.20f, 0.90f, 1f, 0.45f)
             sr.rect(cx - 13f, bottom + cardH - 4f, 26f, 7f)
         }
@@ -681,12 +1195,11 @@ object GameUIRenderer {
         sr.color = gemInnerColor
         sr.rect(cx - 7f, bottom + cardH - 1.5f, 14f, 2f)
 
-        // B. 4 nút đèn năng lượng ở 2 cạnh bên của khung thẻ
         val sideNodeYOffsets = listOf(cy + 8f, cy - 7f)
         val sideNodeXOffsets = listOf(left + 2f, left + cardW - 6f)
         for (nx in sideNodeXOffsets) {
             for (ny in sideNodeYOffsets) {
-                if (isReady) {
+                if (isUnlocked && isReady) {
                     sr.color = Color(0.20f, 0.90f, 1f, 0.45f)
                     sr.rect(nx - 2f, ny - 2f, 8f, 10f)
                 }
@@ -697,9 +1210,8 @@ object GameUIRenderer {
             }
         }
 
-        // C. Viên ngọc năng lượng tròn ở chính giữa đáy thẻ
         val orbY = bottom + 4f
-        if (isReady) {
+        if (isUnlocked && isReady) {
             sr.color = Color(0.20f, 0.92f, 1f, 0.50f)
             sr.circle(cx, orbY, 9.5f)
         }

@@ -31,9 +31,10 @@ object EncyclopediaRenderer {
     private val tempMatrix = Matrix4()
 
     fun open() {
+        EncyclopediaManager.loadForCurrentSlot()
         currentTab = EncyclopediaTab.HOME
         selectedTower = EncyclopediaTowerId.ARCHER_1
-        selectedEnemy = EnemyType.GOBLIN
+        selectedEnemy = EncyclopediaManager.getFirstUnlockedEnemy() ?: EnemyType.GOBLIN
     }
 
     fun handleTouch(x: Float, y: Float): Boolean {
@@ -565,6 +566,10 @@ object EncyclopediaRenderer {
         val boxSize = 50f
 
         val enemies = EncyclopediaManager.allEnemiesOrdered
+        if (!EncyclopediaManager.isEnemyUnlocked(selectedEnemy)) {
+            EncyclopediaManager.getFirstUnlockedEnemy()?.let { selectedEnemy = it }
+        }
+        val isSelectedUnlocked = EncyclopediaManager.isEnemyUnlocked(selectedEnemy)
 
         sr.begin(ShapeRenderer.ShapeType.Filled)
         for (i in enemies.indices) {
@@ -574,7 +579,7 @@ object EncyclopediaRenderer {
             val by = gridTopY - row * cellH
             val eType = enemies[i]
             val unlocked = EncyclopediaManager.isEnemyUnlocked(eType)
-            val isSel = (selectedEnemy == eType)
+            val isSel = (isSelectedUnlocked && selectedEnemy == eType)
             val isSnow = eType in listOf(
                 EnemyType.TROLL, EnemyType.TROLL_CHAMPION, EnemyType.TROLL_CHIEFTAIN,
                 EnemyType.WINTER_WOLF, EnemyType.YETI, EnemyType.ROCKET_RIDER, EnemyType.JT
@@ -590,35 +595,38 @@ object EncyclopediaRenderer {
         sr.color = Color(0.86f, 0.78f, 0.56f, 1f)
         sr.rect(previewX - 6f, previewY - 6f, previewW + 12f, previewH + 12f)
 
-        val isSnowEnemy = selectedEnemy in listOf(
+        val isSnowEnemy = isSelectedUnlocked && selectedEnemy in listOf(
             EnemyType.TROLL, EnemyType.TROLL_CHAMPION, EnemyType.TROLL_CHIEFTAIN,
             EnemyType.WINTER_WOLF, EnemyType.YETI, EnemyType.ROCKET_RIDER, EnemyType.JT
         )
-        val isWastesEnemy = selectedEnemy in listOf(
+        val isWastesEnemy = isSelectedUnlocked && selectedEnemy in listOf(
             EnemyType.SKELETON, EnemyType.SKELETON_KNIGHT, EnemyType.NECROMANCER,
             EnemyType.DEMON_SPAWN, EnemyType.DEMON_HOUND, EnemyType.DEMON_IMP,
             EnemyType.DEMON_LORD, EnemyType.MAGMA_ELEMENTAL, EnemyType.VEZNAN, EnemyType.VEZNAN_DEMON
         )
 
         sr.color = when {
+            !isSelectedUnlocked -> Color(0.24f, 0.20f, 0.16f, 1f)
             isSnowEnemy -> Color(0.85f, 0.90f, 0.95f, 1f)
             isWastesEnemy -> Color(0.28f, 0.26f, 0.30f, 1f)
             else -> Color(0.34f, 0.56f, 0.18f, 1f)
         }
         sr.rect(previewX, previewY, previewW, previewH)
 
-        sr.color = when {
-            isSnowEnemy -> Color(0.74f, 0.78f, 0.84f, 1f)
-            isWastesEnemy -> Color(0.45f, 0.44f, 0.48f, 1f)
-            else -> Color(0.82f, 0.72f, 0.46f, 1f)
-        }
-        sr.rect(previewX, previewY + 18f, previewW, 108f)
+        if (isSelectedUnlocked) {
+            sr.color = when {
+                isSnowEnemy -> Color(0.74f, 0.78f, 0.84f, 1f)
+                isWastesEnemy -> Color(0.45f, 0.44f, 0.48f, 1f)
+                else -> Color(0.82f, 0.72f, 0.46f, 1f)
+            }
+            sr.rect(previewX, previewY + 18f, previewW, 108f)
 
-        if (!isSnowEnemy && !isWastesEnemy) {
-            sr.color = Color(0.26f, 0.46f, 0.14f, 1f)
-            for (gx in 15..265 step 35) {
-                sr.circle(previewX + gx, previewY + 132f, 18f)
-                sr.circle(previewX + gx, previewY + 12f, 14f)
+            if (!isSnowEnemy && !isWastesEnemy) {
+                sr.color = Color(0.26f, 0.46f, 0.14f, 1f)
+                for (gx in 15..265 step 35) {
+                    sr.circle(previewX + gx, previewY + 132f, 18f)
+                    sr.circle(previewX + gx, previewY + 12f, 14f)
+                }
             }
         }
 
@@ -661,25 +669,27 @@ object EncyclopediaRenderer {
             }
         }
 
-        val isSwarm = selectedEnemy in listOf(
-            EnemyType.GOBLIN, EnemyType.ORC, EnemyType.WULF, EnemyType.SPIDER_HATCHLING,
-            EnemyType.SKELETON, EnemyType.BANDIT, EnemyType.BRIGAND
-        )
-        if (isSwarm) {
-            val swarmPositions = listOf(
-                Vector2(previewX + 65f, previewY + 86f),
-                Vector2(previewX + 130f, previewY + 98f),
-                Vector2(previewX + 98f, previewY + 50f),
-                Vector2(previewX + 172f, previewY + 46f),
-                Vector2(previewX + 222f, previewY + 78f)
+        if (isSelectedUnlocked) {
+            val isSwarm = selectedEnemy in listOf(
+                EnemyType.GOBLIN, EnemyType.ORC, EnemyType.WULF, EnemyType.SPIDER_HATCHLING,
+                EnemyType.SKELETON, EnemyType.BANDIT, EnemyType.BRIGAND
             )
-            val sScale = getEnemyVisualScale(selectedEnemy) * 1.65f
-            for (sp in swarmPositions) {
-                drawScaledEnemy(sr, selectedEnemy, sp.x, sp.y, sScale)
+            if (isSwarm) {
+                val swarmPositions = listOf(
+                    Vector2(previewX + 65f, previewY + 86f),
+                    Vector2(previewX + 130f, previewY + 98f),
+                    Vector2(previewX + 98f, previewY + 50f),
+                    Vector2(previewX + 172f, previewY + 46f),
+                    Vector2(previewX + 222f, previewY + 78f)
+                )
+                val sScale = getEnemyVisualScale(selectedEnemy) * 1.65f
+                for (sp in swarmPositions) {
+                    drawScaledEnemy(sr, selectedEnemy, sp.x, sp.y, sScale)
+                }
+            } else {
+                val bigScale = getEnemyVisualScale(selectedEnemy) * 2.40f
+                drawScaledEnemy(sr, selectedEnemy, previewX + previewW / 2f, previewY + 68f, bigScale)
             }
-        } else {
-            val bigScale = getEnemyVisualScale(selectedEnemy) * 2.40f
-            drawScaledEnemy(sr, selectedEnemy, previewX + previewW / 2f, previewY + 68f, bigScale)
         }
 
         val info = EncyclopediaManager.getEnemyInfo(selectedEnemy)
@@ -693,27 +703,38 @@ object EncyclopediaRenderer {
         GameUIRenderer.drawOutlinedText(batch, font, "BACK", boardX + 46f, topY - 68f, Color.LIGHT_GRAY)
         GameUIRenderer.drawOutlinedText(batch, smallFont, "ENEMIES", gridStartX + 138f, gridTopY + 68f, Color(0.95f, 0.85f, 0.55f, 1f))
 
-        GameUIRenderer.drawOutlinedText(batch, font, selectedEnemy.title.uppercase(), previewX, 326f, Color(0.98f, 0.94f, 0.76f, 1f))
-
         val oldSmallScaleX = smallFont.data.scaleX
         val oldSmallScaleY = smallFont.data.scaleY
         smallFont.data.setScale(0.90f)
-        val descLines = wrapLines("${info.description} (${info.specials})", 35)
-        var descY = 298f
-        for (line in descLines.take(4)) {
-            GameUIRenderer.drawShadowedText(batch, smallFont, line.uppercase(), previewX, descY, Color(0.88f, 0.84f, 0.74f, 1f))
-            descY -= 15.5f
+
+        if (isSelectedUnlocked) {
+            GameUIRenderer.drawOutlinedText(batch, font, selectedEnemy.title.uppercase(), previewX, 326f, Color(0.98f, 0.94f, 0.76f, 1f))
+            val descLines = wrapLines("${info.description} (${info.specials})", 35)
+            var descY = 298f
+            for (line in descLines.take(4)) {
+                GameUIRenderer.drawShadowedText(batch, smallFont, line.uppercase(), previewX, descY, Color(0.88f, 0.84f, 0.74f, 1f))
+                descY -= 15.5f
+            }
+
+            val atkStr = if (selectedEnemy.damageMax <= 0f) "NONE" else "${selectedEnemy.damageMin.toInt()}-${selectedEnemy.damageMax.toInt()}"
+            val lifeStr = if (selectedEnemy.livesTaken == 1) "1 LIFE" else "${selectedEnemy.livesTaken} LIVES"
+
+            GameUIRenderer.drawOutlinedText(batch, smallFont, "${selectedEnemy.hpNormal.toInt()}", col1X + 24f, statY1 + 17f, Color.WHITE)
+            GameUIRenderer.drawOutlinedText(batch, smallFont, atkStr, col2X + 24f, statY1 + 17f, Color.WHITE)
+            GameUIRenderer.drawOutlinedText(batch, smallFont, info.armorLabel, col1X + 24f, statY2 + 17f, Color.WHITE)
+            GameUIRenderer.drawOutlinedText(batch, smallFont, info.magicResistLabel, col2X + 24f, statY2 + 17f, Color.WHITE)
+            GameUIRenderer.drawOutlinedText(batch, smallFont, info.speedLabel, col1X + 24f, statY3 + 17f, Color.WHITE)
+            GameUIRenderer.drawOutlinedText(batch, smallFont, lifeStr, col2X + 24f, statY3 + 17f, Color.WHITE)
+        } else {
+            GameUIRenderer.drawBadgeCenteredText(batch, titleFont, "?", previewX, previewY, previewW, previewH, Color(0.84f, 0.76f, 0.52f, 1f))
+            GameUIRenderer.drawOutlinedText(batch, font, "UNKNOWN ENEMY", previewX, 326f, Color(0.98f, 0.94f, 0.76f, 1f))
+            GameUIRenderer.drawShadowedText(batch, smallFont, "ENCOUNTER ENEMIES IN BATTLE TO", previewX, 298f, Color(0.88f, 0.84f, 0.74f, 1f))
+            GameUIRenderer.drawShadowedText(batch, smallFont, "UNLOCK THEIR INFORMATION.", previewX, 282f, Color(0.88f, 0.84f, 0.74f, 1f))
+            for (sy in listOf(statY1, statY2, statY3)) {
+                GameUIRenderer.drawOutlinedText(batch, smallFont, "???", col1X + 24f, sy + 17f, Color.LIGHT_GRAY)
+                GameUIRenderer.drawOutlinedText(batch, smallFont, "???", col2X + 24f, sy + 17f, Color.LIGHT_GRAY)
+            }
         }
-
-        val atkStr = if (selectedEnemy.damageMax <= 0f) "NONE" else "${selectedEnemy.damageMin.toInt()}-${selectedEnemy.damageMax.toInt()}"
-        val lifeStr = if (selectedEnemy.livesTaken == 1) "1 LIFE" else "${selectedEnemy.livesTaken} LIVES"
-
-        GameUIRenderer.drawOutlinedText(batch, smallFont, "${selectedEnemy.hpNormal.toInt()}", col1X + 24f, statY1 + 17f, Color.WHITE)
-        GameUIRenderer.drawOutlinedText(batch, smallFont, atkStr, col2X + 24f, statY1 + 17f, Color.WHITE)
-        GameUIRenderer.drawOutlinedText(batch, smallFont, info.armorLabel, col1X + 24f, statY2 + 17f, Color.WHITE)
-        GameUIRenderer.drawOutlinedText(batch, smallFont, info.magicResistLabel, col2X + 24f, statY2 + 17f, Color.WHITE)
-        GameUIRenderer.drawOutlinedText(batch, smallFont, info.speedLabel, col1X + 24f, statY3 + 17f, Color.WHITE)
-        GameUIRenderer.drawOutlinedText(batch, smallFont, lifeStr, col2X + 24f, statY3 + 17f, Color.WHITE)
 
         smallFont.data.setScale(oldSmallScaleX, oldSmallScaleY)
 

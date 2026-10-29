@@ -2,6 +2,7 @@ package com.game.td.managers
 
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Preferences
+import com.game.td.ecs.components.GameDifficulty
 
 enum class GameMode {
     CAMPAIGN,
@@ -11,9 +12,27 @@ enum class GameMode {
 
 object SaveManager {
     var activeSlot: Int = 1
+        set(value) {
+            field = value
+            UpgradeManager.loadUpgrades()
+            EncyclopediaManager.loadForCurrentSlot()
+        }
 
     private fun getPrefs(): Preferences {
         return Gdx.app.getPreferences("kr_save_slot_$activeSlot")
+    }
+
+    private fun GameDifficulty.toRank(): Int = when (this) {
+        GameDifficulty.CASUAL -> 1
+        GameDifficulty.NORMAL -> 2
+        GameDifficulty.VETERAN -> 3
+    }
+
+    private fun rankToLabel(rank: Int): String = when (rank) {
+        1 -> "EASY"
+        2 -> "NORMAL"
+        3 -> "HARD"
+        else -> "NORMAL"
     }
 
     fun hasData(slot: Int): Boolean {
@@ -30,6 +49,10 @@ object SaveManager {
             val p = Gdx.app.getPreferences("kr_save_slot_$slot")
             p.clear()
             p.flush()
+            if (slot == activeSlot) {
+                UpgradeManager.loadUpgrades()
+                EncyclopediaManager.loadForCurrentSlot()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -40,12 +63,26 @@ object SaveManager {
             val p = Gdx.app.getPreferences("kr_save_slot_$slot")
             p.clear()
             p.putInteger("unlocked_level", 1)
+            p.putBoolean("upg_initialized", true)
             for (i in 1..12) {
                 p.putInteger("stars_lvl_$i", 0)
                 p.putBoolean("heroic_lvl_$i", false)
                 p.putBoolean("iron_lvl_$i", false)
+                p.putInteger("diff_camp_lvl_$i", 0)
+                p.putInteger("diff_heroic_lvl_$i", 0)
+                p.putInteger("diff_iron_lvl_$i", 0)
             }
+            p.putInteger("upg_archer", 0)
+            p.putInteger("upg_barracks", 0)
+            p.putInteger("upg_mage", 0)
+            p.putInteger("upg_artillery", 0)
+            p.putInteger("upg_rain", 0)
+            p.putInteger("upg_reinf", 0)
             p.flush()
+            if (slot == activeSlot) {
+                UpgradeManager.loadUpgrades()
+                EncyclopediaManager.resetForCurrentSlot()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -82,6 +119,29 @@ object SaveManager {
             getPrefs().getBoolean("iron_lvl_$levelNum", false)
         } catch (e: Exception) {
             false
+        }
+    }
+
+    // LẤY NHÃN ĐỘ KHÓ CAO NHẤT ĐÃ HOÀN THÀNH ("EASY" / "NORMAL" / "HARD"), TRẢ VỀ NULL NẾU CHƯA QUA MÀN
+    fun getCompletedDifficultyLabel(levelNum: Int, mode: GameMode): String? {
+        return try {
+            val p = getPrefs()
+            val isCompleted = when (mode) {
+                GameMode.CAMPAIGN -> getLevelStars(levelNum) > 0
+                GameMode.HEROIC -> isHeroicCompleted(levelNum)
+                GameMode.IRON -> isIronCompleted(levelNum)
+            }
+            if (!isCompleted) return null
+
+            val key = when (mode) {
+                GameMode.CAMPAIGN -> "diff_camp_lvl_$levelNum"
+                GameMode.HEROIC -> "diff_heroic_lvl_$levelNum"
+                GameMode.IRON -> "diff_iron_lvl_$levelNum"
+            }
+            val savedRank = p.getInteger(key, 0)
+            if (savedRank in 1..3) rankToLabel(savedRank) else "NORMAL"
+        } catch (e: Exception) {
+            null
         }
     }
 
@@ -124,10 +184,16 @@ object SaveManager {
         }
     }
 
-    // Ghi nhận chiến thắng theo từng chế độ
-    fun recordVictory(levelNum: Int, remainingLives: Int, mode: GameMode = GameMode.CAMPAIGN): Int {
+    // GHI NHẬN CHIẾN THẮNG VÀ CẬP NHẬT ĐỘ KHÓ CAO NHẤT (EASY -> NORMAL -> HARD)
+    fun recordVictory(
+        levelNum: Int,
+        remainingLives: Int,
+        mode: GameMode = GameMode.CAMPAIGN,
+        difficulty: GameDifficulty = GameDifficulty.NORMAL
+    ): Int {
         val p = getPrefs()
         var starsEarned = 0
+        val newDiffRank = difficulty.toRank()
 
         when (mode) {
             GameMode.CAMPAIGN -> {
@@ -137,25 +203,39 @@ object SaveManager {
                     remainingLives >= 1 -> 1
                     else -> 0
                 }
-                val oldStars = getLevelStars(levelNum)
-                if (starsEarned > oldStars) {
-                    p.putInteger("stars_lvl_$levelNum", starsEarned)
-                }
-                val currentUnlocked = unlockedLevel
-                if (levelNum >= currentUnlocked && starsEarned > 0 && currentUnlocked < 12) {
-                    p.putInteger("unlocked_level", levelNum + 1)
+                if (starsEarned > 0) {
+                    val oldStars = getLevelStars(levelNum)
+                    if (starsEarned > oldStars) {
+                        p.putInteger("stars_lvl_$levelNum", starsEarned)
+                    }
+                    val oldDiffRank = p.getInteger("diff_camp_lvl_$levelNum", 0)
+                    if (newDiffRank > oldDiffRank) {
+                        p.putInteger("diff_camp_lvl_$levelNum", newDiffRank)
+                    }
+                    val currentUnlocked = unlockedLevel
+                    if (levelNum >= currentUnlocked && currentUnlocked < 12) {
+                        p.putInteger("unlocked_level", levelNum + 1)
+                    }
                 }
             }
             GameMode.HEROIC -> {
                 if (remainingLives >= 1) {
                     starsEarned = 1
                     p.putBoolean("heroic_lvl_$levelNum", true)
+                    val oldDiffRank = p.getInteger("diff_heroic_lvl_$levelNum", 0)
+                    if (newDiffRank > oldDiffRank) {
+                        p.putInteger("diff_heroic_lvl_$levelNum", newDiffRank)
+                    }
                 }
             }
             GameMode.IRON -> {
                 if (remainingLives >= 1) {
                     starsEarned = 1
                     p.putBoolean("iron_lvl_$levelNum", true)
+                    val oldDiffRank = p.getInteger("diff_iron_lvl_$levelNum", 0)
+                    if (newDiffRank > oldDiffRank) {
+                        p.putInteger("diff_iron_lvl_$levelNum", newDiffRank)
+                    }
                 }
             }
         }

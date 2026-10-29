@@ -113,8 +113,52 @@ object Level6MapRenderer {
         shapeRenderer.rect(695f, 574f, 145f, 28f)
         shapeRenderer.circle(695f, 588f, 14f)
         shapeRenderer.circle(840f, 588f, 14f)
+
+        // 6. VÒNG TRÒN PHÒNG THỦ DƯỚI ĐẤT & 2 CỜ HIỆU LINIREA TRƯỚC CỔNG THÀNH CITADEL
+        drawGroundCrest(shapeRenderer, 640f, 616f)
+        drawLinireaBanner(shapeRenderer, 594f, 622f)
+        drawLinireaBanner(shapeRenderer, 686f, 622f)
     }
 
+    private fun drawGroundCrest(sr: ShapeRenderer, cx: Float, cy: Float) {
+        sr.color = Color(0.18f, 0.45f, 0.78f, 0.55f)
+        sr.ellipse(cx - 28f, cy - 19f, 56f, 38f)
+        sr.color = Color(0.52f, 0.84f, 1f, 0.65f)
+        sr.ellipse(cx - 22f, cy - 15f, 44f, 30f)
+        sr.color = Color(0.82f, 0.72f, 0.46f, 0.90f)
+        sr.ellipse(cx - 16f, cy - 11f, 32f, 22f)
+        sr.color = Color(0.22f, 0.56f, 0.88f, 0.65f)
+        sr.rect(cx - 7f, cy - 2f, 14f, 9f)
+        sr.triangle(cx - 7f, cy - 2f, cx + 7f, cy - 2f, cx, cy - 9f)
+    }
+
+    private fun drawLinireaBanner(sr: ShapeRenderer, x: Float, y: Float) {
+        val outline = Color(0.12f, 0.09f, 0.07f, 1f)
+        sr.color = Color(0f, 0f, 0f, 0.28f)
+        sr.ellipse(x - 10f, y - 5f, 20f, 8f)
+
+        sr.color = outline
+        sr.rect(x - 2.2f, y - 2f, 4.4f, 40f)
+        sr.circle(x, y + 39f, 3.2f)
+        sr.rect(x - 12f, y + 31f, 24f, 4f)
+        sr.color = Color(0.55f, 0.36f, 0.18f, 1f)
+        sr.rect(x - 1.2f, y, 2.4f, 37f)
+        sr.color = Color(0.95f, 0.78f, 0.20f, 1f)
+        sr.circle(x, y + 39f, 2f)
+
+        sr.color = outline
+        sr.rect(x - 10f, y + 15f, 20f, 17f)
+        sr.triangle(x - 10f, y + 15f, x + 10f, y + 15f, x, y + 6f)
+        sr.color = Color(0.18f, 0.52f, 0.88f, 1f)
+        sr.rect(x - 8.5f, y + 16f, 17f, 15f)
+        sr.triangle(x - 8.5f, y + 16f, x + 8.5f, y + 16f, x, y + 8f)
+
+        sr.color = Color(0.82f, 0.94f, 1f, 1f)
+        sr.rect(x - 4.5f, y + 19f, 9f, 8f)
+        sr.triangle(x - 4.5f, y + 19f, x + 4.5f, y + 19f, x, y + 14f)
+        sr.color = Color(0.18f, 0.52f, 0.88f, 1f)
+        sr.circle(x, y + 23f, 2f)
+    }
     private fun drawCurvedFlank(sr: ShapeRenderer, isWest: Boolean, isBorder: Boolean) {
         val width = if (isBorder) 78f else 64f
         val color = if (isBorder) Color(0.55f, 0.44f, 0.26f, 1f) else Color(0.82f, 0.72f, 0.46f, 1f)

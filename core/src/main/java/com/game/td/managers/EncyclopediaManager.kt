@@ -60,7 +60,7 @@ enum class EncyclopediaTowerId(
         "20-40", "VERY SLOW", "AVERAGE", "AREA DAMAGE"
     ),
 
-    // HÀNG 3 BASIC: LEVEL 3
+    // HÀNG 3 BASIC: LEVEL 3 (MỞ KHÓA Ở MÀN 4)
     ARCHER_3(
         "SHARPSHOOTER", TowerType.ARCHER, 3, TowerSpecialization.NONE,
         "Sharpshooters are elite archers with deadly accuracy and long bows.",
@@ -137,14 +137,18 @@ data class EnemyEncyclopediaInfo(
 
 object EncyclopediaManager {
 
-    private const val PREFS_NAME = "td_encyclopedia_v1"
-    private const val KEY_TOWERS = "unlocked_towers"
-    private const val KEY_ENEMIES = "unlocked_enemies"
+    private const val LEGACY_PREFS_NAME = "td_encyclopedia_v1"
+    private const val KEY_INIT = "enc_initialized"
+    private const val KEY_TOWERS = "enc_unlocked_towers"
+    private const val KEY_ENEMIES = "enc_unlocked_enemies"
 
-    private val prefs: Preferences by lazy { Gdx.app.getPreferences(PREFS_NAME) }
+    private fun getSlotPrefs(): Preferences {
+        return Gdx.app.getPreferences("kr_save_slot_${SaveManager.activeSlot}")
+    }
+
     private val unlockedTowers = mutableSetOf<String>()
     private val unlockedEnemies = mutableSetOf<String>()
-    private var isLoaded = false
+    private var loadedSlot: Int = -1
 
     val basicTowers = listOf(
         EncyclopediaTowerId.ARCHER_1, EncyclopediaTowerId.BARRACKS_1, EncyclopediaTowerId.MAGE_1, EncyclopediaTowerId.ARTILLERY_1,
@@ -166,15 +170,43 @@ object EncyclopediaManager {
         EnemyType.DEMON_IMP, EnemyType.DEMON_LORD, EnemyType.MAGMA_ELEMENTAL, EnemyType.VEZNAN, EnemyType.VEZNAN_DEMON
     )
 
-    private fun ensureLoaded() {
-        if (isLoaded) return
-        isLoaded = true
+    private fun ensureSlotSynced() {
+        if (loadedSlot != SaveManager.activeSlot) {
+            loadForCurrentSlot()
+        }
+    }
+
+    fun loadForCurrentSlot() {
+        loadedSlot = SaveManager.activeSlot
+        unlockedTowers.clear()
+        unlockedEnemies.clear()
+
+        val prefs = getSlotPrefs()
+        val totalStarsInSlot = SaveManager.getTotalStars()
+        val highestLevel = SaveManager.unlockedLevel
+
+        if (!prefs.getBoolean(KEY_INIT, false)) {
+            // Luôn mở khóa 4 tháp cấp 1 cơ bản
+            addTowersUpToLevel(if (totalStarsInSlot > 0) highestLevel else 1)
+
+            // Nếu là Slot cũ đã từng chơi (có sao), chuyển danh sách quái từ dữ liệu cũ sang Slot này
+            if (totalStarsInSlot > 0) {
+                val legacyPrefs = Gdx.app.getPreferences(LEGACY_PREFS_NAME)
+                val legacyEnemies = legacyPrefs.getString("unlocked_enemies", "")
+                if (legacyEnemies.isNotBlank()) {
+                    unlockedEnemies.addAll(legacyEnemies.split(",").filter { it.isNotBlank() })
+                }
+                unlockedEnemies.add(EnemyType.GOBLIN.name)
+            }
+            save()
+            return
+        }
 
         val savedTowers = prefs.getString(KEY_TOWERS, "")
         if (savedTowers.isNotBlank()) {
             unlockedTowers.addAll(savedTowers.split(",").filter { it.isNotBlank() })
         }
-        // Mặc định luôn mở khóa 4 tháp cấp 1 của Màn 1
+        // Đảm bảo 4 tháp cấp 1 luôn mở
         unlockedTowers.add(EncyclopediaTowerId.ARCHER_1.name)
         unlockedTowers.add(EncyclopediaTowerId.BARRACKS_1.name)
         unlockedTowers.add(EncyclopediaTowerId.MAGE_1.name)
@@ -184,39 +216,49 @@ object EncyclopediaManager {
         if (savedEnemies.isNotBlank()) {
             unlockedEnemies.addAll(savedEnemies.split(",").filter { it.isNotBlank() })
         }
-        // Mặc định mở khóa Goblin đầu tiên để làm mẫu
-        unlockedEnemies.add(EnemyType.GOBLIN.name)
+    }
+
+    fun resetForCurrentSlot() {
+        loadedSlot = SaveManager.activeSlot
+        unlockedTowers.clear()
+        unlockedEnemies.clear()
+        unlockedTowers.add(EncyclopediaTowerId.ARCHER_1.name)
+        unlockedTowers.add(EncyclopediaTowerId.BARRACKS_1.name)
+        unlockedTowers.add(EncyclopediaTowerId.MAGE_1.name)
+        unlockedTowers.add(EncyclopediaTowerId.ARTILLERY_1.name)
+        save()
     }
 
     private fun save() {
+        val prefs = getSlotPrefs()
+        prefs.putBoolean(KEY_INIT, true)
         prefs.putString(KEY_TOWERS, unlockedTowers.joinToString(","))
         prefs.putString(KEY_ENEMIES, unlockedEnemies.joinToString(","))
         prefs.flush()
     }
 
-    // GỌI KHI NGƯỜI CHƠI BƯỚC VÀO MỘT MÀN CHƠI (DÙ THOÁT RA NGAY VẪN LƯU MỞ KHÓA THÁP)
-    fun onEnterLevel(levelNumber: Int) {
-        ensureLoaded()
-        if (levelNumber <= 0) return // Không tính màn Sandbox 0
-
+    private fun addTowersUpToLevel(levelNumber: Int) {
         if (levelNumber >= 1) {
             unlockedTowers.add(EncyclopediaTowerId.ARCHER_1.name)
             unlockedTowers.add(EncyclopediaTowerId.BARRACKS_1.name)
             unlockedTowers.add(EncyclopediaTowerId.MAGE_1.name)
             unlockedTowers.add(EncyclopediaTowerId.ARTILLERY_1.name)
         }
+        // Màn 2 (The Farmlands) mở khóa Tháp Cấp 2
         if (levelNumber >= 2) {
             unlockedTowers.add(EncyclopediaTowerId.ARCHER_2.name)
             unlockedTowers.add(EncyclopediaTowerId.BARRACKS_2.name)
             unlockedTowers.add(EncyclopediaTowerId.MAGE_2.name)
             unlockedTowers.add(EncyclopediaTowerId.ARTILLERY_2.name)
         }
-        if (levelNumber >= 3) {
+        // Màn 4 (Twin Rivers Pass) mở khóa Tháp Cấp 3 chuẩn game gốc
+        if (levelNumber >= 4) {
             unlockedTowers.add(EncyclopediaTowerId.ARCHER_3.name)
             unlockedTowers.add(EncyclopediaTowerId.BARRACKS_3.name)
             unlockedTowers.add(EncyclopediaTowerId.MAGE_3.name)
             unlockedTowers.add(EncyclopediaTowerId.ARTILLERY_3.name)
         }
+        // Màn 5+ mở khóa các nhánh Tháp Cấp 4 chuyên biệt
         if (levelNumber >= 5) {
             unlockedTowers.add(EncyclopediaTowerId.RANGERS_HIDEOUT.name)
         }
@@ -235,25 +277,37 @@ object EncyclopediaManager {
         if (levelNumber >= 9) {
             unlockedTowers.add(EncyclopediaTowerId.TESLA_X104.name)
         }
+    }
+
+    // GỌI KHI NGƯỜI CHƠI BƯỚC VÀO MỘT MÀN CHƠI
+    fun onEnterLevel(levelNumber: Int) {
+        ensureSlotSynced()
+        if (levelNumber <= 0) return // Không tính màn Sandbox 0
+        addTowersUpToLevel(levelNumber)
         save()
     }
 
     // GỌI NGAY KHI QUÁI XUẤT HIỆN TRÊN BẢN ĐỒ
     fun unlockEnemy(type: EnemyType) {
-        ensureLoaded()
+        ensureSlotSynced()
         if (unlockedEnemies.add(type.name)) {
             save()
         }
     }
 
     fun isTowerUnlocked(towerId: EncyclopediaTowerId): Boolean {
-        ensureLoaded()
+        ensureSlotSynced()
         return unlockedTowers.contains(towerId.name)
     }
 
     fun isEnemyUnlocked(type: EnemyType): Boolean {
-        ensureLoaded()
+        ensureSlotSynced()
         return unlockedEnemies.contains(type.name)
+    }
+
+    fun getFirstUnlockedEnemy(): EnemyType? {
+        ensureSlotSynced()
+        return allEnemiesOrdered.firstOrNull { unlockedEnemies.contains(it.name) }
     }
 
     fun getEnemyInfo(type: EnemyType): EnemyEncyclopediaInfo {
@@ -382,7 +436,7 @@ object EncyclopediaManager {
                 "Spawns from Graveyards, Immune to Poison"
             )
             EnemyType.SKELETON_KNIGHT -> Pair(
-                " corrupted bones of once great warriors animated by dark magic.",
+                "Corrupted bones of once great warriors animated by dark magic.",
                 "Light Armor, Immune to Poison"
             )
             EnemyType.NECROMANCER -> Pair(

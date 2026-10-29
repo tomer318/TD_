@@ -175,6 +175,11 @@ class MainMenuScreen(private val game: Game) : ScreenAdapter() {
                             onReturn = { openWorldMap() }
                         )
                     }
+                },
+                onReturnToMainMenu = {
+                    Gdx.app.postRunnable {
+                        game.screen = MainMenuScreen(game)
+                    }
                 }
             )
         }

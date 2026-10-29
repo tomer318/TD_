@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector2
 import com.game.td.map.Level12TheDarkTower
+import com.game.td.renderers.MapRenderer
 
 object Level12MapRenderer {
 
@@ -63,13 +64,13 @@ object Level12MapRenderer {
         val gPos = Level12TheDarkTower.graveyardPosition
         drawGraveyardArea(shapeRenderer, gPos.x, gPos.y)
 
-        // 6. HAI LÁ CỜ LINIREA XANH TẠI CỔNG THOÁT PHÍA NAM
-        shapeRenderer.color = Color(0.28f, 0.20f, 0.15f, 1f)
-        shapeRenderer.rect(860f, 25f, 3f, 28f)
-        shapeRenderer.rect(920f, 25f, 3f, 28f)
-        shapeRenderer.color = Color(0.20f, 0.55f, 0.90f, 1f)
-        shapeRenderer.triangle(863f, 53f, 863f, 36f, 880f, 44f)
-        shapeRenderer.triangle(923f, 53f, 923f, 36f, 940f, 44f)
+        // 6. VÒNG TRÒN PHÒNG THỦ DƯỚI ĐẤT & 2 CỜ HIỆU LINIREA TẠI CỔNG THOÁT PHÍA NAM (X = 890F)
+        MapRenderer.drawDefensePoint(
+            sr = shapeRenderer,
+            crestX = 890f, crestY = 48f,
+            flag1X = 846f, flag1Y = 42f,
+            flag2X = 934f, flag2Y = 42f
+        )
 
         // 7. TÒA PHÁO ĐÀI THE DARK TOWER (PHÍA BẮC)
         shapeRenderer.color = Color(0.12f, 0.11f, 0.14f, 1f)
@@ -148,19 +149,15 @@ object Level12MapRenderer {
 
     // VẼ BIỂN GỖ "FOR SALE" TRÊN BAN CÔNG THÁP ĐEN
     private fun drawForSaleSignOnBalcony(sr: ShapeRenderer, bX: Float, bY: Float) {
-        // Cọc gỗ cắm biển
         sr.color = Color(0.36f, 0.22f, 0.11f, 1f)
         sr.rect(bX - 3f, bY - 2f, 6f, 34f)
 
-        // Khung viền biển gỗ đậm
         sr.color = Color(0.32f, 0.19f, 0.09f, 1f)
         sr.rect(bX - 29f, bY + 10f, 58f, 24f)
 
-        // Mặt bảng gỗ sáng màu vàng nâu
         sr.color = Color(0.76f, 0.56f, 0.30f, 1f)
         sr.rect(bX - 27f, bY + 12f, 54f, 20f)
 
-        // Vân ván gỗ ngang và 2 đinh tán
         sr.color = Color(0.62f, 0.44f, 0.22f, 1f)
         sr.rect(bX - 27f, bY + 21f, 54f, 1.5f)
         sr.color = Color(0.25f, 0.25f, 0.28f, 1f)
@@ -214,7 +211,6 @@ object Level12MapRenderer {
 
     private fun drawSummoningPentagram(sr: ShapeRenderer, center: Vector2, radius: Float, isDormant: Boolean = false) {
         if (isDormant) {
-            // Vòng đá cổ tự đã tắt năng lượng khi chơi Heroic / Iron
             sr.color = Color(0.45f, 0.44f, 0.48f, 1f)
             sr.circle(center.x, center.y, radius)
             sr.color = Color(0.58f, 0.58f, 0.62f, 1f)

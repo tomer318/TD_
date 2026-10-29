@@ -3,14 +3,13 @@ package com.game.td.renderers.maps
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector2
+import com.game.td.map.Level2Farmlands
+import com.game.td.renderers.MapRenderer
 
 object Level2MapRenderer {
 
     fun render(shapeRenderer: ShapeRenderer) {
-        // =====================================================================
-        // 1. CỤM RỪNG RẬM BAO QUANH (THEO ĐƯỜNG VIỀN XANH LÁ TRONG ẢNH GỐC)
-        // =====================================================================
-        // A. Cụm rừng Tây Bắc (trên cùng bên trái)
+        // 1. CỤM RỪNG RẬM BAO QUANH
         drawDenseForest(
             shapeRenderer,
             listOf(
@@ -22,7 +21,6 @@ object Level2MapRenderer {
             )
         )
 
-        // B. Cụm rừng Đông Bắc (trên cùng bên phải)
         drawDenseForest(
             shapeRenderer,
             listOf(
@@ -32,7 +30,6 @@ object Level2MapRenderer {
             )
         )
 
-        // C. Cụm rừng Đông Nam (dưới cùng bên phải)
         drawDenseForest(
             shapeRenderer,
             listOf(
@@ -45,41 +42,36 @@ object Level2MapRenderer {
             )
         )
 
-        // =====================================================================
-        // 2. KHU ĐỒNG RUỘNG & NÔNG TRẠI TÂY NAM (THEO VÙNG XÁM BẠN VẼ)
-        // =====================================================================
+        // 2. KHU ĐỒNG RUỘNG & NÔNG TRẠI TÂY NAM
         val farmOriginX = 45f
         val farmOriginY = 90f
 
-        // Nền đất cày xới màu đất nâu
         shapeRenderer.color = Color(0.48f, 0.36f, 0.22f, 1f)
         shapeRenderer.rect(farmOriginX - 10f, farmOriginY - 10f, 280f, 190f)
 
-        // 4 ô thửa ruộng lúa mì chín vàng đan xen luống
         drawFieldPlot(shapeRenderer, farmOriginX, farmOriginY + 95f, 125f, 80f, isWheat = true)
         drawFieldPlot(shapeRenderer, farmOriginX + 135f, farmOriginY + 95f, 125f, 80f, isWheat = false)
         drawFieldPlot(shapeRenderer, farmOriginX, farmOriginY, 125f, 80f, isWheat = false)
         drawFieldPlot(shapeRenderer, farmOriginX + 135f, farmOriginY, 125f, 80f, isWheat = true)
 
-        // 2 Ngôi nhà nông trại mái tranh (ở phía trên ruộng)
         drawFarmHouse(shapeRenderer, farmOriginX + 140f, farmOriginY + 195f)
         drawFarmHouse(shapeRenderer, farmOriginX + 205f, farmOriginY + 205f)
 
-        // Các đống rơm khô (Haystacks)
         drawHaystack(shapeRenderer, farmOriginX + 310f, farmOriginY + 20f)
         drawHaystack(shapeRenderer, farmOriginX + 345f, farmOriginY + 55f)
         drawHaystack(shapeRenderer, 860f, 210f)
 
-        // Hai cối xay gió nhỏ góc Đông Nam
         drawWindmill(shapeRenderer, 840f, 320f)
         drawWindmill(shapeRenderer, 880f, 290f)
 
-        // =====================================================================
         // 3. CÂY ĐỘC LẬP TRÊN DẢI CỎ GIỮA
-        // =====================================================================
         drawSingleTree(shapeRenderer, 810f, 410f)
         drawSingleTree(shapeRenderer, 220f, 410f)
         drawSingleTree(shapeRenderer, 1020f, 190f)
+
+        // 4. VẼ ĐƯỜNG ĐI TRƯỚC, SAU ĐÓ VẼ BIỂU TƯỢNG PHÒNG THỦ & CỜ HIỆU ĐÈ LÊN TRÊN ĐƯỜNG
+        MapRenderer.drawStandardDirtPaths(shapeRenderer, Level2Farmlands.data.allPaths)
+        MapRenderer.drawDefensePointOnPath(shapeRenderer, Level2Farmlands.data.waypoints)
     }
 
     private fun drawFieldPlot(sr: ShapeRenderer, x: Float, y: Float, w: Float, h: Float, isWheat: Boolean) {
@@ -101,13 +93,10 @@ object Level2MapRenderer {
     }
 
     private fun drawFarmHouse(sr: ShapeRenderer, x: Float, y: Float) {
-        // Tường gỗ
         sr.color = Color(0.45f, 0.32f, 0.18f, 1f)
         sr.rect(x - 18f, y - 12f, 36f, 24f)
-        // Cửa gỗ
         sr.color = Color(0.25f, 0.18f, 0.10f, 1f)
         sr.rect(x - 5f, y - 12f, 10f, 15f)
-        // Mái rơm vàng
         sr.color = Color(0.85f, 0.72f, 0.28f, 1f)
         sr.triangle(x - 24f, y + 12f, x + 24f, y + 12f, x, y + 32f)
     }
