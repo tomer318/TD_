@@ -7,13 +7,12 @@ import com.badlogic.gdx.graphics.GL20
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.math.Matrix4
 import com.badlogic.gdx.math.Vector2
 import com.badlogic.gdx.utils.Align
 import com.game.td.Config
-import com.game.td.ecs.components.EnemyComponent
-import com.game.td.ecs.components.EnemyType
-import com.game.td.ecs.components.HealthComponent
-import com.game.td.ecs.components.TransformComponent
+import com.game.td.ecs.components.*
+import com.game.td.managers.AchievementManager
 import com.game.td.managers.GameMode
 import com.game.td.managers.SaveManager
 import com.game.td.managers.SoundManager
@@ -30,7 +29,8 @@ enum class HintPopupType {
     ARMORED_ENEMIES,
     COMMAND_TROOPS,
     STRATEGY_BASICS,
-    MAGIC_RESISTANT_ENEMIES
+    MAGIC_RESISTANT_ENEMIES,
+    HEAVILY_ARMORED_ENEMIES
 }
 
 object TutorialRenderer {
@@ -39,7 +39,9 @@ object TutorialRenderer {
     private val PARCHMENT = Color(0.93f, 0.87f, 0.65f, 1f)
     private val PARCHMENT_DARK = Color(0.85f, 0.78f, 0.54f, 1f)
 
-    // Hàng đợi các huy hiệu thông báo bên mép trái màn hình (NEW ENEMY! & TIP!)
+    private val oldMatrix = Matrix4()
+    private val tempMatrix = Matrix4()
+
     private sealed class LeftBadgeItem {
         data class NewEnemyBadge(val enemyType: EnemyType) : LeftBadgeItem()
         data class TipBadge(val hintType: HintPopupType) : LeftBadgeItem()
@@ -54,13 +56,21 @@ object TutorialRenderer {
         val bottomTip2: String = ""
     )
 
+    private data class Level4UnlockEntry(
+        val subtitle: String,
+        val title: String,
+        val description: String,
+        val towerType: TowerType,
+        val specialization: TowerSpecialization,
+        val soldierRank: String? = null
+    )
+
     private val activeLeftBadges = mutableListOf<LeftBadgeItem>()
     private var showClickHereOnFirstBadge: Boolean = false
 
     private var currentLevelNum: Int = 1
     private var currentMode: GameMode = GameMode.CAMPAIGN
 
-    // Trạng thái hướng dẫn & khóa Spell
     var isLevel1CampaignActive: Boolean = false
         private set
 
@@ -69,7 +79,6 @@ object TutorialRenderer {
     var instructionPage: Int = 1
         private set
 
-    // Bảng NEW TOWER UPGRADES! (0 = đóng, 2 = Mở tháp Lv2 ở Màn 2, 3 = Mở tháp Lv3 ở Màn 4)
     var activeTowerUpgradePopupLevel: Int = 0
         private set
 
@@ -93,8 +102,9 @@ object TutorialRenderer {
     private var hasTriggeredFinalWavePopup: Boolean = false
     private var hasTriggeredLevel2StrategyHint: Boolean = false
     private var hasTriggeredLevel3MagicHint: Boolean = false
+    private var hasTriggeredLevel5Wave5TowerPopup: Boolean = false
+    private var hasTriggeredLevel6HeavyArmorHint: Boolean = false
 
-    // Khởi tạo lại mỗi khi bắt đầu màn chơi (startNewGame)
     fun initForLevel(levelNumber: Int, gameMode: GameMode) {
         currentLevelNum = levelNumber
         currentMode = gameMode
@@ -108,6 +118,8 @@ object TutorialRenderer {
 
         hasTriggeredLevel2StrategyHint = false
         hasTriggeredLevel3MagicHint = false
+        hasTriggeredLevel5Wave5TowerPopup = false
+        hasTriggeredLevel6HeavyArmorHint = false
 
         if (levelNumber == 1 && gameMode == GameMode.CAMPAIGN) {
             isLevel1CampaignActive = true
@@ -131,25 +143,25 @@ object TutorialRenderer {
             hasTriggeredWave6Hint = true
             hasTriggeredFinalWavePopup = true
 
-            // Kiểm tra bật bảng NEW TOWER UPGRADES! (Chỉ hiện 1 lần duy nhất trên mỗi File Save)
             if (gameMode == GameMode.CAMPAIGN) {
-                val prefs = Gdx.app.getPreferences("kr_save_slot_${SaveManager.activeSlot}")
-                if (levelNumber == 2 && !prefs.getBoolean("seen_tower_upgrade_lvl2", false)) {
-                    prefs.putBoolean("seen_tower_upgrade_lvl2", true)
-                    prefs.flush()
-                    activeTowerUpgradePopupLevel = 2
-                    SoundManager.playTowerUpgrade()
-                } else if (levelNumber == 4 && !prefs.getBoolean("seen_tower_upgrade_lvl3", false)) {
-                    prefs.putBoolean("seen_tower_upgrade_lvl3", true)
-                    prefs.flush()
-                    activeTowerUpgradePopupLevel = 3
-                    SoundManager.playTowerUpgrade()
+                when (levelNumber) {
+                    2 -> {
+                        activeTowerUpgradePopupLevel = 2
+                        SoundManager.playTowerUpgrade()
+                    }
+                    4 -> {
+                        activeTowerUpgradePopupLevel = 3
+                        SoundManager.playTowerUpgrade()
+                    }
+                    6, 7, 8, 9, 10 -> {
+                        activeTowerUpgradePopupLevel = levelNumber
+                        SoundManager.playTowerUpgrade()
+                    }
                 }
             }
         }
     }
 
-    // Kiểm tra xem có đang mở bảng modal nào cần tạm dừng trận đấu không
     fun isModalOpen(): Boolean {
         return isInstructionOpen ||
             activeTowerUpgradePopupLevel > 0 ||
@@ -158,11 +170,9 @@ object TutorialRenderer {
             activeHintPopup != HintPopupType.NONE
     }
 
-    // GỌI KHI QUÁI VẬT XUẤT HIỆN TRÊN BẢN ĐỒ:
     fun onEnemySpawned(enemyType: EnemyType) {
         if (enemyType == EnemyType.SPIDER_HATCHLING) return
 
-        // 1. Kiểm tra bật huy hiệu NEW ENEMY! (1 lần duy nhất cho mỗi File Save)
         val prefs = Gdx.app.getPreferences("kr_save_slot_${SaveManager.activeSlot}")
         val seenKey = "seen_new_enemy_${enemyType.name}"
         if (!prefs.getBoolean(seenKey, false)) {
@@ -176,7 +186,6 @@ object TutorialRenderer {
             }
         }
 
-        // 2. Ở Màn 3 Campaign: Khi Shaman xuất hiện -> Luôn bật huy hiệu TIP! (MAGIC RESISTANT ENEMIES!)
         if (currentLevelNum == 3 && currentMode == GameMode.CAMPAIGN &&
             enemyType == EnemyType.SHAMAN && !hasTriggeredLevel3MagicHint
         ) {
@@ -189,11 +198,9 @@ object TutorialRenderer {
         }
     }
 
-    // Tự động kiểm tra Wave hiện tại để bật Spell và Hint cho Màn 1, Màn 2, Màn 3
     fun checkWaveTriggers(levelNumber: Int, gameMode: GameMode, currentWaveDisplay: Int, totalWaves: Int) {
         if (gameMode != GameMode.CAMPAIGN || isModalOpen()) return
 
-        // --- MÀN 1 CAMPAIGN ---
         if (levelNumber == 1 && isLevel1CampaignActive) {
             if (currentWaveDisplay == 3 && !hasTriggeredWave3Popup) {
                 hasTriggeredWave3Popup = true
@@ -223,16 +230,28 @@ object TutorialRenderer {
             }
         }
 
-        // --- MÀN 2 CAMPAIGN: Wave 1 luôn xuất hiện TIP! (STRATEGY BASICS!) ---
         if (levelNumber == 2 && currentWaveDisplay == 1 && !hasTriggeredLevel2StrategyHint) {
             hasTriggeredLevel2StrategyHint = true
             activeLeftBadges.add(LeftBadgeItem.TipBadge(HintPopupType.STRATEGY_BASICS))
             showClickHereOnFirstBadge = true
             SoundManager.playTowerPreview()
         }
+
+        if (levelNumber == 5 && currentWaveDisplay == 5 && !hasTriggeredLevel5Wave5TowerPopup) {
+            hasTriggeredLevel5Wave5TowerPopup = true
+            activeTowerUpgradePopupLevel = 5
+            SoundManager.playTowerUpgrade()
+            return
+        }
+
+        if (levelNumber == 6 && currentWaveDisplay == 1 && !hasTriggeredLevel6HeavyArmorHint) {
+            hasTriggeredLevel6HeavyArmorHint = true
+            activeLeftBadges.add(LeftBadgeItem.TipBadge(HintPopupType.HEAVILY_ARMORED_ENEMIES))
+            showClickHereOnFirstBadge = true
+            SoundManager.playTowerPreview()
+        }
     }
 
-    // Xử lý khi người chơi bấm vào các huy hiệu tròn NEW ENEMY! hoặc TIP! ở mép trái màn hình
     fun handleBadgeTouch(x: Float, y: Float): Boolean {
         if (isModalOpen() || activeLeftBadges.isEmpty()) return false
 
@@ -251,6 +270,7 @@ object TutorialRenderer {
                 when (val clicked = activeLeftBadges.removeAt(i)) {
                     is LeftBadgeItem.NewEnemyBadge -> {
                         activeEnemyPopup = clicked.enemyType
+                        AchievementManager.onEnemyCardOpened()
                     }
                     is LeftBadgeItem.TipBadge -> {
                         activeHintPopup = clicked.hintType
@@ -262,7 +282,6 @@ object TutorialRenderer {
         return false
     }
 
-    // Xử lý chạm trên các bảng Instructions, New Tower Upgrades, New Special, New Enemy & Hint
     fun handleTouch(
         x: Float,
         y: Float,
@@ -272,7 +291,6 @@ object TutorialRenderer {
         val cX = Config.WORLD_WIDTH / 2f
         val cY = Config.WORLD_HEIGHT / 2f
 
-        // 1. Đang mở bảng INSTRUCTIONS (Trang 1, 2, 3)
         if (isInstructionOpen) {
             if (instructionPage < 3) {
                 if (x in (cX - 245f)..(cX - 5f) && y in (cY - 265f)..(cY - 195f)) {
@@ -295,23 +313,35 @@ object TutorialRenderer {
             return true
         }
 
-        // 2. Đang mở bảng NEW TOWER UPGRADES! (Màn 2 hoặc Màn 4)
         if (activeTowerUpgradePopupLevel > 0) {
-            val popupCenterY = Config.WORLD_HEIGHT / 2f + 28f
-            val scrollY = popupCenterY - 340f / 2f
-            val okBtnX = cX + 95f
-            val okBtnY = scrollY - 62f
-            val okBtnW = 185f
-            val okBtnH = 60f
+            if (activeTowerUpgradePopupLevel in listOf(2, 3)) {
+                val popupCenterY = Config.WORLD_HEIGHT / 2f + 28f
+                val scrollY = popupCenterY - 340f / 2f
+                val okBtnX = cX + 95f
+                val okBtnY = scrollY - 62f
+                val okBtnW = 185f
+                val okBtnH = 60f
 
-            if (x in (okBtnX - 15f)..(okBtnX + okBtnW + 15f) && y in (okBtnY - 15f)..(okBtnY + okBtnH + 15f)) {
-                SoundManager.playClick()
-                activeTowerUpgradePopupLevel = 0
+                if (x in (okBtnX - 15f)..(okBtnX + okBtnW + 15f) && y in (okBtnY - 15f)..(okBtnY + okBtnH + 15f)) {
+                    SoundManager.playClick()
+                    activeTowerUpgradePopupLevel = 0
+                }
+            } else {
+                val entriesCount = getLevel4UnlockEntries(activeTowerUpgradePopupLevel).size
+                val bottomScrollY = if (entriesCount == 1) Config.WORLD_HEIGHT / 2f - 105f else 132f
+                val okBtnX = cX + 55f
+                val okBtnY = bottomScrollY - 56f
+                val okBtnW = 175f
+                val okBtnH = 56f
+
+                if (x in (okBtnX - 20f)..(okBtnX + okBtnW + 20f) && y in (okBtnY - 20f)..(okBtnY + okBtnH + 20f)) {
+                    SoundManager.playClick()
+                    activeTowerUpgradePopupLevel = 0
+                }
             }
             return true
         }
 
-        // 3. Đang mở bảng NEW SPECIAL AVAILABLE! (Wave 3 hoặc Wave cuối)
         if (activeSpecialPopup != SpecialUnlockPopupType.NONE) {
             val popupCenterY = Config.WORLD_HEIGHT / 2f + 35f
             val scrollY = popupCenterY - 265f / 2f
@@ -339,7 +369,6 @@ object TutorialRenderer {
             return true
         }
 
-        // 4. Đang mở bảng NEW ENEMY!
         if (activeEnemyPopup != null) {
             val popupCenterY = Config.WORLD_HEIGHT / 2f + 35f
             val scrollY = popupCenterY - 265f / 2f
@@ -355,7 +384,6 @@ object TutorialRenderer {
             return true
         }
 
-        // 5. Đang mở bảng HINT
         if (activeHintPopup != HintPopupType.NONE) {
             val popupCenterY = Config.WORLD_HEIGHT / 2f + 22f
             val scrollY = popupCenterY - 390f / 2f
@@ -374,9 +402,86 @@ object TutorialRenderer {
         return false
     }
 
-    // =========================================================================
-    // VẼ BONG BÓNG CHỈ DẪN TRÊN BẢN ĐỒ & CÁC HUY HIỆU "NEW ENEMY!" / "TIP!" BÊN TRÁI
-    // =========================================================================
+    private fun withScaledTransform(sr: ShapeRenderer, cx: Float, cy: Float, scale: Float, block: () -> Unit) {
+        sr.end()
+        oldMatrix.set(sr.transformMatrix)
+        tempMatrix.idt().translate(cx, cy, 0f).scale(scale, scale, 1f)
+        sr.transformMatrix = tempMatrix
+        sr.begin(ShapeRenderer.ShapeType.Filled)
+        block()
+        sr.end()
+        sr.transformMatrix = oldMatrix
+        sr.begin(ShapeRenderer.ShapeType.Filled)
+    }
+
+    private fun drawRenderedStrategicPoint(sr: ShapeRenderer, cx: Float, cy: Float, scale: Float = 1f) {
+        withScaledTransform(sr, cx, cy, scale) {
+            TowerRenderer.renderStrategicPoint(sr, 0f, 0f, levelNumber = 1)
+        }
+    }
+
+    private fun drawRenderedTower(
+        sr: ShapeRenderer,
+        type: TowerType,
+        level: Int,
+        cx: Float,
+        cy: Float,
+        scale: Float = 1f,
+        specialization: TowerSpecialization = TowerSpecialization.NONE
+    ) {
+        withScaledTransform(sr, cx, cy, scale) {
+            sr.color = Color(0.32f, 0.52f, 0.16f, 1f)
+            sr.ellipse(-30f, -21f, 60f, 32f)
+            sr.color = Color(0.62f, 0.58f, 0.48f, 1f)
+            sr.ellipse(-25f, -18f, 50f, 26f)
+
+            val dummyTower = Entity().apply {
+                add(TransformComponent(position = Vector2(0f, 0f)))
+                add(TowerComponent(towerType = type, level = level, specialization = specialization))
+            }
+            TowerRenderer.render(sr, dummyTower)
+        }
+    }
+
+    private fun getEnemyAutoScale(type: EnemyType): Float = when (type) {
+        EnemyType.VEZNAN_DEMON, EnemyType.JUGGERNAUT, EnemyType.JT -> 0.55f
+        EnemyType.VEZNAN, EnemyType.YETI, EnemyType.MAGMA_ELEMENTAL, EnemyType.SPIDER_MATRIARCH -> 0.72f
+        EnemyType.OGRE, EnemyType.DEMON_LORD, EnemyType.TROLL_CHIEFTAIN, EnemyType.MARAUDER -> 0.85f
+        else -> 1.0f
+    }
+
+    private fun drawRenderedEnemy(sr: ShapeRenderer, type: EnemyType, cx: Float, cy: Float, scale: Float = 1f) {
+        val finalScale = scale * getEnemyAutoScale(type)
+        withScaledTransform(sr, cx, cy, finalScale) {
+            val dummyEnemy = Entity().apply {
+                add(TransformComponent(position = Vector2(0f, 0f)))
+                add(HealthComponent(maxHealth = 100f, currentHealth = 100f))
+                add(EnemyComponent(enemyType = type))
+            }
+            EnemyRenderer.render(sr, dummyEnemy, showHpBar = false)
+        }
+    }
+
+    private fun drawRenderedEgg(sr: ShapeRenderer, cx: Float, cy: Float, scale: Float = 1f) {
+        withScaledTransform(sr, cx, cy, scale) {
+            val dummyEgg = Entity().apply {
+                add(TransformComponent(position = Vector2(0f, 0f)))
+            }
+            EnemyRenderer.renderEgg(sr, dummyEgg)
+        }
+    }
+
+    private fun drawRenderedSoldier(sr: ShapeRenderer, rankName: String, cx: Float, cy: Float, scale: Float = 1f) {
+        withScaledTransform(sr, cx, cy, scale) {
+            val dummySoldier = Entity().apply {
+                add(TransformComponent(position = Vector2(0f, 0f)))
+                add(HealthComponent(maxHealth = 100f, currentHealth = 100f))
+                add(SoldierComponent(soldierRankName = rankName, targetPosition = Vector2(0f, 0f)))
+            }
+            SoldierRenderer.render(sr, dummySoldier, showHpBar = false)
+        }
+    }
+
     fun renderMapHints(
         sr: ShapeRenderer,
         batch: SpriteBatch,
@@ -456,7 +561,7 @@ object TutorialRenderer {
                     sr.color = Color(0.32f, 0.28f, 0.20f, 1f)
                     sr.circle(badgeX, badgeY, 21f)
 
-                    drawDummyEnemyEntity(sr, item.enemyType, badgeX - 2f, badgeY - 4f)
+                    drawRenderedEnemy(sr, item.enemyType, badgeX - 2f, badgeY - 3f, scale = 1.05f)
 
                     val exX = badgeX + 22f
                     val exY = badgeY - 2f
@@ -468,17 +573,9 @@ object TutorialRenderer {
                     sr.circle(exX - 2f, exY - 11f, 3.8f)
 
                     sr.color = OUTLINE
-                    sr.rect(badgeX - 30f, badgeY + 17f, 60f, 14f)
+                    sr.rect(badgeX - 32f, badgeY + 17f, 64f, 14f)
+                    ComicFontRenderer.drawPlaqueText(sr, "NEW ENEMY", badgeX, badgeY + 24f, 8.5f, Color(1f, 0.90f, 0.18f, 1f))
                     sr.end()
-
-                    batch.begin()
-                    smallFont.data.setScale(0.66f)
-                    GameUIRenderer.drawBadgeCenteredText(
-                        batch, smallFont, "NEW ENEMY",
-                        badgeX - 30f, badgeY + 17f, 60f, 14f,
-                        Color(1f, 0.90f, 0.18f, 1f)
-                    )
-                    batch.end()
                 }
 
                 is LeftBadgeItem.TipBadge -> {
@@ -499,6 +596,7 @@ object TutorialRenderer {
                         HintPopupType.ARMORED_ENEMIES -> drawArmorShieldIcon(sr, badgeX - 1f, badgeY - 1f, 0.65f, isMagic = false)
                         HintPopupType.MAGIC_RESISTANT_ENEMIES -> drawArmorShieldIcon(sr, badgeX - 1f, badgeY - 1f, 0.65f, isMagic = true)
                         HintPopupType.STRATEGY_BASICS -> drawSwordAndShieldIcon(sr, badgeX - 1f, badgeY - 1f, 0.68f)
+                        HintPopupType.HEAVILY_ARMORED_ENEMIES -> drawHeavyHelmetBadgeIcon(sr, badgeX - 1f, badgeY - 2f, 0.75f)
                         else -> drawBlueRallyFlagIcon(sr, badgeX - 2f, badgeY - 2f, 0.65f)
                     }
 
@@ -513,16 +611,8 @@ object TutorialRenderer {
 
                     sr.color = OUTLINE
                     sr.rect(badgeX - 18f, badgeY + 17f, 36f, 14f)
+                    ComicFontRenderer.drawPlaqueText(sr, "TIP", badgeX, badgeY + 24f, 9.5f, Color(0.55f, 0.92f, 1f, 1f))
                     sr.end()
-
-                    batch.begin()
-                    smallFont.data.setScale(0.72f)
-                    GameUIRenderer.drawBadgeCenteredText(
-                        batch, smallFont, "TIP",
-                        badgeX - 18f, badgeY + 17f, 36f, 14f,
-                        Color(0.55f, 0.92f, 1f, 1f)
-                    )
-                    batch.end()
                 }
             }
 
@@ -576,27 +666,23 @@ object TutorialRenderer {
         } else {
             sr.triangle(boxX + 2f, boxY + boxH / 2f - 6f, boxX + 2f, boxY + boxH / 2f + 6f, pointerTipX + 4f, pointerTipY)
         }
+
+        if (line2.isEmpty()) {
+            ComicFontRenderer.drawRibbonBannerText(sr, line1, boxX + boxW / 2f, boxY + boxH / 2f, 14f)
+        } else {
+            ComicFontRenderer.drawRibbonBannerText(sr, line1, boxX + boxW / 2f, boxY + boxH - 16f, 13.5f)
+        }
         sr.end()
 
-        batch.begin()
-        if (line2.isEmpty()) {
-            font.data.setScale(1.02f)
-            font.color = OUTLINE
-            font.draw(batch, line1, boxX, boxY + boxH / 2f + 6f, boxW, Align.center, false)
-        } else {
-            font.data.setScale(1.00f)
-            font.color = OUTLINE
-            font.draw(batch, line1, boxX + 12f, boxY + boxH - 12f)
-            font.data.setScale(0.82f)
+        if (line2.isNotEmpty()) {
+            batch.begin()
+            font.data.setScale(0.84f)
             font.color = Color(0.25f, 0.20f, 0.14f, 1f)
-            font.draw(batch, line2, boxX + 12f, boxY + 18f)
+            font.draw(batch, line2, boxX, boxY + 18f, boxW, Align.center, false)
+            batch.end()
         }
-        batch.end()
     }
 
-    // =========================================================================
-    // VẼ CÁC BẢNG POPUP: INSTRUCTIONS, NEW TOWER UPGRADES, NEW SPECIAL, NEW ENEMY & HINT
-    // =========================================================================
     fun renderPopups(
         sr: ShapeRenderer,
         batch: SpriteBatch,
@@ -610,16 +696,14 @@ object TutorialRenderer {
 
         when {
             isInstructionOpen -> renderInstructionsScroll(sr, batch, font, smallFont, instructionPage)
-            activeTowerUpgradePopupLevel > 0 -> renderNewTowerUpgradesPopup(sr, batch, font, smallFont, activeTowerUpgradePopupLevel)
+            activeTowerUpgradePopupLevel in listOf(2, 3) -> renderNewTowerUpgradesPopup(sr, batch, font, smallFont, activeTowerUpgradePopupLevel)
+            activeTowerUpgradePopupLevel >= 5 -> renderNewTowerUnlockedLevel4Popup(sr, batch, font, smallFont, activeTowerUpgradePopupLevel)
             activeSpecialPopup != SpecialUnlockPopupType.NONE -> renderSpecialUnlockPopup(sr, batch, font, smallFont, activeSpecialPopup)
             activeEnemyPopup != null -> renderNewEnemyPopup(sr, batch, font, smallFont, activeEnemyPopup!!)
             activeHintPopup != HintPopupType.NONE -> renderHintPopup(sr, batch, font, smallFont, activeHintPopup)
         }
     }
 
-    // =========================================================================
-    // PHẦN 5 (MỚI): BẢNG "NEW TOWER UPGRADES!" CHO MÀN 2 (LVL 2) & MÀN 4 (LVL 3)
-    // =========================================================================
     private fun renderNewTowerUpgradesPopup(
         sr: ShapeRenderer,
         batch: SpriteBatch,
@@ -648,19 +732,19 @@ object TutorialRenderer {
         sr.color = Color(0f, 0f, 0f, 0.40f)
         sr.rect(0f, 0f, Config.WORLD_WIDTH, Config.WORLD_HEIGHT)
 
-        // 1. Nút OK! màu xanh dương ở góc dưới phải
         drawTabButton(sr, okBtnX, okBtnY, okBtnW, okBtnH, Color(0.16f, 0.38f, 0.58f, 1f))
 
-        // 2. Bảng nâu "NEW TOWER UPGRADES!" trên đỉnh lệch trái (giống Hình 3 & 7)
         sr.color = OUTLINE
         sr.rect(tabX - 3f, tabY - 3f, tabW + 6f, tabH + 6f)
         sr.color = Color(0.44f, 0.34f, 0.25f, 1f)
         sr.rect(tabX, tabY, tabW, tabH)
 
-        // 3. Tờ giấy da dê chính
         drawJaggedParchment(sr, scrollX, scrollY, scrollW, scrollH)
 
-        // 4. Vẽ 4 tấm ảnh Polaroid của 4 loại tháp (Barracks, Archer, Mage, Artillery)
+        ComicFontRenderer.drawPlaqueText(sr, "NEW TOWER UPGRADES!", tabX + tabW / 2f, tabY + tabH / 2f + 2f, 22f, Color(0.96f, 0.92f, 0.72f, 1f))
+        ComicFontRenderer.drawRibbonBannerText(sr, "TOWERS LEVEL $unlockedTier AVAILABLE", cX, scrollY + scrollH - 42f, 21f)
+        ComicFontRenderer.drawPlaqueText(sr, "OK!", okBtnX + okBtnW / 2f, okBtnY + okBtnH / 2f, 22f, Color.WHITE)
+
         val cardW = 166f
         val cardH = 162f
         val cardCentersX = listOf(cX - 270f, cX - 90f, cX + 90f, cX + 270f)
@@ -670,7 +754,6 @@ object TutorialRenderer {
             val px = cardCentersX[i] - cardW / 2f
             val py = cardOffsetsY[i]
 
-            // Khung Polaroid kem viền nâu
             sr.color = Color(0f, 0f, 0f, 0.28f)
             sr.rect(px + 5f, py - 5f, cardW, cardH)
             sr.color = OUTLINE
@@ -683,7 +766,6 @@ object TutorialRenderer {
             val inW = cardW - 20f
             val inH = cardH - 20f
 
-            // Nền cỏ & đường đất trong mỗi tấm ảnh Polaroid
             sr.color = Color(0.42f, 0.62f, 0.18f, 1f)
             sr.rect(inX, inY, inW, inH)
             sr.color = Color(0.84f, 0.74f, 0.46f, 1f)
@@ -694,85 +776,278 @@ object TutorialRenderer {
 
             when (i) {
                 0 -> {
-                    // CỘT 1: BARRACKS (Lv2 Footmen hoặc Lv3 Knights)
-                    drawMiniBarracksTower(sr, cx, cy + 16f, 1.35f, tier = unlockedTier)
-                    drawMiniSoldier(sr, cx - 36f, cy - 30f, tier = unlockedTier)
-                    drawMiniSoldier(sr, cx - 2f, cy - 38f, tier = unlockedTier)
-                    drawMiniSoldier(sr, cx + 34f, cy - 26f, tier = unlockedTier)
+                    val sRank = if (unlockedTier == 2) "Footman" else "Knight"
+                    drawRenderedTower(sr, TowerType.BARRACKS, unlockedTier, cx, cy + 16f, scale = 1.45f)
+                    drawRenderedSoldier(sr, sRank, cx - 36f, cy - 30f, scale = 1.35f)
+                    drawRenderedSoldier(sr, sRank, cx - 2f, cy - 38f, scale = 1.35f)
+                    drawRenderedSoldier(sr, sRank, cx + 34f, cy - 26f, scale = 1.35f)
                 }
-                1 -> {
-                    // CỘT 2: ARCHER TOWER (Lv2 Marksmen hoặc Lv3 Sharpshooter)
-                    drawMiniArcherTower(sr, cx, cy - 6f, 1.45f, tier = unlockedTier)
-                }
-                2 -> {
-                    // CỘT 3: MAGE TOWER (Lv2 Adept hoặc Lv3 Wizard)
-                    drawMiniMageTower(sr, cx, cy - 8f, 1.45f, tier = unlockedTier)
-                }
-                3 -> {
-                    // CỘT 4: ARTILLERY (Lv2 Dwarven Artillery hoặc Lv3 Howitzer)
-                    drawMiniArtilleryTower(sr, cx + 8f, cy - 8f, 1.40f, tier = unlockedTier)
-                    // Các thùng thuốc nổ đỏ (Lv2) hoặc đạn pháo lớn (Lv3) xếp bên trái
-                    if (unlockedTier == 2) {
-                        sr.color = OUTLINE
-                        sr.rect(cx - 52f, cy - 18f, 16f, 22f)
-                        sr.rect(cx - 38f, cy - 26f, 16f, 22f)
-                        sr.color = Color(0.86f, 0.24f, 0.12f, 1f)
-                        sr.rect(cx - 50f, cy - 16f, 12f, 18f)
-                        sr.rect(cx - 36f, cy - 24f, 12f, 18f)
-                    } else {
-                        sr.color = OUTLINE
-                        sr.rect(cx - 52f, cy - 20f, 14f, 26f)
-                        sr.rect(cx - 36f, cy - 26f, 14f, 26f)
-                        sr.color = Color(0.55f, 0.58f, 0.62f, 1f)
-                        sr.rect(cx - 50f, cy - 18f, 10f, 22f)
-                        sr.rect(cx - 34f, cy - 24f, 10f, 22f)
-                    }
+                1 -> drawRenderedTower(sr, TowerType.ARCHER, unlockedTier, cx, cy - 4f, scale = 1.65f)
+                2 -> drawRenderedTower(sr, TowerType.MAGE, unlockedTier, cx, cy - 6f, scale = 1.65f)
+                3 -> drawRenderedTower(sr, TowerType.ARTILLERY, unlockedTier, cx + 4f, cy - 4f, scale = 1.60f)
+            }
+        }
+        sr.end()
+
+        batch.begin()
+        val oldSmallScaleX = smallFont.data.scaleX
+        val oldSmallScaleY = smallFont.data.scaleY
+        smallFont.data.setScale(1.00f)
+        smallFont.color = OUTLINE
+        smallFont.draw(
+            batch,
+            "YOU CAN NOW UPGRADE YOUR TOWERS UP TO LEVEL $unlockedTier.",
+            scrollX, scrollY + scrollH - 74f, scrollW, Align.center, false
+        )
+        smallFont.data.setScale(oldSmallScaleX, oldSmallScaleY)
+        batch.end()
+    }
+
+    private fun getLevel4UnlockEntries(levelNum: Int): List<Level4UnlockEntry> = when (levelNum) {
+        5 -> listOf(
+            Level4UnlockEntry(
+                subtitle = "LEVEL 4 ARCHER TOWER",
+                title = "RANGERS HIDEOUT",
+                description = "HIGHEST RATE OF FIRE AND EXCELLENT RANGE. CAN POISON AND TRAP ENEMIES!",
+                towerType = TowerType.ARCHER,
+                specialization = TowerSpecialization.RANGERS_HIDEOUT
+            )
+        )
+        6 -> listOf(
+            Level4UnlockEntry(
+                subtitle = "LEVEL 4 MAGE TOWER",
+                title = "ARCANE WIZARD",
+                description = "VERY HIGH DAMAGE, EXCELLENT AGAINST ARMORED ENEMIES",
+                towerType = TowerType.MAGE,
+                specialization = TowerSpecialization.ARCANE_WIZARD
+            ),
+            Level4UnlockEntry(
+                subtitle = "LEVEL 4 BARRACKS",
+                title = "HOLY ORDER",
+                description = "SPAWNS PALADINS WITH FULL PLATE ARMOR THAT CAN BLOCK ENEMIES LONGER",
+                towerType = TowerType.BARRACKS,
+                specialization = TowerSpecialization.HOLY_ORDER,
+                soldierRank = "Paladin"
+            )
+        )
+        7 -> listOf(
+            Level4UnlockEntry(
+                subtitle = "LEVEL 4 MARKSMAN TOWER",
+                title = "MUSKETEER GARRISON",
+                description = "GREATEST RANGE AND VERY HIGH DAMAGE.",
+                towerType = TowerType.ARCHER,
+                specialization = TowerSpecialization.MUSKETEER_GARRISON
+            )
+        )
+        8 -> listOf(
+            Level4UnlockEntry(
+                subtitle = "LEVEL 4 ARTILLERY",
+                title = "500MM BIG BERTHA",
+                description = "BIGGEST PIECE OF ARTILLERY THAT DEALS VERY HIGH AREA DAMAGE",
+                towerType = TowerType.ARTILLERY,
+                specialization = TowerSpecialization.BIG_BERTHA
+            ),
+            Level4UnlockEntry(
+                subtitle = "LEVEL 4 BARRACKS",
+                title = "BARBARIAN MEAD HALL",
+                description = "SPAWNS AXE WIELDING BARBARIANS THAT CAN OBLITERATE MOST FOES.",
+                towerType = TowerType.BARRACKS,
+                specialization = TowerSpecialization.BARBARIAN_MEAD_HALL,
+                soldierRank = "Barbarian"
+            )
+        )
+        9 -> listOf(
+            Level4UnlockEntry(
+                subtitle = "LEVEL 4 MAGE TOWER",
+                title = "SORCERER TOWER",
+                description = "CURSES ENEMIES DAMAGING THEM AND REDUCING THEIR ARMOR FOR A WHILE.",
+                towerType = TowerType.MAGE,
+                specialization = TowerSpecialization.SORCERER_MAGE
+            )
+        )
+        10 -> listOf(
+            Level4UnlockEntry(
+                subtitle = "LEVEL 4 ARTILLERY",
+                title = "TESLA X104",
+                description = "SHOOTS BOLTS OF LIGHTNING THAT CAN STRIKE MULTIPLE GROUND AND FLYING ENEMIES.",
+                towerType = TowerType.ARTILLERY,
+                specialization = TowerSpecialization.TESLA_X104
+            )
+        )
+        else -> emptyList()
+    }
+
+    private fun renderNewTowerUnlockedLevel4Popup(
+        sr: ShapeRenderer,
+        batch: SpriteBatch,
+        font: BitmapFont,
+        smallFont: BitmapFont,
+        levelNum: Int
+    ) {
+        val entries = getLevel4UnlockEntries(levelNum)
+        if (entries.isEmpty()) return
+
+        val isSnowTheme = levelNum in 7..9
+        val isWastesTheme = levelNum >= 10
+
+        val cX = Config.WORLD_WIDTH / 2f
+        val scrollW = 620f
+        val scrollX = cX - scrollW / 2f
+
+        val cardH = if (entries.size == 1) 220f else 195f
+        val gap = 22f
+        val bottomScrollY = if (entries.size == 1) Config.WORLD_HEIGHT / 2f - 105f else 132f
+        val topScrollY = bottomScrollY + (entries.size - 1) * (cardH + gap)
+
+        val tabW = 390f
+        val tabH = 62f
+        val tabX = cX - tabW / 2f + 15f
+        val tabY = topScrollY + cardH - 12f
+
+        val okBtnW = 175f
+        val okBtnH = 56f
+        val okBtnX = cX + 55f
+        val okBtnY = bottomScrollY - 56f
+
+        sr.begin(ShapeRenderer.ShapeType.Filled)
+        sr.color = Color(0f, 0f, 0f, 0.42f)
+        sr.rect(0f, 0f, Config.WORLD_WIDTH, Config.WORLD_HEIGHT)
+
+        drawTabButton(sr, okBtnX, okBtnY, okBtnW, okBtnH, Color(0.16f, 0.38f, 0.58f, 1f))
+
+        sr.color = OUTLINE
+        sr.rect(tabX - 3f, tabY - 3f, tabW + 6f, tabH + 6f)
+        sr.color = Color(0.44f, 0.34f, 0.25f, 1f)
+        sr.rect(tabX, tabY, tabW, tabH)
+
+        ComicFontRenderer.drawPlaqueText(sr, "NEW TOWER UNLOCKED!", tabX + tabW / 2f, tabY + tabH / 2f + 2f, 20f, Color(0.96f, 0.92f, 0.72f, 1f))
+        ComicFontRenderer.drawPlaqueText(sr, "OK!", okBtnX + okBtnW / 2f, okBtnY + okBtnH / 2f, 21f, Color.WHITE)
+
+        for (idx in entries.indices) {
+            val entry = entries[idx]
+            val curScrollY = topScrollY - idx * (cardH + gap)
+
+            drawJaggedParchment(sr, scrollX, curScrollY, scrollW, cardH)
+            ComicFontRenderer.drawRibbonBannerText(sr, entry.title, scrollX + 410f, curScrollY + cardH - 68f, 20f)
+
+            val picW = 195f
+            val picH = cardH - 16f
+            val picX = scrollX + 18f
+            val picY = curScrollY + 8f
+
+            sr.color = Color(0f, 0f, 0f, 0.25f)
+            sr.rect(picX + 4f, picY - 4f, picW, picH)
+            sr.color = OUTLINE
+            sr.rect(picX - 3f, picY - 3f, picW + 6f, picH + 6f)
+            sr.color = Color(0.92f, 0.85f, 0.65f, 1f)
+            sr.rect(picX, picY, picW, picH)
+
+            val inX = picX + 9f
+            val inY = picY + 9f
+            val inW = picW - 18f
+            val inH = picH - 18f
+
+            sr.color = when {
+                isSnowTheme -> Color(0.76f, 0.82f, 0.88f, 1f)
+                isWastesTheme -> Color(0.28f, 0.26f, 0.30f, 1f)
+                else -> Color(0.42f, 0.62f, 0.18f, 1f)
+            }
+            sr.rect(inX, inY, inW, inH)
+
+            sr.color = when {
+                isSnowTheme -> Color(0.32f, 0.48f, 0.36f, 1f)
+                isWastesTheme -> Color(0.18f, 0.16f, 0.20f, 1f)
+                else -> Color(0.26f, 0.46f, 0.12f, 1f)
+            }
+            sr.circle(inX + 32f, inY + inH - 22f, 24f)
+            sr.circle(inX + inW - 32f, inY + inH - 22f, 24f)
+            if (isSnowTheme) {
+                sr.color = Color(0.92f, 0.96f, 1f, 0.9f)
+                sr.circle(inX + 32f, inY + inH - 16f, 16f)
+                sr.circle(inX + inW - 32f, inY + inH - 16f, 16f)
+            }
+
+            sr.color = when {
+                isSnowTheme -> Color(0.90f, 0.94f, 0.98f, 1f)
+                isWastesTheme -> Color(0.48f, 0.45f, 0.48f, 1f)
+                else -> Color(0.84f, 0.74f, 0.46f, 1f)
+            }
+            sr.rect(inX, inY, inW, inH * 0.52f)
+
+            val towerCx = inX + inW / 2f
+            val towerCy = if (entry.soldierRank != null) inY + inH * 0.62f else inY + inH * 0.46f
+            val towerScale = if (entry.soldierRank != null) 1.45f else 1.70f
+
+            drawRenderedTower(
+                sr = sr,
+                type = entry.towerType,
+                level = 4,
+                cx = towerCx,
+                cy = towerCy,
+                scale = towerScale,
+                specialization = entry.specialization
+            )
+
+            if (entry.specialization == TowerSpecialization.MUSKETEER_GARRISON) {
+                sr.color = Color(0.95f, 0.96f, 0.98f, 0.92f)
+                sr.circle(towerCx + 22f, towerCy + 14f, 11f)
+                sr.circle(towerCx + 32f, towerCy + 8f, 9f)
+                sr.circle(towerCx - 16f, towerCy + 12f, 8f)
+            }
+
+            if (entry.specialization == TowerSpecialization.TESLA_X104) {
+                val orbX = towerCx
+                val orbY = towerCy + 40f
+                sr.color = Color(0.25f, 0.88f, 1f, 0.95f)
+                sr.rectLine(orbX, orbY, orbX + 28f, orbY - 14f, 5.5f)
+                sr.rectLine(orbX + 28f, orbY - 14f, orbX + 18f, orbY - 36f, 5.5f)
+                sr.rectLine(orbX + 18f, orbY - 36f, orbX + 46f, orbY - 68f, 5.5f)
+                sr.color = Color.WHITE
+                sr.rectLine(orbX, orbY, orbX + 28f, orbY - 14f, 2.2f)
+                sr.rectLine(orbX + 28f, orbY - 14f, orbX + 18f, orbY - 36f, 2.2f)
+                sr.rectLine(orbX + 18f, orbY - 36f, orbX + 46f, orbY - 68f, 2.2f)
+            }
+
+            if (entry.soldierRank != null) {
+                drawRenderedSoldier(sr, entry.soldierRank, towerCx - 28f, inY + 26f, scale = 1.25f)
+                drawRenderedSoldier(sr, entry.soldierRank, towerCx + 6f, inY + 24f, scale = 1.25f)
+                if (entry.specialization == TowerSpecialization.BARBARIAN_MEAD_HALL) {
+                    drawRenderedEnemy(sr, EnemyType.TROLL, towerCx + 42f, inY + 28f, scale = 1.25f)
+                } else {
+                    drawRenderedEnemy(sr, EnemyType.ORC, towerCx - 50f, inY + 24f, scale = 1.15f)
                 }
             }
         }
         sr.end()
 
-        // 5. Vẽ chữ cho bảng NEW TOWER UPGRADES!
         batch.begin()
-        val oldFontScaleX = font.data.scaleX
-        val oldFontScaleY = font.data.scaleY
         val oldSmallScaleX = smallFont.data.scaleX
         val oldSmallScaleY = smallFont.data.scaleY
 
-        font.data.setScale(1.85f)
-        GameUIRenderer.drawBadgeCenteredText(
-            batch, font, "NEW TOWER UPGRADES!",
-            tabX, tabY + 6f, tabW, tabH,
-            Color(0.96f, 0.92f, 0.72f, 1f)
-        )
+        for (idx in entries.indices) {
+            val entry = entries[idx]
+            val curScrollY = topScrollY - idx * (cardH + gap)
+            val textX = scrollX + 235f
+            val topTextY = curScrollY + cardH - 30f
 
-        font.data.setScale(1.65f)
-        font.color = OUTLINE
-        font.draw(
-            batch,
-            "TOWERS LEVEL $unlockedTier AVAILABLE",
-            scrollX, scrollY + scrollH - 36f, scrollW, Align.center, false
-        )
+            smallFont.data.setScale(0.92f)
+            smallFont.color = OUTLINE
+            smallFont.draw(batch, entry.subtitle, textX, topTextY)
 
-        smallFont.data.setScale(1.02f)
-        smallFont.color = OUTLINE
-        smallFont.draw(
-            batch,
-            "YOU CAN NOW UPGRADE YOUR TOWERS UP TO LEVEL $unlockedTier.",
-            scrollX, scrollY + scrollH - 72f, scrollW, Align.center, false
-        )
+            smallFont.data.setScale(0.92f)
+            smallFont.color = Color(0.68f, 0.22f, 0.10f, 1f)
+            val dLines = wrapTextLines(entry.description, 34)
+            var dy = topTextY - 66f
+            for (line in dLines) {
+                smallFont.draw(batch, line, textX, dy)
+                dy -= 19f
+            }
+        }
 
-        font.data.setScale(1.60f)
-        GameUIRenderer.drawBadgeCenteredText(batch, font, "OK!", okBtnX, okBtnY, okBtnW, okBtnH - 4f, Color.WHITE)
-
-        font.data.setScale(oldFontScaleX, oldFontScaleY)
         smallFont.data.setScale(oldSmallScaleX, oldSmallScaleY)
         batch.end()
     }
 
-    // =========================================================================
-    // PHẦN 3: BẢNG GIỚI THIỆU QUÁI MỚI ("NEW ENEMY!") CHUẨN HÌNH 2, 3 & 5
-    // =========================================================================
     private fun renderNewEnemyPopup(
         sr: ShapeRenderer,
         batch: SpriteBatch,
@@ -815,6 +1090,10 @@ object TutorialRenderer {
 
         drawJaggedParchment(sr, scrollX, scrollY, scrollW, scrollH)
 
+        ComicFontRenderer.drawPlaqueText(sr, "NEW ENEMY!", tabX + tabW / 2f, tabY + tabH / 2f + 2f, 23f, Color(0.96f, 0.92f, 0.72f, 1f))
+        ComicFontRenderer.drawPlaqueText(sr, "OK!", okBtnX + okBtnW / 2f, okBtnY + okBtnH / 2f, 22f, Color.WHITE)
+        ComicFontRenderer.drawRibbonBannerText(sr, info.title, scrollX + 440f, scrollY + scrollH - 42f, 21f)
+
         val picX = scrollX + 26f
         val picY = scrollY + 25f
         val picW = 225f
@@ -852,46 +1131,182 @@ object TutorialRenderer {
 
         sr.color = when {
             isSnow -> Color(0.88f, 0.92f, 0.96f, 1f)
-            isWastes -> Color(0.48f, 0.45f, 0.48f, 1f)
+            isWastes -> Color(0.52f, 0.50f, 0.54f, 1f)
             else -> Color(0.84f, 0.74f, 0.46f, 1f)
         }
         sr.rect(innerX, innerY, innerW, innerH * 0.62f)
 
         when (enemyType) {
             EnemyType.GOBLIN -> {
-                val gobPts = listOf(
-                    Vector2(innerX + 42f, innerY + 62f),
-                    Vector2(innerX + 82f, innerY + 86f),
-                    Vector2(innerX + 68f, innerY + 38f),
-                    Vector2(innerX + 122f, innerY + 36f),
+                for (gp in listOf(
+                    Vector2(innerX + 42f, innerY + 62f), Vector2(innerX + 82f, innerY + 86f),
+                    Vector2(innerX + 68f, innerY + 38f), Vector2(innerX + 122f, innerY + 36f),
                     Vector2(innerX + 162f, innerY + 66f)
-                )
-                for (gp in gobPts) drawDummyEnemyEntity(sr, EnemyType.GOBLIN, gp.x, gp.y)
+                )) drawRenderedEnemy(sr, EnemyType.GOBLIN, gp.x, gp.y, scale = 1.45f)
             }
             EnemyType.ORC -> {
-                drawDummyEnemyEntity(sr, EnemyType.ORC, innerX + 38f, innerY + 58f)
-                drawDummyEnemyEntity(sr, EnemyType.ORC, innerX + 82f, innerY + 92f)
-                drawDummyEnemyEntity(sr, EnemyType.ORC, innerX + 115f, innerY + 46f)
-                drawMiniSoldier(sr, innerX + 125f, innerY + 102f)
-                drawMiniSoldier(sr, innerX + 155f, innerY + 46f)
+                drawRenderedEnemy(sr, EnemyType.ORC, innerX + 38f, innerY + 58f, scale = 1.45f)
+                drawRenderedEnemy(sr, EnemyType.ORC, innerX + 82f, innerY + 92f, scale = 1.45f)
+                drawRenderedEnemy(sr, EnemyType.ORC, innerX + 115f, innerY + 46f, scale = 1.45f)
+                drawRenderedSoldier(sr, "Militia", innerX + 125f, innerY + 102f, scale = 1.45f)
+                drawRenderedSoldier(sr, "Militia", innerX + 155f, innerY + 46f, scale = 1.45f)
             }
             EnemyType.SHAMAN -> {
-                // Hình Polaroid Shaman chuẩn Hình 5: Shaman giơ trượng phát sáng cam hồi máu cho đồng bọn
-                drawDummyEnemyEntity(sr, EnemyType.SHAMAN, innerX + 42f, innerY + 68f)
-                drawDummyEnemyEntity(sr, EnemyType.SHAMAN, innerX + 96f, innerY + 95f)
-                // Hào quang hồi máu cam vàng quanh 2 đồng minh phía trước
+                drawRenderedEnemy(sr, EnemyType.SHAMAN, innerX + 42f, innerY + 68f, scale = 1.45f)
+                drawRenderedEnemy(sr, EnemyType.SHAMAN, innerX + 96f, innerY + 95f, scale = 1.45f)
                 for (hpPos in listOf(Vector2(innerX + 105f, innerY + 46f), Vector2(innerX + 162f, innerY + 56f))) {
                     sr.color = Color(1f, 0.62f, 0.12f, 0.65f)
                     sr.circle(hpPos.x, hpPos.y, 20f)
-                    drawDummyEnemyEntity(sr, EnemyType.ORC, hpPos.x, hpPos.y)
+                    drawRenderedEnemy(sr, EnemyType.ORC, hpPos.x, hpPos.y, scale = 1.35f)
                     sr.color = Color(1f, 0.92f, 0.35f, 0.9f)
                     sr.rect(hpPos.x - 6f, hpPos.y - 2f, 12f, 4f)
                     sr.rect(hpPos.x - 2f, hpPos.y - 6f, 4f, 12f)
                 }
             }
-            else -> {
-                drawDummyEnemyEntity(sr, enemyType, innerX + innerW / 2f, innerY + 65f)
+            EnemyType.BANDIT -> {
+                drawRenderedEnemy(sr, EnemyType.BANDIT, innerX + 40f, innerY + 62f, scale = 1.45f)
+                drawRenderedEnemy(sr, EnemyType.BANDIT, innerX + 85f, innerY + 98f, scale = 1.45f)
+                drawRenderedEnemy(sr, EnemyType.BANDIT, innerX + 128f, innerY + 64f, scale = 1.45f)
+                drawRenderedSoldier(sr, "Militia", innerX + 122f, innerY + 102f, scale = 1.40f)
+                drawRenderedSoldier(sr, "Militia", innerX + 164f, innerY + 68f, scale = 1.40f)
             }
+            EnemyType.BRIGAND -> {
+                drawRenderedTower(sr, TowerType.MAGE, 2, innerX + 95f, innerY + 158f, scale = 1.05f)
+                sr.color = Color(0.25f, 0.88f, 1f, 0.85f)
+                sr.circle(innerX + 58f, innerY + 122f, 11f)
+                sr.color = Color.WHITE
+                sr.circle(innerX + 58f, innerY + 122f, 5.5f)
+                drawRenderedEnemy(sr, EnemyType.BRIGAND, innerX + 42f, innerY + 75f, scale = 1.45f)
+                drawRenderedEnemy(sr, EnemyType.BRIGAND, innerX + 104f, innerY + 52f, scale = 1.45f)
+                drawRenderedEnemy(sr, EnemyType.BRIGAND, innerX + 162f, innerY + 95f, scale = 1.45f)
+            }
+            EnemyType.GIANT_SPIDER -> {
+                sr.color = Color(0.92f, 0.95f, 0.98f, 0.85f)
+                sr.rectLine(innerX + 5f, innerY + 175f, innerX + 55f, innerY + 145f, 2f)
+                sr.rectLine(innerX + 5f, innerY + 150f, innerX + 50f, innerY + 168f, 2f)
+                drawRenderedEnemy(sr, EnemyType.GIANT_SPIDER, innerX + 35f, innerY + 112f, scale = 1.35f)
+                drawRenderedEnemy(sr, EnemyType.GIANT_SPIDER, innerX + 42f, innerY + 54f, scale = 1.35f)
+                drawRenderedEnemy(sr, EnemyType.GIANT_SPIDER, innerX + 92f, innerY + 78f, scale = 1.35f)
+                drawRenderedEnemy(sr, EnemyType.GIANT_SPIDER, innerX + 122f, innerY + 108f, scale = 1.35f)
+                drawRenderedEnemy(sr, EnemyType.GIANT_SPIDER, innerX + 156f, innerY + 52f, scale = 1.35f)
+            }
+            EnemyType.MARAUDER -> {
+                drawRenderedEnemy(sr, EnemyType.MARAUDER, innerX + 48f, innerY + 86f, scale = 1.45f)
+                drawRenderedEnemy(sr, EnemyType.MARAUDER, innerX + 92f, innerY + 46f, scale = 1.45f)
+                drawRenderedEnemy(sr, EnemyType.MARAUDER, innerX + 135f, innerY + 96f, scale = 1.45f)
+                drawRenderedEnemy(sr, EnemyType.BRIGAND, innerX + 172f, innerY + 92f, scale = 1.25f)
+            }
+            EnemyType.SPIDER_MATRIARCH -> {
+                drawRenderedEgg(sr, innerX + 38f, innerY + 76f, scale = 1.15f)
+                drawRenderedEgg(sr, innerX + 36f, innerY + 34f, scale = 1.15f)
+                drawRenderedEgg(sr, innerX + 64f, innerY + 56f, scale = 1.15f)
+                drawRenderedEnemy(sr, EnemyType.SPIDER_MATRIARCH, innerX + 115f, innerY + 72f, scale = 1.65f)
+                drawRenderedEnemy(sr, EnemyType.SPIDER_HATCHLING, innerX + 86f, innerY + 32f, scale = 1.35f)
+                drawRenderedEnemy(sr, EnemyType.SPIDER_HATCHLING, innerX + 148f, innerY + 98f, scale = 1.35f)
+                drawRenderedEnemy(sr, EnemyType.SPIDER_HATCHLING, innerX + 162f, innerY + 42f, scale = 1.35f)
+            }
+            EnemyType.DARK_KNIGHT -> {
+                drawRenderedEnemy(sr, EnemyType.DARK_KNIGHT, innerX + 45f, innerY + 62f, scale = 1.45f)
+                drawRenderedEnemy(sr, EnemyType.DARK_KNIGHT, innerX + 95f, innerY + 105f, scale = 1.45f)
+                drawRenderedEnemy(sr, EnemyType.DARK_KNIGHT, innerX + 115f, innerY + 52f, scale = 1.45f)
+                drawRenderedSoldier(sr, "Knight", innerX + 152f, innerY + 52f, scale = 1.40f)
+            }
+            EnemyType.GARGOYLE -> {
+                drawRenderedSoldier(sr, "Knight", innerX + 72f, innerY + 36f, scale = 1.30f)
+                drawRenderedSoldier(sr, "Knight", innerX + 106f, innerY + 44f, scale = 1.30f)
+                drawRenderedSoldier(sr, "Knight", innerX + 138f, innerY + 38f, scale = 1.30f)
+                drawRenderedEnemy(sr, EnemyType.GARGOYLE, innerX + 52f, innerY + 112f, scale = 1.35f)
+                drawRenderedEnemy(sr, EnemyType.GARGOYLE, innerX + 98f, innerY + 95f, scale = 1.35f)
+                drawRenderedEnemy(sr, EnemyType.GARGOYLE, innerX + 152f, innerY + 118f, scale = 1.35f)
+            }
+            EnemyType.TROLL -> {
+                drawRenderedEnemy(sr, EnemyType.TROLL, innerX + 52f, innerY + 86f, scale = 1.45f)
+                drawRenderedEnemy(sr, EnemyType.TROLL, innerX + 95f, innerY + 46f, scale = 1.45f)
+                drawRenderedEnemy(sr, EnemyType.TROLL, innerX + 138f, innerY + 105f, scale = 1.45f)
+            }
+            EnemyType.WINTER_WOLF -> {
+                drawRenderedEnemy(sr, EnemyType.WINTER_WOLF, innerX + 48f, innerY + 86f, scale = 1.40f)
+                drawRenderedEnemy(sr, EnemyType.WINTER_WOLF, innerX + 105f, innerY + 46f, scale = 1.40f)
+                drawRenderedEnemy(sr, EnemyType.WINTER_WOLF, innerX + 148f, innerY + 78f, scale = 1.40f)
+            }
+            EnemyType.TROLL_CHAMPION -> {
+                drawRenderedEnemy(sr, EnemyType.TROLL_CHAMPION, innerX + 48f, innerY + 88f, scale = 1.40f)
+                drawRenderedEnemy(sr, EnemyType.TROLL_CHAMPION, innerX + 78f, innerY + 42f, scale = 1.40f)
+                drawRenderedEnemy(sr, EnemyType.TROLL_CHAMPION, innerX + 128f, innerY + 82f, scale = 1.40f)
+                for (axePos in listOf(Vector2(innerX + 102f, innerY + 135f), Vector2(innerX + 158f, innerY + 122f))) {
+                    sr.color = OUTLINE
+                    sr.rectLine(axePos.x - 6f, axePos.y - 6f, axePos.x + 6f, axePos.y + 6f, 3.5f)
+                    sr.color = Color(0.82f, 0.86f, 0.90f, 1f)
+                    sr.circle(axePos.x - 4f, axePos.y + 4f, 5.5f)
+                }
+            }
+            EnemyType.YETI -> drawRenderedEnemy(sr, EnemyType.YETI, innerX + innerW / 2f, innerY + 66f, scale = 2.25f)
+            EnemyType.TROLL_CHIEFTAIN -> {
+                for (mp in listOf(Vector2(innerX + 38f, innerY + 56f), Vector2(innerX + 132f, innerY + 108f), Vector2(innerX + 156f, innerY + 54f))) {
+                    sr.color = Color(0.95f, 0.28f, 0.10f, 0.65f)
+                    sr.ellipse(mp.x - 20f, mp.y - 18f, 40f, 15f)
+                    drawRenderedEnemy(sr, EnemyType.TROLL, mp.x, mp.y, scale = 1.25f)
+                }
+                drawRenderedEnemy(sr, EnemyType.TROLL_CHIEFTAIN, innerX + 86f, innerY + 78f, scale = 1.55f)
+            }
+            EnemyType.DARK_SLAYER -> {
+                drawRenderedEnemy(sr, EnemyType.DARK_SLAYER, innerX + 46f, innerY + 56f, scale = 1.45f)
+                drawRenderedEnemy(sr, EnemyType.DARK_SLAYER, innerX + 98f, innerY + 96f, scale = 1.45f)
+                drawRenderedSoldier(sr, "Barbarian", innerX + 156f, innerY + 88f, scale = 1.35f)
+            }
+            EnemyType.ROCKET_RIDER -> {
+                for (rp in listOf(Vector2(innerX + 42f, innerY + 122f), Vector2(innerX + 42f, innerY + 78f), Vector2(innerX + 92f, innerY + 104f), Vector2(innerX + 148f, innerY + 96f))) {
+                    sr.color = Color(0f, 0f, 0f, 0.26f)
+                    sr.ellipse(rp.x - 10f, rp.y - 34f, 20f, 7f)
+                    drawRenderedEnemy(sr, EnemyType.ROCKET_RIDER, rp.x, rp.y, scale = 1.25f)
+                }
+            }
+            EnemyType.DEMON_SPAWN -> {
+                drawRenderedEnemy(sr, EnemyType.DEMON_SPAWN, innerX + 42f, innerY + 56f, scale = 1.40f)
+                drawRenderedEnemy(sr, EnemyType.DEMON_SPAWN, innerX + 68f, innerY + 108f, scale = 1.40f)
+                drawRenderedEnemy(sr, EnemyType.DEMON_SPAWN, innerX + 135f, innerY + 108f, scale = 1.40f)
+                drawRenderedSoldier(sr, "Knight", innerX + 168f, innerY + 108f, scale = 1.35f)
+                drawRenderedSoldier(sr, "Knight", innerX + 138f, innerY + 58f, scale = 1.35f)
+                val expX = innerX + 102f; val expY = innerY + 56f
+                sr.color = Color(0.95f, 0.28f, 0.06f, 0.90f); sr.circle(expX, expY, 22f)
+                sr.color = Color(1f, 0.62f, 0.12f, 0.95f); sr.circle(expX, expY, 15f)
+                sr.color = Color(1f, 0.92f, 0.28f, 1f); sr.circle(expX, expY, 8f)
+            }
+            EnemyType.DEMON_LORD -> {
+                for (sp in listOf(Vector2(innerX + 42f, innerY + 76f), Vector2(innerX + 115f, innerY + 44f), Vector2(innerX + 158f, innerY + 102f))) {
+                    sr.color = Color(0.98f, 0.35f, 0.08f, 0.65f); sr.circle(sp.x, sp.y, 24f)
+                    sr.color = Color(1f, 0.72f, 0.18f, 0.45f); sr.circle(sp.x, sp.y, 19f)
+                    drawRenderedEnemy(sr, EnemyType.DEMON_SPAWN, sp.x, sp.y, scale = 1.25f)
+                }
+                drawRenderedEnemy(sr, EnemyType.DEMON_LORD, innerX + 94f, innerY + 96f, scale = 1.55f)
+                sr.color = Color(1f, 0.52f, 0.10f, 0.85f); sr.circle(innerX + 74f, innerY + 114f, 11f)
+                sr.color = Color(1f, 0.92f, 0.35f, 1f); sr.circle(innerX + 74f, innerY + 114f, 6f)
+            }
+            EnemyType.DEMON_HOUND -> {
+                drawRenderedEnemy(sr, EnemyType.DEMON_HOUND, innerX + 42f, innerY + 95f, scale = 1.40f)
+                drawRenderedEnemy(sr, EnemyType.DEMON_HOUND, innerX + 86f, innerY + 52f, scale = 1.40f)
+                drawRenderedEnemy(sr, EnemyType.DEMON_HOUND, innerX + 148f, innerY + 86f, scale = 1.40f)
+            }
+            EnemyType.DEMON_IMP -> {
+                for (ip in listOf(Vector2(innerX + 42f, innerY + 112f), Vector2(innerX + 95f, innerY + 66f), Vector2(innerX + 152f, innerY + 104f))) {
+                    sr.color = Color(0f, 0f, 0f, 0.28f); sr.ellipse(ip.x - 10f, ip.y - 30f, 20f, 7f)
+                    drawRenderedEnemy(sr, EnemyType.DEMON_IMP, ip.x, ip.y, scale = 1.35f)
+                }
+            }
+            EnemyType.NECROMANCER -> {
+                for (mp in listOf(Vector2(innerX + 34f, innerY + 78f), Vector2(innerX + 58f, innerY + 118f), Vector2(innerX + 95f, innerY + 42f), Vector2(innerX + 152f, innerY + 112f), Vector2(innerX + 158f, innerY + 64f))) {
+                    sr.color = Color(0.24f, 0.22f, 0.24f, 1f); sr.ellipse(mp.x - 18f, mp.y - 12f, 36f, 16f)
+                    drawRenderedEnemy(sr, EnemyType.SKELETON, mp.x, mp.y + 4f, scale = 1.15f)
+                }
+                val necX = innerX + 96f; val necY = innerY + 92f
+                drawRenderedEnemy(sr, EnemyType.NECROMANCER, necX, necY, scale = 1.55f)
+                for (side in listOf(-18f, 18f)) {
+                    sr.color = Color(0.28f, 0.98f, 0.20f, 0.75f); sr.circle(necX + side, necY + 2f, 10f)
+                    sr.color = Color(0.82f, 1f, 0.65f, 0.95f); sr.circle(necX + side, necY + 2f, 5f)
+                }
+            }
+            EnemyType.MAGMA_ELEMENTAL -> drawRenderedEnemy(sr, EnemyType.MAGMA_ELEMENTAL, innerX + innerW / 2f, innerY + 66f, scale = 2.25f)
+            else -> drawRenderedEnemy(sr, enemyType, innerX + innerW / 2f, innerY + 65f, scale = 2.15f)
         }
 
         if (info.bottomTip1.isNotEmpty()) {
@@ -915,43 +1330,29 @@ object TutorialRenderer {
         sr.end()
 
         batch.begin()
-        val oldFontScaleX = font.data.scaleX
-        val oldFontScaleY = font.data.scaleY
         val oldSmallScaleX = smallFont.data.scaleX
         val oldSmallScaleY = smallFont.data.scaleY
 
-        font.data.setScale(1.85f)
-        GameUIRenderer.drawBadgeCenteredText(
-            batch, font, "NEW ENEMY!",
-            tabX, tabY + 6f, tabW, tabH,
-            Color(0.96f, 0.92f, 0.72f, 1f)
-        )
-
-        font.data.setScale(1.60f)
-        GameUIRenderer.drawBadgeCenteredText(batch, font, "OK!", okBtnX, okBtnY, okBtnW, okBtnH - 4f, Color.WHITE)
-
         val textX = scrollX + 275f
-        font.data.setScale(1.55f)
-        font.color = OUTLINE
-        font.draw(batch, info.title, textX, scrollY + scrollH - 36f)
-
-        smallFont.data.setScale(0.92f)
+        smallFont.data.setScale(0.90f)
         smallFont.color = OUTLINE
-        val descLines = wrapTextLines(info.description, 34)
+        val descLines = wrapTextLines(info.description, 35)
         var curY = scrollY + scrollH - 72f
+        val lineStep = if (descLines.size >= 4 || info.bullets.size >= 4) 17.5f else 19f
         for (line in descLines) {
             smallFont.draw(batch, line, textX, curY)
-            curY -= 19f
+            curY -= lineStep
         }
 
-        curY -= 10f
-        smallFont.data.setScale(0.98f)
+        curY -= if (info.bullets.size >= 4) 6f else 10f
+        smallFont.data.setScale(0.95f)
+        val bulletStep = if (info.bullets.size >= 4) 19f else 21f
         for (b in info.bullets) {
             smallFont.color = OUTLINE
             smallFont.draw(batch, "-", textX, curY)
             smallFont.color = Color(0.68f, 0.22f, 0.10f, 1f)
             smallFont.draw(batch, b, textX + 18f, curY)
-            curY -= 22f
+            curY -= bulletStep
         }
 
         if (info.footnote.isNotEmpty()) {
@@ -976,14 +1377,10 @@ object TutorialRenderer {
             }
         }
 
-        font.data.setScale(oldFontScaleX, oldFontScaleY)
         smallFont.data.setScale(oldSmallScaleX, oldSmallScaleY)
         batch.end()
     }
 
-    // =========================================================================
-    // PHẦN 4: BẢNG MẸO CHIẾN THUẬT ("HINT") CHO MÀN 1, MÀN 2 & MÀN 3
-    // =========================================================================
     private fun renderHintPopup(
         sr: ShapeRenderer,
         batch: SpriteBatch,
@@ -1021,12 +1418,16 @@ object TutorialRenderer {
 
         drawJaggedParchment(sr, scrollX, scrollY, scrollW, scrollH)
 
+        ComicFontRenderer.drawPlaqueText(sr, "HINT", cX, tabY + tabH / 2f + 2f, 26f, Color(0.96f, 0.92f, 0.72f, 1f))
+        ComicFontRenderer.drawPlaqueText(sr, "OK!", okBtnX + okBtnW / 2f, okBtnY + okBtnH / 2f, 22f, Color.WHITE)
+
         when (hintType) {
             HintPopupType.ARMORED_ENEMIES -> {
+                ComicFontRenderer.drawRibbonBannerText(sr, "ARMORED ENEMIES!", scrollX + 355f, scrollY + scrollH - 48f, 20f)
                 drawArmorShieldIcon(sr, scrollX + 92f, scrollY + scrollH - 82f, 1.85f, isMagic = false)
 
                 val diagramY = scrollY + 138f
-                drawDummyEnemyEntity(sr, EnemyType.ORC, scrollX + 125f, diagramY, scale = 1.45f)
+                drawRenderedEnemy(sr, EnemyType.ORC, scrollX + 125f, diagramY, scale = 1.95f)
 
                 val arrowStart = Vector2(scrollX + 172f, diagramY + 8f)
                 val arrowMid = Vector2(scrollX + 220f, diagramY + 15f)
@@ -1036,18 +1437,18 @@ object TutorialRenderer {
                 sr.rectLine(arrowMid, arrowEnd, 4.5f)
                 sr.triangle(arrowEnd.x + 8f, arrowEnd.y - 2f, arrowEnd.x - 10f, arrowEnd.y + 10f, arrowEnd.x - 8f, arrowEnd.y - 10f)
 
-                drawMiniArcherTower(sr, scrollX + 345f, diagramY - 2f, 1.05f)
-                drawMiniBarracksTower(sr, scrollX + 435f, diagramY - 2f, 1.05f)
-                drawMiniSoldier(sr, scrollX + 455f, diagramY - 18f)
-                drawMiniArtilleryTower(sr, scrollX + 528f, diagramY - 2f, 1.05f)
+                drawRenderedTower(sr, TowerType.ARCHER, 1, scrollX + 345f, diagramY - 2f, scale = 1.25f)
+                drawRenderedTower(sr, TowerType.BARRACKS, 1, scrollX + 435f, diagramY - 2f, scale = 1.25f)
+                drawRenderedSoldier(sr, "Militia", scrollX + 458f, diagramY - 20f, scale = 1.20f)
+                drawRenderedTower(sr, TowerType.ARTILLERY, 1, scrollX + 532f, diagramY - 2f, scale = 1.25f)
             }
 
             HintPopupType.MAGIC_RESISTANT_ENEMIES -> {
-                // --- HÌNH 6 (MÀN 3): MAGIC RESISTANT ENEMIES! ---
+                ComicFontRenderer.drawRibbonBannerText(sr, "MAGIC RESISTANT ENEMIES!", scrollX + 395f, scrollY + scrollH - 48f, 18f)
                 drawArmorShieldIcon(sr, scrollX + 92f, scrollY + scrollH - 82f, 1.85f, isMagic = true)
 
                 val diagramY = scrollY + 142f
-                drawDummyEnemyEntity(sr, EnemyType.SHAMAN, scrollX + 205f, diagramY, scale = 1.45f)
+                drawRenderedEnemy(sr, EnemyType.SHAMAN, scrollX + 205f, diagramY, scale = 1.95f)
 
                 val arrowStart = Vector2(scrollX + 252f, diagramY + 8f)
                 val arrowMid = Vector2(scrollX + 305f, diagramY + 15f)
@@ -1057,11 +1458,11 @@ object TutorialRenderer {
                 sr.rectLine(arrowMid, arrowEnd, 4.5f)
                 sr.triangle(arrowEnd.x + 8f, arrowEnd.y - 2f, arrowEnd.x - 10f, arrowEnd.y + 10f, arrowEnd.x - 8f, arrowEnd.y - 10f)
 
-                drawMiniMageTower(sr, scrollX + 425f, diagramY - 2f, 1.25f)
+                drawRenderedTower(sr, TowerType.MAGE, 1, scrollX + 425f, diagramY - 2f, scale = 1.45f)
             }
 
             HintPopupType.STRATEGY_BASICS -> {
-                // --- HÌNH 4 (MÀN 2): STRATEGY BASICS! (BẢN ĐỒ HỖ TRỢ TRẠI LÍNH) ---
+                ComicFontRenderer.drawRibbonBannerText(sr, "STRATEGY BASICS!", cX, scrollY + scrollH - 42f, 22f)
                 val mapW = 540f
                 val mapH = 210f
                 val mapX = cX - mapW / 2f
@@ -1072,7 +1473,6 @@ object TutorialRenderer {
                 sr.color = Color(0.54f, 0.72f, 0.22f, 1f)
                 sr.rect(mapX, mapY, mapW, mapH)
 
-                // Con đường chữ S đi qua cụm tháp phòng thủ
                 val rEdge = Color(0.62f, 0.52f, 0.30f, 1f)
                 val rFill = Color(0.84f, 0.75f, 0.48f, 1f)
                 val p1 = Vector2(mapX + 10f, mapY + 75f)
@@ -1085,7 +1485,6 @@ object TutorialRenderer {
                 sr.color = rFill
                 sr.rectLine(p1, p2, 54f); sr.rectLine(p2, p3, 54f); sr.rectLine(p4, p5, 54f)
 
-                // Vòng tròn đỏ dưới chân 3 tháp tầm xa (Mage, Archer, Artillery)
                 val magePos = Vector2(mapX + 165f, mapY + 152f)
                 val archPos = Vector2(mapX + 355f, mapY + 158f)
                 val artPos = Vector2(mapX + 115f, mapY + 38f)
@@ -1098,27 +1497,25 @@ object TutorialRenderer {
                     sr.ellipse(tp.x - 31f, tp.y - 15f, 62f, 26f)
                 }
 
-                drawMiniMageTower(sr, magePos.x, magePos.y, 0.90f)
-                drawMiniArcherTower(sr, archPos.x, archPos.y, 0.90f)
-                drawMiniBarracksTower(sr, barrPos.x, barrPos.y, 0.90f)
-                drawMiniArtilleryTower(sr, artPos.x, artPos.y, 0.90f)
+                drawRenderedTower(sr, TowerType.MAGE, 1, magePos.x, magePos.y, scale = 0.95f)
+                drawRenderedTower(sr, TowerType.ARCHER, 1, archPos.x, archPos.y, scale = 0.95f)
+                drawRenderedTower(sr, TowerType.BARRACKS, 1, barrPos.x, barrPos.y, scale = 0.95f)
+                drawRenderedTower(sr, TowerType.ARTILLERY, 1, artPos.x, artPos.y, scale = 0.95f)
 
-                // Lính chặn đánh quái ở giữa đường + 3 mũi tên đỏ từ 3 tháp tầm xa bắn hỗ trợ
                 val chokeX = mapX + 235f
                 val chokeY = mapY + 102f
-                drawMiniSoldier(sr, chokeX - 8f, chokeY + 6f)
-                drawMiniSoldier(sr, chokeX + 14f, chokeY - 4f)
-                drawMiniSoldier(sr, chokeX - 18f, chokeY - 16f)
-                drawMiniGoblin(sr, chokeX - 22f, chokeY + 6f, 0.85f)
-                drawMiniGoblin(sr, chokeX + 26f, chokeY - 2f, 0.85f)
-                drawMiniGoblin(sr, chokeX - 4f, chokeY - 16f, 0.85f)
+                drawRenderedSoldier(sr, "Militia", chokeX - 8f, chokeY + 6f, scale = 1.05f)
+                drawRenderedSoldier(sr, "Militia", chokeX + 14f, chokeY - 4f, scale = 1.05f)
+                drawRenderedSoldier(sr, "Militia", chokeX - 18f, chokeY - 16f, scale = 1.05f)
+                drawRenderedEnemy(sr, EnemyType.GOBLIN, chokeX - 24f, chokeY + 6f, scale = 1.05f)
+                drawRenderedEnemy(sr, EnemyType.ORC, chokeX + 28f, chokeY - 2f, scale = 1.05f)
+                drawRenderedEnemy(sr, EnemyType.GOBLIN, chokeX - 4f, chokeY - 18f, scale = 1.05f)
 
                 sr.color = Color(0.86f, 0.22f, 0.10f, 1f)
                 sr.rectLine(magePos.x + 18f, magePos.y + 18f, chokeX - 6f, chokeY + 24f, 3.8f)
                 sr.rectLine(archPos.x - 24f, archPos.y + 12f, chokeX + 16f, chokeY + 22f, 3.8f)
                 sr.rectLine(artPos.x + 18f, artPos.y + 24f, chokeX - 28f, chokeY - 12f, 3.8f)
 
-                // Khung giấy ghi chú trắng kem: "SUPPORT YOUR SOLDIERS WITH RANGED TOWERS!"
                 val noteX = mapX + 235f
                 val noteY = mapY + 10f
                 val noteW = 195f
@@ -1130,7 +1527,65 @@ object TutorialRenderer {
                 sr.rect(noteX, noteY, noteW, noteH)
             }
 
+            HintPopupType.HEAVILY_ARMORED_ENEMIES -> {
+                ComicFontRenderer.drawRibbonBannerText(sr, "HEAVILY ARMORED ENEMIES!", cX, scrollY + scrollH - 42f, 20f)
+                val mapW = 520f
+                val mapH = 205f
+                val mapX = cX - mapW / 2f
+                val mapY = scrollY + 24f
+
+                sr.color = Color(0.75f, 0.68f, 0.46f, 1f)
+                sr.rect(mapX - 3f, mapY - 3f, mapW + 6f, mapH + 6f)
+                sr.color = Color(0.84f, 0.75f, 0.48f, 1f)
+                sr.rect(mapX, mapY, mapW, mapH)
+
+                sr.color = Color(0.46f, 0.66f, 0.18f, 1f)
+                sr.rect(mapX, mapY, 175f, 118f)
+                sr.rect(mapX + mapW - 185f, mapY, 185f, 128f)
+
+                val wizPos = Vector2(mapX + 105f, mapY + 86f)
+                val arcPos = Vector2(mapX + mapW - 105f, mapY + 86f)
+
+                drawRenderedTower(sr, TowerType.MAGE, 3, wizPos.x, wizPos.y, scale = 1.45f)
+                drawRenderedTower(
+                    sr = sr,
+                    type = TowerType.MAGE,
+                    level = 4,
+                    cx = arcPos.x,
+                    cy = arcPos.y,
+                    scale = 1.45f,
+                    specialization = TowerSpecialization.ARCANE_WIZARD
+                )
+
+                val dk1 = Vector2(mapX + 235f, mapY + 138f)
+                val dk2 = Vector2(mapX + 252f, mapY + 95f)
+                drawRenderedEnemy(sr, EnemyType.DARK_KNIGHT, dk1.x, dk1.y, scale = 1.35f)
+                drawRenderedEnemy(sr, EnemyType.DARK_KNIGHT, dk2.x, dk2.y, scale = 1.35f)
+
+                sr.color = Color(0.25f, 0.88f, 1f, 0.85f)
+                sr.circle(mapX + 188f, mapY + 135f, 10f)
+                sr.color = Color.WHITE
+                sr.circle(mapX + 188f, mapY + 135f, 5f)
+
+                sr.color = Color(0.92f, 0.25f, 1f, 0.90f)
+                sr.rectLine(arcPos.x, arcPos.y + 26f, dk2.x + 6f, dk2.y, 6f)
+                sr.color = Color.WHITE
+                sr.rectLine(arcPos.x, arcPos.y + 26f, dk2.x + 6f, dk2.y, 2.2f)
+
+                val noteW = 205f
+                val noteH = 62f
+                val noteX = cX - noteW / 2f
+                val noteY = mapY + 6f
+                sr.color = OUTLINE
+                sr.rect(noteX - 2f, noteY - 2f, noteW + 4f, noteH + 4f)
+                sr.triangle(noteX + 18f, noteY + noteH, noteX + 34f, noteY + noteH, wizPos.x + 38f, wizPos.y - 8f)
+                sr.triangle(noteX + noteW - 34f, noteY + noteH, noteX + noteW - 18f, noteY + noteH, arcPos.x - 38f, arcPos.y - 8f)
+                sr.color = Color(0.98f, 0.96f, 0.90f, 1f)
+                sr.rect(noteX, noteY, noteW, noteH)
+            }
+
             else -> {
+                ComicFontRenderer.drawRibbonBannerText(sr, "COMMAND YOUR TROOPS!", scrollX + 365f, scrollY + scrollH - 48f, 19f)
                 drawBlueRallyFlagIcon(sr, scrollX + 88f, scrollY + scrollH - 86f, 1.85f)
 
                 val wheelCx = scrollX + 148f
@@ -1156,7 +1611,7 @@ object TutorialRenderer {
                     )
                 }
 
-                drawMiniBarracksTower(sr, wheelCx, wheelCy, 1.02f)
+                drawRenderedTower(sr, TowerType.BARRACKS, 1, wheelCx, wheelCy, scale = 1.15f)
 
                 val upY = wheelCy + 62f
                 sr.color = OUTLINE
@@ -1193,10 +1648,10 @@ object TutorialRenderer {
                 sr.color = Color(0.88f, 0.85f, 0.66f, 1f)
                 sr.ellipse(rangeCx - 142f, rangeCy - 69f, 284f, 138f)
 
-                drawMiniBarracksTower(sr, rangeCx - 10f, rangeCy + 14f, 1.15f)
-                drawMiniSoldier(sr, rangeCx - 58f, rangeCy - 36f)
-                drawMiniSoldier(sr, rangeCx - 36f, rangeCy - 22f)
-                drawMiniSoldier(sr, rangeCx - 14f, rangeCy - 38f)
+                drawRenderedTower(sr, TowerType.BARRACKS, 1, rangeCx - 10f, rangeCy + 16f, scale = 1.25f)
+                drawRenderedSoldier(sr, "Militia", rangeCx - 58f, rangeCy - 36f, scale = 1.25f)
+                drawRenderedSoldier(sr, "Militia", rangeCx - 34f, rangeCy - 22f, scale = 1.25f)
+                drawRenderedSoldier(sr, "Militia", rangeCx - 12f, rangeCy - 38f, scale = 1.25f)
 
                 sr.color = Color(0.14f, 0.48f, 0.78f, 1f)
                 sr.rect(rangeCx + 4f, rangeCy - 38f, 16f, 9f)
@@ -1218,132 +1673,163 @@ object TutorialRenderer {
         sr.end()
 
         batch.begin()
-        val oldFontScaleX = font.data.scaleX
-        val oldFontScaleY = font.data.scaleY
         val oldSmallScaleX = smallFont.data.scaleX
         val oldSmallScaleY = smallFont.data.scaleY
 
-        font.data.setScale(1.95f)
-        GameUIRenderer.drawBadgeCenteredText(
-            batch, font, "HINT",
-            tabX, tabY + 6f, tabW, tabH,
-            Color(0.96f, 0.92f, 0.72f, 1f)
-        )
-
-        font.data.setScale(1.60f)
-        GameUIRenderer.drawBadgeCenteredText(batch, font, "OK!", okBtnX, okBtnY, okBtnW, okBtnH - 4f, Color.WHITE)
-
         val headerX = scrollX + 170f
+        val redHighlight = Color(0.76f, 0.20f, 0.08f, 1f)
+
         when (hintType) {
             HintPopupType.ARMORED_ENEMIES -> {
-                font.data.setScale(1.60f)
-                font.color = OUTLINE
-                font.draw(batch, "ARMORED ENEMIES!", headerX, scrollY + scrollH - 42f)
-
                 smallFont.data.setScale(0.95f)
                 smallFont.color = Color(0.24f, 0.20f, 0.16f, 1f)
                 smallFont.draw(batch, "SOME ENEMIES WEAR DIFFERENT LEVELS OF", headerX, scrollY + scrollH - 76f)
                 smallFont.draw(batch, "ARMOR THAT PROTECTS THEM AGAINST", headerX, scrollY + scrollH - 96f)
                 smallFont.draw(batch, "NON-MAGICAL ATTACKS.", headerX, scrollY + scrollH - 116f)
 
-                smallFont.data.setScale(0.82f)
-                smallFont.color = Color(0.72f, 0.22f, 0.08f, 1f)
+                smallFont.data.setScale(0.84f)
+                smallFont.color = redHighlight
                 smallFont.draw(batch, "RESISTS", scrollX + 150f, scrollY + 195f, 140f, Align.center, false)
                 smallFont.draw(batch, "DAMAGE FROM", scrollX + 150f, scrollY + 178f, 140f, Align.center, false)
 
-                smallFont.data.setScale(1.00f)
-                smallFont.color = OUTLINE
-                smallFont.draw(batch, "ARMORED ENEMIES TAKE ", scrollX + 95f, scrollY + 70f)
-                smallFont.color = Color(0.74f, 0.22f, 0.08f, 1f)
-                smallFont.draw(batch, "LESS DAMAGE", scrollX + 340f, scrollY + 70f)
-                smallFont.color = OUTLINE
-                smallFont.draw(batch, " FROM", scrollX + 485f, scrollY + 70f)
-
-                smallFont.color = Color(0.74f, 0.22f, 0.08f, 1f)
-                smallFont.draw(batch, "MARKSMEN, SOLDIERS", scrollX + 135f, scrollY + 46f)
-                smallFont.color = OUTLINE
-                smallFont.draw(batch, " AND ", scrollX + 365f, scrollY + 46f)
-                smallFont.color = Color(0.74f, 0.22f, 0.08f, 1f)
-                smallFont.draw(batch, "ARTILLERY.", scrollX + 422f, scrollY + 46f)
+                smallFont.data.setScale(0.98f)
+                ComicFontRenderer.drawMultiColorLine(
+                    batch, smallFont,
+                    listOf(
+                        Pair("ARMORED ENEMIES TAKE ", OUTLINE),
+                        Pair("LESS DAMAGE ", redHighlight),
+                        Pair("FROM", OUTLINE)
+                    ),
+                    scrollX + 115f, scrollY + 70f
+                )
+                ComicFontRenderer.drawMultiColorLine(
+                    batch, smallFont,
+                    listOf(
+                        Pair("MARKSMEN, SOLDIERS ", redHighlight),
+                        Pair("AND ", OUTLINE),
+                        Pair("ARTILLERY.", redHighlight)
+                    ),
+                    scrollX + 145f, scrollY + 46f
+                )
             }
 
             HintPopupType.MAGIC_RESISTANT_ENEMIES -> {
-                font.data.setScale(1.55f)
-                font.color = OUTLINE
-                font.draw(batch, "MAGIC RESISTANT ENEMIES!", headerX, scrollY + scrollH - 42f)
-
                 smallFont.data.setScale(0.95f)
                 smallFont.color = Color(0.24f, 0.20f, 0.16f, 1f)
                 smallFont.draw(batch, "SOME ENEMIES ENJOY DIFFERENT LEVELS OF", headerX, scrollY + scrollH - 76f)
                 smallFont.draw(batch, "MAGIC RESISTANCE THAT PROTECTS THEM", headerX, scrollY + scrollH - 96f)
                 smallFont.draw(batch, "AGAINST MAGICAL ATTACKS.", headerX, scrollY + scrollH - 116f)
 
-                smallFont.data.setScale(0.82f)
-                smallFont.color = Color(0.72f, 0.22f, 0.08f, 1f)
+                smallFont.data.setScale(0.84f)
+                smallFont.color = redHighlight
                 smallFont.draw(batch, "RESISTS", scrollX + 235f, scrollY + 198f, 140f, Align.center, false)
                 smallFont.draw(batch, "DAMAGE FROM", scrollX + 235f, scrollY + 181f, 140f, Align.center, false)
 
-                smallFont.data.setScale(1.02f)
+                smallFont.data.setScale(0.98f)
                 smallFont.color = OUTLINE
                 smallFont.draw(batch, "MAGIC RESISTANT ENEMIES TAKE", scrollX, scrollY + 72f, scrollW, Align.center, false)
 
-                smallFont.color = Color(0.74f, 0.22f, 0.08f, 1f)
-                smallFont.draw(batch, "LESS DAMAGE", scrollX + 180f, scrollY + 46f)
-                smallFont.color = OUTLINE
-                smallFont.draw(batch, " FROM ", scrollX + 332f, scrollY + 46f)
-                smallFont.color = Color(0.74f, 0.22f, 0.08f, 1f)
-                smallFont.draw(batch, "WIZARDS.", scrollX + 402f, scrollY + 46f)
+                ComicFontRenderer.drawMultiColorLine(
+                    batch, smallFont,
+                    listOf(
+                        Pair("LESS DAMAGE ", redHighlight),
+                        Pair("FROM ", OUTLINE),
+                        Pair("WIZARDS.", redHighlight)
+                    ),
+                    scrollX + 195f, scrollY + 46f
+                )
             }
 
             HintPopupType.STRATEGY_BASICS -> {
-                font.data.setScale(1.60f)
-                font.color = OUTLINE
-                font.draw(batch, "STRATEGY BASICS!", scrollX, scrollY + scrollH - 36f, scrollW, Align.center, false)
-
                 smallFont.data.setScale(0.94f)
-                smallFont.color = OUTLINE
-                smallFont.draw(batch, "BARRACKS ARE ", scrollX + 75f, scrollY + scrollH - 72f)
-                smallFont.color = Color(0.74f, 0.22f, 0.08f, 1f)
-                smallFont.draw(batch, "GOOD FOR BLOCKING THE ENEMY,", scrollX + 222f, scrollY + scrollH - 72f)
-
-                smallFont.color = OUTLINE
-                smallFont.draw(batch, "BUT ", scrollX + 75f, scrollY + scrollH - 94f)
-                smallFont.color = Color(0.74f, 0.22f, 0.08f, 1f)
-                smallFont.draw(batch, "LACK IN ATTACK POWER.", scrollX + 120f, scrollY + scrollH - 94f)
-                smallFont.color = OUTLINE
-                smallFont.draw(batch, " MAKE SURE YOU HAVE", scrollX + 355f, scrollY + scrollH - 94f)
-                smallFont.draw(batch, "ENOUGH FIREPOWER TO SUPPORT THEM!", scrollX + 75f, scrollY + scrollH - 116f)
+                ComicFontRenderer.drawMultiColorLine(
+                    batch, smallFont,
+                    listOf(
+                        Pair("BARRACKS ARE ", OUTLINE),
+                        Pair("GOOD FOR BLOCKING THE ENEMY,", redHighlight)
+                    ),
+                    scrollX + 75f, scrollY + scrollH - 72f
+                )
+                ComicFontRenderer.drawMultiColorLine(
+                    batch, smallFont,
+                    listOf(
+                        Pair("BUT ", OUTLINE),
+                        Pair("LACK IN ATTACK POWER. ", redHighlight),
+                        Pair("MAKE SURE YOU HAVE", OUTLINE)
+                    ),
+                    scrollX + 75f, scrollY + scrollH - 94f
+                )
+                ComicFontRenderer.drawMultiColorLine(
+                    batch, smallFont,
+                    listOf(
+                        Pair("ENOUGH FIREPOWER TO SUPPORT THEM!", OUTLINE)
+                    ),
+                    scrollX + 75f, scrollY + scrollH - 116f
+                )
 
                 val mapX = cX - 270f
                 val mapY = scrollY + 24f
-                smallFont.data.setScale(0.78f)
+                smallFont.data.setScale(0.84f)
                 smallFont.color = OUTLINE
                 smallFont.draw(batch, "SUPPORT YOUR", mapX + 235f, mapY + 62f, 195f, Align.center, false)
                 smallFont.draw(batch, "SOLDIERS WITH", mapX + 235f, mapY + 44f, 195f, Align.center, false)
                 smallFont.draw(batch, "RANGED TOWERS!", mapX + 235f, mapY + 26f, 195f, Align.center, false)
             }
 
-            else -> {
-                font.data.setScale(1.60f)
-                font.color = OUTLINE
-                font.draw(batch, "COMMAND YOUR TROOPS!", headerX, scrollY + scrollH - 42f)
+            HintPopupType.HEAVILY_ARMORED_ENEMIES -> {
+                smallFont.data.setScale(0.94f)
+                ComicFontRenderer.drawMultiColorLine(
+                    batch, smallFont,
+                    listOf(
+                        Pair("SOME ENEMIES WEAR ", OUTLINE),
+                        Pair("HEAVY ARMOR ", redHighlight),
+                        Pair("AND ARE", OUTLINE)
+                    ),
+                    scrollX + 75f, scrollY + scrollH - 72f
+                )
+                ComicFontRenderer.drawMultiColorLine(
+                    batch, smallFont,
+                    listOf(
+                        Pair("ALMOST IMPERVIOUS TO PHYSICAL DAMAGE. IN ORDER", OUTLINE)
+                    ),
+                    scrollX + 75f, scrollY + scrollH - 94f
+                )
+                ComicFontRenderer.drawMultiColorLine(
+                    batch, smallFont,
+                    listOf(
+                        Pair("TO KILL THEM ", OUTLINE),
+                        Pair("HIT THEM WITH MAGIC ATTACKS!", redHighlight)
+                    ),
+                    scrollX + 75f, scrollY + scrollH - 116f
+                )
 
+                val noteW = 205f
+                val noteX = cX - noteW / 2f
+                val noteY = scrollY + 30f
+                smallFont.data.setScale(0.84f)
+                smallFont.color = OUTLINE
+                smallFont.draw(batch, "USE THE HIGHEST", noteX, noteY + 50f, noteW, Align.center, false)
+                smallFont.draw(batch, "LEVELS OF WIZARDS", noteX, noteY + 32f, noteW, Align.center, false)
+                smallFont.draw(batch, "AVAILABLE!", noteX, noteY + 14f, noteW, Align.center, false)
+            }
+
+            else -> {
                 smallFont.data.setScale(0.95f)
                 smallFont.color = Color(0.24f, 0.20f, 0.16f, 1f)
                 smallFont.draw(batch, "YOU CAN ADJUST YOUR SOLDIERS RALLY", headerX, scrollY + scrollH - 76f)
                 smallFont.draw(batch, "POINT TO MAKE THEM DEFEND A", headerX, scrollY + scrollH - 96f)
                 smallFont.draw(batch, "DIFFERENT AREA.", headerX, scrollY + scrollH - 116f)
 
-                smallFont.data.setScale(0.72f)
+                smallFont.data.setScale(0.82f)
                 GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "200", scrollX + 148f - 18f, scrollY + 135f + 62f - 28f, 36f, 14f, Color.WHITE)
                 GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "$", scrollX + 148f - 15f, scrollY + 135f - 62f - 13f, 30f, 26f, Color.WHITE)
 
-                smallFont.data.setScale(0.76f)
+                smallFont.data.setScale(0.84f)
                 smallFont.color = Color(0.16f, 0.52f, 0.82f, 1f)
                 smallFont.draw(batch, "RALLY RANGE", scrollX + 375f, scrollY + 202f, 140f, Align.center, false)
 
-                smallFont.data.setScale(0.80f)
-                smallFont.color = Color(0.74f, 0.22f, 0.08f, 1f)
+                smallFont.data.setScale(0.84f)
+                smallFont.color = redHighlight
                 smallFont.draw(batch, "SELECT THE RALLY", scrollX + 115f, scrollY + 48f, 190f, Align.center, false)
                 smallFont.draw(batch, "POINT CONTROL", scrollX + 115f, scrollY + 31f, 190f, Align.center, false)
 
@@ -1352,188 +1838,44 @@ object TutorialRenderer {
             }
         }
 
-        font.data.setScale(oldFontScaleX, oldFontScaleY)
         smallFont.data.setScale(oldSmallScaleX, oldSmallScaleY)
         batch.end()
     }
 
-    // =========================================================================
-    // CƠ SỞ DỮ LIỆU THÔNG TIN QUÁI MỚI ("NEW ENEMY!") CHUẨN WIKI KINGDOM RUSH
-    // =========================================================================
     private fun getEnemyCardDetails(type: EnemyType): EnemyCardDetails = when (type) {
-        EnemyType.GOBLIN -> EnemyCardDetails(
-            title = "GOBLINS",
-            description = "SMALL EVIL HUMANOIDS WITH NO OUTSTANDING ABILITIES.",
-            bullets = listOf("LOW HEALTH", "AVERAGE SPEED")
-        )
-        EnemyType.ORC -> EnemyCardDetails(
-            title = "ORCS",
-            description = "TOUGH SAVAGES WITH LIGHT ARMOR.",
-            bullets = listOf("LIGHT ARMOR *", "SLOW SPEED"),
-            footnote = "* ARMORED ENEMIES RECEIVE LESS DAMAGE FROM ARCHERS AND SOLDIERS",
-            bottomTip1 = "MAGIC DAMAGE IGNORES",
-            bottomTip2 = "ARMOR COMPLETELY"
-        )
-        EnemyType.SHAMAN -> EnemyCardDetails(
-            title = "SHAMAN",
-            description = "TRIBAL HEALERS RESISTANT TO MAGIC ATTACKS",
-            bullets = listOf("HIGH MAGIC RESISTANCE *", "CAN HEAL ALLIES", "AVERAGE SPEED"),
-            footnote = "* RESISTS DAMAGE FROM MAGE TOWERS",
-            bottomTip1 = "ARCHER TOWERS ARE THE BEST",
-            bottomTip2 = "WAY TO DEAL WITH SHAMANS"
-        )
-        EnemyType.OGRE -> EnemyCardDetails(
-            title = "OGRES",
-            description = "BIG, UGLY AND TOUGH HUMANOIDS. THEY'LL OBLITERATE EVERYTHING IN THEIR PATH.",
-            bullets = listOf("VERY HIGH HEALTH", "VERY SLOW SPEED", "COSTS 3 LIVES"),
-            bottomTip1 = "MAGES AND ARTILLERY ARE GREAT",
-            bottomTip2 = "TO SUPPORT YOUR SOLDIERS."
-        )
-        EnemyType.BANDIT -> EnemyCardDetails(
-            title = "BANDITS",
-            description = "SWIFT & DEADLY, THEY CAN DISPATCH THEIR ENEMIES VERY QUICKLY.",
-            bullets = listOf("FAST SPEED", "VERY HIGH DAMAGE", "CAN DODGE MELEE ATTACKS")
-        )
-        EnemyType.BRIGAND -> EnemyCardDetails(
-            title = "BRIGANDS",
-            description = "ARMORED OUTLAWS THAT CAN WITHSTAND A LOT OF PUNISHMENT.",
-            bullets = listOf("MEDIUM ARMOR *", "AVERAGE SPEED"),
-            footnote = "* ARMORED ENEMIES RECEIVE LESS DAMAGE FROM ARCHERS AND SOLDIERS"
-        )
-        EnemyType.WULF -> EnemyCardDetails(
-            title = "WULVES",
-            description = "VERY FAST VICIOUS CREATURES THAT CAN DODGE MELEE ATTACKS.",
-            bullets = listOf("LOW HEALTH", "VERY FAST SPEED", "CAN DODGE MELEE ATTACKS")
-        )
-        EnemyType.MARAUDER -> EnemyCardDetails(
-            title = "MARAUDERS",
-            description = "HULKING WELL-TRAINED ARMORED OUTLAWS, OFTEN SEEN LEADING BRIGANDS.",
-            bullets = listOf("HEAVY ARMOR", "SLOW SPEED", "COSTS 3 LIVES")
-        )
-        EnemyType.GIANT_SPIDER -> EnemyCardDetails(
-            title = "GIANT SPIDERS",
-            description = "QUICK, VICIOUS ENEMIES RESISTANT TO MAGIC.",
-            bullets = listOf("HIGH MAGIC RESISTANCE", "LOW HEALTH", "FAST SPEED")
-        )
-        EnemyType.SPIDER_MATRIARCH -> EnemyCardDetails(
-            title = "SPIDER MATRIARCHS",
-            description = "TOUGH MAGIC RESISTANT BEASTS THAT CAN SPAWN SEVERAL SPIDERLINGS.",
-            bullets = listOf("HIGH MAGIC RESISTANCE", "SPAWNS SPIDERLINGS", "COSTS 2 LIVES")
-        )
-        EnemyType.GARGOYLE -> EnemyCardDetails(
-            title = "GARGOYLES",
-            description = "VILE WINGED CREATURES THAT CAN FLY PAST BARRACKS AND ARTILLERY.",
-            bullets = listOf("FLYING (CANNOT BE BLOCKED)", "AVERAGE SPEED"),
-            bottomTip1 = "FLYING ENEMIES CANNOT BE BLOCKED",
-            bottomTip2 = "BY BARRACKS OR TARGETED BY ARTILLERY"
-        )
-        EnemyType.SHADOW_ARCHER -> EnemyCardDetails(
-            title = "SHADOW ARCHERS",
-            description = "DEADLY ACCURATE ARCHERS THAT WILL SHOOT AT YOUR NEARBY SOLDIERS.",
-            bullets = listOf("RANGED ATTACK", "LOW MAGIC RESISTANCE", "AVERAGE SPEED")
-        )
-        EnemyType.DARK_KNIGHT -> EnemyCardDetails(
-            title = "DARK KNIGHTS",
-            description = "FULL PLATED CORRUPTED KNIGHTS, ALMOST IMPERVIOUS TO DAMAGE.",
-            bullets = listOf("HEAVY ARMOR", "SLOW SPEED"),
-            bottomTip1 = "USE MAGES TO MELT THROUGH",
-            bottomTip2 = "HEAVILY ARMORED ENEMIES!"
-        )
-        EnemyType.WORG -> EnemyCardDetails(
-            title = "WORGS",
-            description = "CUNNING FAST BEASTS THAT CAN DODGE MELEE ATTACKS AND RESIST MAGIC.",
-            bullets = listOf("MAGIC RESISTANCE", "CAN DODGE MELEE ATTACKS", "FAST SPEED")
-        )
-        EnemyType.GOLEM_HEAD -> EnemyCardDetails(
-            title = "GOLEM HEADS",
-            description = "MECHANICAL CONSTRUCTS OF DARK MAGIC.",
-            bullets = listOf("MEDIUM ARMOR", "SLOW SPEED")
-        )
-        EnemyType.TROLL -> EnemyCardDetails(
-            title = "TROLLS",
-            description = "VERY TOUGH WARRIORS THAT CAN REGENERATE THEIR WOUNDS QUICKLY.",
-            bullets = listOf("VERY HIGH DAMAGE", "HEALTH REGENERATION", "AVERAGE SPEED")
-        )
-        EnemyType.WINTER_WOLF -> EnemyCardDetails(
-            title = "WINTER WOLVES",
-            description = "CUNNING & DEADLY BEASTS THAT CAN DEFEAT ALL BUT THE BEST WARRIORS.",
-            bullets = listOf("MAGIC RESISTANCE", "CAN DODGE MELEE ATTACKS", "VERY FAST SPEED")
-        )
-        EnemyType.TROLL_CHAMPION -> EnemyCardDetails(
-            title = "TROLL CHAMPIONS",
-            description = "ELITE TRIBAL WARRIORS EQUIPPED WITH VICIOUS THROWING AXES.",
-            bullets = listOf("RANGED AXE ATTACK", "HEALTH REGENERATION", "COSTS 3 LIVES")
-        )
-        EnemyType.TROLL_CHIEFTAIN -> EnemyCardDetails(
-            title = "TROLL CHIEFTAINS",
-            description = "THEY CAN ENRAGE THEIR BRETHREN, IMPROVING THEIR COMBAT ABILITIES!",
-            bullets = listOf("HIGH HEALTH REGENERATION", "CAN ENRAGE OTHER TROLLS", "VERY SLOW SPEED")
-        )
-        EnemyType.YETI -> EnemyCardDetails(
-            title = "YETIS",
-            description = "LARGE APE-MAN LIKE CREATURES THAT CAN OBLITERATE SCORES OF SOLDIERS.",
-            bullets = listOf("SUPER HIGH HEALTH", "AREA ATTACK", "COSTS 5 LIVES")
-        )
-        EnemyType.ROCKET_RIDER -> EnemyCardDetails(
-            title = "ROCKET RIDERS",
-            description = "THE ROCKET RIDERS FOLLOW THEIR DARK LORD'S WILL WHEREVER THEY GO.",
-            bullets = listOf("FLYING", "AVERAGE SPEED", "CAN USE TURBO BOOST")
-        )
-        EnemyType.DARK_SLAYER -> EnemyCardDetails(
-            title = "DARK SLAYERS",
-            description = "CLAIMED BY DARKNESS, SLAYERS ARE THE BANE OF ANYONE STANDING IN THEIR WAY.",
-            bullets = listOf("GREAT ARMOR", "VERY HIGH DAMAGE", "SLOW SPEED")
-        )
-        EnemyType.DEMON_SPAWN -> EnemyCardDetails(
-            title = "DEMON SPAWNS",
-            description = "TERRIBLE INFERNAL CREATURES THAT EXPLODE WHEN THEY DIE.",
-            bullets = listOf("MAGIC RESISTANCE", "INFERNAL COMBUSTION")
-        )
-        EnemyType.DEMON_LORD -> EnemyCardDetails(
-            title = "DEMON LORDS",
-            description = "LEADERS OF THE FIENDISH ARMIES, THEY SHIELD MINIONS WITH INFERNAL BARRIERS.",
-            bullets = listOf("PROTECTS OTHER DEMONS", "MAGIC RESISTANCE", "INFERNAL COMBUSTION")
-        )
-        EnemyType.DEMON_HOUND -> EnemyCardDetails(
-            title = "DEMON HOUNDS",
-            description = "VICIOUS FAST CREATURES, THEY SERVE AS HUNTING DOGS OF THE DEMON LORDS.",
-            bullets = listOf("MAGIC RESISTANCE", "FAST SPEED", "INFERNAL COMBUSTION")
-        )
-        EnemyType.DEMON_IMP -> EnemyCardDetails(
-            title = "DEMON IMPS",
-            description = "FLYING MISCHIEVOUS INFERNAL CREATURES OFTEN SEEN WITH GARGOYLES.",
-            bullets = listOf("FLYING", "AVERAGE SPEED")
-        )
-        EnemyType.SKELETON -> EnemyCardDetails(
-            title = "SKELETONS",
-            description = "MINDLESS AUTOMATONS THAT OBEY THE ORDERS OF EVIL NECROMANCERS.",
-            bullets = listOf("SLOW SPEED", "IMMUNE TO POISON")
-        )
-        EnemyType.SKELETON_KNIGHT -> EnemyCardDetails(
-            title = "SKELETON KNIGHTS",
-            description = "SKELETAL REMAINS OF FALLEN WARRIORS REANIMATED BY DARK MAGIC.",
-            bullets = listOf("LIGHT ARMOR", "SLOW SPEED")
-        )
-        EnemyType.NECROMANCER -> EnemyCardDetails(
-            title = "NECROMANCERS",
-            description = "MASTERS OF THE DARK ARTS, THEY SUMMON UNDEAD MINIONS TO DO THEIR BIDDING.",
-            bullets = listOf("SUMMONS UNDEAD", "RANGED MAGIC ATTACK", "SLOW SPEED")
-        )
-        EnemyType.MAGMA_ELEMENTAL -> EnemyCardDetails(
-            title = "MAGMA ELEMENTALS",
-            description = "MADE OF ROCK AND FIRE, THESE BEINGS LEAVE A TRAIL OF DESTRUCTION.",
-            bullets = listOf("SUPER HIGH HEALTH", "AREA ATTACK", "COSTS 5 LIVES")
-        )
-        else -> EnemyCardDetails(
-            title = type.title.uppercase(),
-            description = "A FORMIDABLE FOE MARCHING AGAINST THE KINGDOM OF LINIREA!",
-            bullets = listOf("HIGH THREAT", "BOSS ENEMY")
-        )
+        EnemyType.GOBLIN -> EnemyCardDetails("GOBLINS", "SMALL EVIL HUMANOIDS WITH NO OUTSTANDING ABILITIES.", listOf("LOW HEALTH", "AVERAGE SPEED"))
+        EnemyType.ORC -> EnemyCardDetails("ORCS", "TOUGH SAVAGES WITH LIGHT ARMOR.", listOf("LIGHT ARMOR *", "SLOW SPEED"), "* ARMORED ENEMIES RECEIVE LESS DAMAGE FROM ARCHERS AND SOLDIERS", "MAGIC DAMAGE IGNORES", "ARMOR COMPLETELY")
+        EnemyType.SHAMAN -> EnemyCardDetails("SHAMAN", "TRIBAL HEALERS RESISTANT TO MAGIC ATTACKS", listOf("HIGH MAGIC RESISTANCE *", "CAN HEAL ALLIES", "AVERAGE SPEED"), "* RESISTS DAMAGE FROM MAGE TOWERS", "ARCHER TOWERS ARE THE BEST", "WAY TO DEAL WITH SHAMANS")
+        EnemyType.OGRE -> EnemyCardDetails("OGRES", "BIG, UGLY AND TOUGH HUMANOIDS. THEY'LL OBLITERATE EVERYTHING IN THEIR PATH.", listOf("VERY HIGH HEALTH", "VERY SLOW SPEED", "COSTS 3 LIVES"), bottomTip1 = "MAGES AND ARTILLERY ARE GREAT", bottomTip2 = "TO SUPPORT YOUR SOLDIERS.")
+        EnemyType.BANDIT -> EnemyCardDetails("BANDITS", "SWIFT & AGILE, THEY CAN DISPATCH THEIR ENEMIES VERY QUICKLY.", listOf("FAST SPEED", "VERY HIGH DAMAGE", "CAN DODGE MELEE ATTACKS"), bottomTip1 = "BANDITS CAN EASILY OBLITERATE", bottomTip2 = "YOUR LOW LEVEL SOLDIERS.")
+        EnemyType.BRIGAND -> EnemyCardDetails("BRIGANDS", "ARMORED OUTLAWS THAT CAN WITHSTAND A LOT OF PUNISHMENT", listOf("AVERAGE SPEED", "ARMORED"), bottomTip1 = "EXPLOSIONS IGNORE HALF THE", bottomTip2 = "ARMOR RATING")
+        EnemyType.WULF -> EnemyCardDetails("WULVES", "VERY FAST VICIOUS CREATURES THAT CAN DODGE MELEE ATTACKS.", listOf("LOW HEALTH", "VERY FAST SPEED", "CAN DODGE MELEE ATTACKS"))
+        EnemyType.MARAUDER -> EnemyCardDetails("MARAUDERS", "HULKING, WELL-TRAINED ARMORED OUTLAWS, OFTEN SEEN LEADING BRIGANDS AND BANDITS.", listOf("SLOW SPEED", "ARMORED", "COST 3 LIVES"))
+        EnemyType.GIANT_SPIDER -> EnemyCardDetails("GIANT SPIDER", "QUICK, VICIOUS ENEMIES RESISTANT TO MAGIC.", listOf("HIGH MAGIC RESISTANCE", "LOW HEALTH", "FAST SPEED"), bottomTip1 = "MAKE SURE YOU HAVE ENOUGH", bottomTip2 = "SOLDIERS TO STOP THEM")
+        EnemyType.SPIDER_MATRIARCH -> EnemyCardDetails("MATRIARCH", "TOUGH MAGIC RESISTANT BEAST THAT CAN SPAWN SEVERAL SPIDERLINGS.", listOf("HIGH MAGIC RESISTANCE", "SPAWNS SPIDERLINGS", "COST 2 LIVES", "AVERAGE SPEED"))
+        EnemyType.GARGOYLE -> EnemyCardDetails("GARGOYLES", "VILE WINGED CREATURES THAT CAN FLY PAST BARRACKS AND ARTILLERY.", listOf("FLYING", "AVERAGE SPEED"), bottomTip1 = "FLYING ENEMIES CAN'T BE BLOCKED", bottomTip2 = "NOR TARGETED BY MOST ARTILLERY")
+        EnemyType.SHADOW_ARCHER -> EnemyCardDetails("SHADOW ARCHERS", "DEADLY ACCURATE ARCHERS THAT WILL SHOOT AT YOUR NEARBY SOLDIERS.", listOf("RANGED ATTACK", "LOW MAGIC RESISTANCE", "AVERAGE SPEED"))
+        EnemyType.DARK_KNIGHT -> EnemyCardDetails("DARK KNIGHTS", "FULL PLATED CORRUPTED KNIGHTS, ALMOST IMPERVIOUS TO PHYSICAL DAMAGE.", listOf("SLOW SPEED", "HEAVY ARMOR"), bottomTip1 = "MAGIC ATTACKS ARE THE BEST WAY", bottomTip2 = "TO DEAL WITH DARK KNIGHTS")
+        EnemyType.WORG -> EnemyCardDetails("WORGS", "CUNNING FAST BEASTS THAT CAN DODGE MELEE ATTACKS AND RESIST MAGIC.", listOf("MAGIC RESISTANCE", "CAN DODGE MELEE ATTACKS", "FAST SPEED"))
+        EnemyType.GOLEM_HEAD -> EnemyCardDetails("GOLEM HEADS", "MECHANICAL CONSTRUCTS OF DARK MAGIC.", listOf("MEDIUM ARMOR", "SLOW SPEED"))
+        EnemyType.TROLL -> EnemyCardDetails("TROLLS", "VERY TOUGH WARRIORS THAT CAN REGENERATE THEIR WOUNDS QUICKLY.", listOf("VERY HIGH DAMAGE", "HEALTH REGENERATION", "AVERAGE SPEED"), bottomTip1 = "TRY TO KILL THEM FAST TO", bottomTip2 = "PREVENT REGENERATION.")
+        EnemyType.WINTER_WOLF -> EnemyCardDetails("WINTER WOLVES", "CUNNING & DEADLY, THESE BEASTS CAN DEFEAT ALL BUT THE BEST WARRIORS.", listOf("HIGH MAGIC RESISTANCE", "CAN DODGE MELEE ATTACKS", "VERY FAST SPEED"))
+        EnemyType.TROLL_CHAMPION -> EnemyCardDetails("TROLL CHAMPION", "ELITE TRIBAL WARRIORS EQUIPPED WITH VICIOUS THROWING AXES", listOf("RANGED ATTACK", "HEALTH REGENERATION", "AVERAGE SPEED"), bottomTip1 = "VICIOUS AXES DEAL FULL", bottomTip2 = "DAMAGE REGARDLESS OF ARMOR")
+        EnemyType.TROLL_CHIEFTAIN -> EnemyCardDetails("TROLL CHIEFTAIN", "THE CHIEFTAIN CAN ENRAGE HIS BRETHREN, IMPROVING THEIR ATTACK DAMAGE, ARMOR RATING, SPEED AND HEALTH.", listOf("HIGH HEALTH REGENERATION", "CAN ENRAGE OTHER TROLLS", "VERY SLOW SPEED"))
+        EnemyType.YETI -> EnemyCardDetails("YETI", "LARGE APE-MAN LIKE CREATURE THAT CAN OBLITERATE SCORES OF SOLDIERS WITH ONE STRIKE.", listOf("VERY HIGH HEALTH", "VERY SLOW SPEED", "COST 5 LIVES", "AREA ATTACK"), bottomTip1 = "YETI ATTACKS DEAL AREA", bottomTip2 = "DAMAGE")
+        EnemyType.ROCKET_RIDER -> EnemyCardDetails("ROCKET RIDERS", "HALF MAN, HALF MACHINE; THE ROCKET RIDERS FOLLOW THEIR DARK LORD'S WILL WHEREVER THEY GO.", listOf("FLYING", "AVERAGE SPEED", "CAN USE TURBO"), bottomTip1 = "TURBO MAKES THEM FLY SUPER", bottomTip2 = "FAST FOR 2 SECONDS.")
+        EnemyType.DARK_SLAYER -> EnemyCardDetails("DARK SLAYERS", "CLAIMED BY DARKNESS; SLAYERS ARE THE BANE OF ANYONE STANDING IN THEIR WAY.", listOf("VERY TOUGH", "SLOW SPEED", "GREAT ARMOR"))
+        EnemyType.DEMON_SPAWN -> EnemyCardDetails("DEMON SPAWN", "TERRIBLE INFERNAL CREATURES THAT EXPLODE WHEN THEY DIE, DAMAGING NEARBY SOLDIERS.", listOf("MAGIC RESISTANCE", "INFERNAL COMBUSTION"))
+        EnemyType.DEMON_LORD -> EnemyCardDetails("DEMON LORD", "DEMON LORDS LEAD FIENDISH ARMIES INTO BATTLE, PROTECTING THEIR MINIONS WITH INFERNAL SHIELDS.", listOf("SHIELDS OTHER DEMONS", "MAGIC RESISTANCE", "INFERNAL COMBUSTION"), bottomTip1 = "INFERNAL SHIELDS NEGATE DAMAGE", bottomTip2 = "FROM A LIMITED NUMBER OF ATTACKS.")
+        EnemyType.DEMON_HOUND -> EnemyCardDetails("DEMON HOUNDS", "VICIOUS TERRIBLE CREATURES, THEY SERVE AS HUNTING DOGS FOR THE DEMON LORDS.", listOf("MAGIC RESISTANCE", "INFERNAL COMBUSTION", "FAST SPEED"))
+        EnemyType.DEMON_IMP -> EnemyCardDetails("DEMON IMP", "FLYING MISCHIEVIOUS INFERNAL CREATURES THAT ARE OFTEN SEEN IN THE COMPANY OF GARGOYLES.", listOf("FLYING", "AVERAGE SPEED"))
+        EnemyType.SKELETON -> EnemyCardDetails("SKELETONS", "MINDLESS AUTOMATONS THAT OBEY THE ORDERS OF EVIL NECROMANCERS.", listOf("SLOW SPEED", "IMMUNE TO POISON"))
+        EnemyType.SKELETON_KNIGHT -> EnemyCardDetails("SKELETON KNIGHTS", "SKELETAL REMAINS OF FALLEN WARRIORS REANIMATED BY DARK MAGIC.", listOf("LIGHT ARMOR", "SLOW SPEED"))
+        EnemyType.NECROMANCER -> EnemyCardDetails("NECROMANCER", "MASTER OF THE DARK ARTS, THE NECROMANCER SUMMONS UNDEAD MINIONS TO DO THEIR BIDDING.", listOf("SUMMONS UNDEAD", "RANGED ATTACK", "SLOW SPEED"))
+        EnemyType.MAGMA_ELEMENTAL -> EnemyCardDetails("MAGMA ELEMENTAL", "MADE OF ROCK AND FIRE, MAGMA ELEMENTALS ARE BEINGS OF DEATH AND DESTRUCTION.", listOf("VERY HIGH HEALTH", "VERY SLOW SPEED", "COST 5 LIVES", "AREA ATTACK"))
+        else -> EnemyCardDetails(type.title.uppercase(), "A FORMIDABLE FOE MARCHING AGAINST THE KINGDOM OF LINIREA!", listOf("HIGH THREAT", "BOSS ENEMY"))
     }
 
-    // =========================================================================
-    // PHẦN 1 & 2: CUỘN GIẤY HƯỚNG DẪN 3 TRANG & MỞ KHÓA SPELL
-    // =========================================================================
     private fun renderInstructionsScroll(
         sr: ShapeRenderer,
         batch: SpriteBatch,
@@ -1572,6 +1914,22 @@ object TutorialRenderer {
 
         drawJaggedParchment(sr, scrollX, scrollY, scrollW, scrollH)
 
+        ComicFontRenderer.drawPlaqueText(sr, "INSTRUCTIONS", cX, tabY + tabH / 2f + 2f, 25f, Color(0.96f, 0.92f, 0.72f, 1f))
+
+        if (page < 3) {
+            ComicFontRenderer.drawPlaqueText(sr, "SKIP THIS!", cX - 124f, scrollY - 29f, 20f, Color.WHITE)
+            ComicFontRenderer.drawPlaqueText(sr, "NEXT!", cX + 124f, scrollY - 29f, 20f, Color.WHITE)
+        } else {
+            ComicFontRenderer.drawPlaqueText(sr, "GOT IT!", cX, scrollY - 22f, 22f, Color.WHITE)
+        }
+
+        val pageTitle = when (page) {
+            1 -> "OBJECTIVE"
+            2 -> "TOWER CONSTRUCTION"
+            else -> "BASIC TOWER TYPES"
+        }
+        ComicFontRenderer.drawRibbonBannerText(sr, pageTitle, cX, scrollY + scrollH - 36f, 22f)
+
         when (page) {
             1 -> drawPage1ObjectiveArt(sr, cX, scrollY)
             2 -> drawPage2ConstructionArt(sr, cX, scrollY)
@@ -1580,36 +1938,17 @@ object TutorialRenderer {
         sr.end()
 
         batch.begin()
-        val oldFontScaleX = font.data.scaleX
-        val oldFontScaleY = font.data.scaleY
         val oldSmallScaleX = smallFont.data.scaleX
         val oldSmallScaleY = smallFont.data.scaleY
 
-        font.data.setScale(2.15f)
-        GameUIRenderer.drawBadgeCenteredText(
-            batch, font, "INSTRUCTIONS",
-            tabX, tabY + 6f, tabW, tabH,
-            Color(0.96f, 0.92f, 0.72f, 1f)
-        )
-
-        if (page < 3) {
-            font.data.setScale(1.55f)
-            GameUIRenderer.drawBadgeCenteredText(batch, font, "SKIP THIS!", cX - 240f, scrollY - 58f, 232f, 58f, Color.WHITE)
-            GameUIRenderer.drawBadgeCenteredText(batch, font, "NEXT!", cX + 8f, scrollY - 58f, 232f, 58f, Color.WHITE)
-        } else {
-            font.data.setScale(1.65f)
-            GameUIRenderer.drawBadgeCenteredText(batch, font, "GOT IT!", cX - 135f, scrollY - 42f, 270f, 42f, Color.WHITE)
+        if (page == 3) {
             smallFont.data.setScale(0.78f)
             GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "I'M READY NOW BRING IT ON!", cX - 135f, scrollY - 68f, 270f, 28f, Color(0.90f, 0.94f, 1f, 1f))
         }
 
         when (page) {
             1 -> {
-                font.data.setScale(1.65f)
-                font.color = OUTLINE
-                font.draw(batch, "OBJECTIVE", scrollX, scrollY + scrollH - 28f, scrollW, Align.center, false)
-
-                smallFont.data.setScale(1.08f)
+                smallFont.data.setScale(1.04f)
                 smallFont.color = OUTLINE
                 smallFont.draw(batch, "PROTECT YOUR LANDS FROM THE ENEMY ATTACK", scrollX, scrollY + scrollH - 64f, scrollW, Align.center, false)
                 smallFont.data.setScale(0.90f)
@@ -1629,11 +1968,7 @@ object TutorialRenderer {
             }
 
             2 -> {
-                font.data.setScale(1.65f)
-                font.color = OUTLINE
-                font.draw(batch, "TOWER CONSTRUCTION", scrollX, scrollY + scrollH - 28f, scrollW, Align.center, false)
-
-                smallFont.data.setScale(1.02f)
+                smallFont.data.setScale(1.00f)
                 smallFont.color = OUTLINE
                 smallFont.draw(batch, "BUILD TOWERS ON THE STRATEGIC POINTS TO", scrollX, scrollY + scrollH - 64f, scrollW, Align.center, false)
                 smallFont.draw(batch, "STOP THE ENEMY HORDE FROM GETTING THROUGH.", scrollX, scrollY + scrollH - 86f, scrollW, Align.center, false)
@@ -1657,17 +1992,13 @@ object TutorialRenderer {
                 smallFont.draw(batch, "STRATEGIC POINT", step1X - 75f, scrollY + 111f, 150f, Align.center, false)
 
                 smallFont.data.setScale(0.76f)
-                GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "70", step2X - 48f - 18f, scrollY + 198f, 36f, 14f, Color(1f, 0.90f, 0.28f, 1f))
-                GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "70", step2X + 48f - 18f, scrollY + 198f, 36f, 14f, Color(1f, 0.90f, 0.28f, 1f))
-                GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "100", step2X - 48f - 18f, scrollY + 86f, 36f, 14f, Color(1f, 0.90f, 0.28f, 1f))
-                GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "150", step2X + 48f - 18f, scrollY + 86f, 36f, 14f, Color(1f, 0.90f, 0.28f, 1f))
+                GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "70", step2X - 48f - 18f, scrollY + 195f, 36f, 15f, Color(1f, 0.90f, 0.28f, 1f))
+                GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "70", step2X + 48f - 18f, scrollY + 195f, 36f, 15f, Color(1f, 0.90f, 0.28f, 1f))
+                GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "100", step2X - 48f - 18f, scrollY + 107f, 36f, 15f, Color(1f, 0.90f, 0.28f, 1f))
+                GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "150", step2X + 48f - 18f, scrollY + 107f, 36f, 15f, Color(1f, 0.90f, 0.28f, 1f))
             }
 
             3 -> {
-                font.data.setScale(1.65f)
-                font.color = OUTLINE
-                font.draw(batch, "BASIC TOWER TYPES", scrollX, scrollY + scrollH - 28f, scrollW, Align.center, false)
-
                 smallFont.data.setScale(1.00f)
                 smallFont.color = OUTLINE
                 smallFont.draw(batch, "THERE ARE FOUR BASIC TYPES OF TOWERS AVAILABLE.", scrollX, scrollY + scrollH - 64f, scrollW, Align.center, false)
@@ -1693,7 +2024,6 @@ object TutorialRenderer {
             }
         }
 
-        font.data.setScale(oldFontScaleX, oldFontScaleY)
         smallFont.data.setScale(oldSmallScaleX, oldSmallScaleY)
         batch.end()
     }
@@ -1712,17 +2042,23 @@ object TutorialRenderer {
         val roadColor = Color(0.84f, 0.75f, 0.48f, 1f)
         val roadEdge = Color(0.62f, 0.52f, 0.30f, 1f)
         val pts = listOf(
-            Vector2(mapX + 10f, mapY + 72f),
+            Vector2(mapX + 12f, mapY + 72f),
             Vector2(mapX + 145f, mapY + 86f),
             Vector2(mapX + 245f, mapY + 78f),
             Vector2(mapX + 345f, mapY + 148f),
             Vector2(mapX + 465f, mapY + 178f),
-            Vector2(mapX + mapW - 10f, mapY + 178f)
+            Vector2(mapX + mapW - 12f, mapY + 178f)
         )
         sr.color = roadEdge
-        for (i in 0 until pts.size - 1) sr.rectLine(pts[i], pts[i + 1], 68f)
+        for (i in 0 until pts.size - 1) {
+            sr.rectLine(pts[i], pts[i + 1], 68f)
+            sr.circle(pts[i].x, pts[i].y, 34f)
+        }
         sr.color = roadColor
-        for (i in 0 until pts.size - 1) sr.rectLine(pts[i], pts[i + 1], 60f)
+        for (i in 0 until pts.size - 1) {
+            sr.rectLine(pts[i], pts[i + 1], 60f)
+            sr.circle(pts[i].x, pts[i].y, 30f)
+        }
 
         val trees = listOf(
             Vector2(mapX + 45f, mapY + 215f), Vector2(mapX + 85f, mapY + 230f),
@@ -1737,31 +2073,17 @@ object TutorialRenderer {
             sr.circle(t.x - 2f, t.y + 3f, 18f)
         }
 
-        drawMiniStrategicPoint(sr, mapX + 78f, mapY + 142f, 0.80f)
-        drawMiniArcherTower(sr, mapX + 245f, mapY + 142f, 0.85f)
+        drawRenderedStrategicPoint(sr, mapX + 82f, mapY + 142f, scale = 0.85f)
+        drawRenderedTower(sr, TowerType.ARCHER, 1, mapX + 245f, mapY + 142f, scale = 0.95f)
 
-        val goblins = listOf(
-            Vector2(mapX + 45f, mapY + 62f),
-            Vector2(mapX + 82f, mapY + 68f),
-            Vector2(mapX + 112f, mapY + 92f),
-            Vector2(mapX + 132f, mapY + 58f)
-        )
-        for (g in goblins) drawMiniGoblin(sr, g.x, g.y, 0.85f)
+        for (g in listOf(Vector2(mapX + 45f, mapY + 62f), Vector2(mapX + 82f, mapY + 68f), Vector2(mapX + 112f, mapY + 92f), Vector2(mapX + 132f, mapY + 58f))) {
+            drawRenderedEnemy(sr, EnemyType.GOBLIN, g.x, g.y, scale = 0.95f)
+        }
 
         val defX = mapX + 472f
         val defY = mapY + 168f
-        sr.color = Color(0.15f, 0.58f, 0.92f, 0.85f)
-        sr.ellipse(defX - 32f, defY - 18f, 64f, 36f)
-        sr.color = Color(0.55f, 0.85f, 1f, 0.95f)
-        sr.ellipse(defX - 22f, defY - 12f, 44f, 24f)
-        sr.color = roadColor
-        sr.ellipse(defX - 14f, defY - 7f, 28f, 14f)
-
-        for (fy in listOf(defY + 34f, defY - 38f)) {
-            sr.color = OUTLINE
-            sr.rect(defX + 36f, fy, 3f, 24f)
-            sr.color = Color(0.22f, 0.56f, 0.92f, 1f)
-            sr.rect(defX + 30f, fy + 10f, 15f, 12f)
+        withScaledTransform(sr, defX, defY, 0.85f) {
+            MapRenderer.drawDefensePoint(sr, 0f, 0f, 36f, 38f, 36f, -42f)
         }
 
         sr.color = OUTLINE
@@ -1790,20 +2112,21 @@ object TutorialRenderer {
         val step3X = cX + 220f
         val centerY = scrollY + 175f
 
-        drawMiniStrategicPoint(sr, step1X, centerY, 1.35f)
+        drawRenderedStrategicPoint(sr, step1X, centerY, scale = 1.25f)
         drawRedArrow(sr, cX - 132f, centerY)
+        drawRenderedStrategicPoint(sr, step2X, centerY, scale = 0.95f)
 
-        drawMiniStrategicPoint(sr, step2X, centerY, 1.05f)
-        sr.color = OUTLINE
-        sr.rectLine(step2X - 48f, centerY + 44f, step2X + 48f, centerY + 44f, 8f)
-        sr.rectLine(step2X - 48f, centerY - 44f, step2X + 48f, centerY - 44f, 8f)
-        sr.rectLine(step2X - 48f, centerY + 44f, step2X - 48f, centerY - 44f, 8f)
-        sr.rectLine(step2X + 48f, centerY + 44f, step2X + 48f, centerY - 44f, 8f)
-        sr.color = Color(0.55f, 0.58f, 0.62f, 1f)
-        sr.rectLine(step2X - 48f, centerY + 44f, step2X + 48f, centerY + 44f, 4.5f)
-        sr.rectLine(step2X - 48f, centerY - 44f, step2X + 48f, centerY - 44f, 4.5f)
-        sr.rectLine(step2X - 48f, centerY + 44f, step2X - 48f, centerY - 44f, 4.5f)
-        sr.rectLine(step2X + 48f, centerY + 44f, step2X + 48f, centerY - 44f, 4.5f)
+        sr.color = Color(0.24f, 0.24f, 0.26f, 0.95f)
+        sr.rectLine(step2X - 48f, centerY + 44f, step2X + 48f, centerY + 44f, 5.5f)
+        sr.rectLine(step2X - 48f, centerY - 44f, step2X + 48f, centerY - 44f, 5.5f)
+        sr.rectLine(step2X - 48f, centerY + 44f, step2X - 48f, centerY - 44f, 5.5f)
+        sr.rectLine(step2X + 48f, centerY + 44f, step2X + 48f, centerY - 44f, 5.5f)
+
+        sr.color = Color(0.42f, 0.44f, 0.48f, 1f)
+        sr.rect(step2X - 6f, centerY + 40f, 12f, 7f)
+        sr.rect(step2X - 6f, centerY - 47f, 12f, 7f)
+        sr.rect(step2X - 52f, centerY - 4f, 7f, 12f)
+        sr.rect(step2X + 45f, centerY - 4f, 7f, 12f)
 
         val wheelButtons = listOf(
             Vector2(step2X - 48f, centerY + 44f),
@@ -1815,49 +2138,57 @@ object TutorialRenderer {
             val b = wheelButtons[idx]
             sr.color = OUTLINE
             sr.rect(b.x - 21f, b.y - 16f, 42f, 40f)
-            sr.color = Color(0.58f, 0.60f, 0.64f, 1f)
+            sr.color = Color(0.24f, 0.24f, 0.26f, 1f)
             sr.rect(b.x - 19f, b.y - 14f, 38f, 36f)
-            sr.color = Color(0.18f, 0.16f, 0.14f, 1f)
-            sr.rect(b.x - 15f, b.y - 10f, 30f, 28f)
+            sr.color = Color(0.15f, 0.13f, 0.11f, 0.98f)
+            sr.rect(b.x - 15.5f, b.y - 10.5f, 31f, 29f)
 
+            sr.color = Color(0.68f, 0.72f, 0.76f, 1f)
+            sr.rect(b.x - 19f, b.y + 17f, 6f, 5f)
+            sr.rect(b.x + 13f, b.y + 17f, 6f, 5f)
+            sr.rect(b.x - 19f, b.y - 14f, 6f, 5f)
+            sr.rect(b.x + 13f, b.y - 14f, 6f, 5f)
+
+            val icx = b.x
+            val icy = b.y + 4f
             when (idx) {
                 0 -> {
-                    sr.color = Color(0.90f, 0.92f, 0.96f, 1f)
-                    sr.rectLine(b.x - 6f, b.y - 2f, b.x + 4f, b.y + 8f, 2.5f)
-                    sr.rectLine(b.x - 2f, b.y - 6f, b.x + 8f, b.y + 4f, 2.5f)
+                    for (ao in listOf(Vector2(-5f, -2.5f), Vector2(0f, 4f), Vector2(5f, -2.5f))) {
+                        val ax = icx + ao.x; val ay = icy + ao.y
+                        sr.color = Color(0.62f, 0.44f, 0.22f, 1f); sr.rectLine(ax - 1.5f, ay - 5f, ax + 1.5f, ay + 1f, 1.8f)
+                        sr.color = Color(0.88f, 0.90f, 0.94f, 1f); sr.triangle(ax, ay + 5.5f, ax - 3.8f, ay + 1f, ax + 3.8f, ay + 1f)
+                    }
                 }
                 1 -> {
-                    sr.color = Color(0.78f, 0.82f, 0.88f, 1f)
-                    sr.rect(b.x - 7f, b.y - 2f, 14f, 11f)
-                    sr.triangle(b.x - 7f, b.y - 2f, b.x + 7f, b.y - 2f, b.x, b.y - 8f)
+                    sr.color = Color(0.80f, 0.82f, 0.86f, 1f)
+                    sr.triangle(icx, icy - 8.5f, icx - 9.5f, icy + 7.5f, icx + 9.5f, icy + 7.5f)
+                    sr.rect(icx - 9.5f, icy + 2.5f, 19f, 5f)
+                    sr.color = Color(0.40f, 0.44f, 0.50f, 1f)
+                    sr.triangle(icx, icy - 6.5f, icx - 7f, icy + 6f, icx + 7f, icy + 6f)
                 }
                 2 -> {
-                    sr.color = Color(0.85f, 0.65f, 0.20f, 1f)
-                    sr.rectLine(b.x - 6f, b.y - 6f, b.x + 3f, b.y + 4f, 3f)
-                    sr.color = Color(0.35f, 0.85f, 1f, 1f)
-                    sr.circle(b.x + 3f, b.y + 6f, 5f)
+                    sr.color = Color(0.85f, 0.68f, 0.20f, 1f); sr.rectLine(icx - 6f, icy - 7.5f, icx + 1.5f, icy + 1f, 2.8f)
+                    sr.color = Color(0.45f, 0.85f, 1f, 1f); sr.circle(icx + 1f, icy + 5.5f, 5.5f)
+                    sr.color = Color.WHITE; sr.circle(icx - 0.5f, icy + 6.5f, 2f)
                 }
                 3 -> {
-                    sr.color = Color(0.35f, 0.38f, 0.42f, 1f)
-                    sr.circle(b.x, b.y + 1f, 7.5f)
-                    sr.color = Color(1f, 0.55f, 0.10f, 1f)
-                    sr.circle(b.x + 3f, b.y + 9f, 2.5f)
+                    sr.color = Color(0.35f, 0.38f, 0.42f, 1f); sr.circle(icx - 1f, icy - 1.5f, 8f)
+                    sr.color = Color(0.68f, 0.74f, 0.80f, 1f); sr.circle(icx - 3.5f, icy + 1.5f, 2.2f)
+                    sr.color = Color(1f, 0.45f, 0.10f, 1f); sr.circle(icx + 1f, icy + 9.5f, 2.4f)
                 }
             }
 
-            sr.color = OUTLINE
-            sr.rect(b.x - 18f, b.y - 26f, 36f, 15f)
-            sr.color = Color(0.12f, 0.10f, 0.08f, 1f)
-            sr.rect(b.x - 16f, b.y - 24f, 32f, 11f)
+            sr.color = OUTLINE; sr.rect(b.x - 18f, b.y - 25f, 36f, 15f)
+            sr.color = Color(0.10f, 0.09f, 0.08f, 0.98f); sr.rect(b.x - 16.5f, b.y - 23.5f, 33f, 12f)
         }
 
         drawRedArrow(sr, cX + 98f, centerY)
-        drawMiniArcherTower(sr, step3X, centerY - 6f, 1.35f)
+        drawRenderedTower(sr, TowerType.ARCHER, 1, step3X, centerY - 2f, scale = 1.40f)
     }
 
     private fun drawPage3BasicTowerTypesArt(sr: ShapeRenderer, cX: Float, scrollY: Float) {
         val colCenters = listOf(cX - 285f, cX - 95f, cX + 95f, cX + 285f)
-        val artY = scrollY + 185f
+        val artY = scrollY + 188f
 
         sr.color = Color(0.75f, 0.68f, 0.46f, 1f)
         for (divX in listOf(cX - 190f, cX, cX + 190f)) {
@@ -1867,50 +2198,38 @@ object TutorialRenderer {
         }
 
         for (cx in colCenters) {
-            val bx = cx - 84f
-            val by = scrollY + 52f
-            val bw = 168f
-            val bh = 54f
-            sr.color = Color(0.75f, 0.68f, 0.46f, 1f)
-            sr.rect(bx - 2f, by - 2f, bw + 4f, bh + 4f)
-            sr.color = Color(0.95f, 0.91f, 0.74f, 1f)
-            sr.rect(bx, by, bw, bh)
+            val bx = cx - 84f; val by = scrollY + 52f; val bw = 168f; val bh = 54f
+            sr.color = Color(0.75f, 0.68f, 0.46f, 1f); sr.rect(bx - 2f, by - 2f, bw + 4f, bh + 4f)
+            sr.color = Color(0.95f, 0.91f, 0.74f, 1f); sr.rect(bx, by, bw, bh)
         }
 
         val c1 = colCenters[0]
-        drawMiniArcherTower(sr, c1 - 15f, artY, 1.15f)
-        drawMiniGoblin(sr, c1 + 42f, artY - 22f, 0.95f)
+        drawRenderedTower(sr, TowerType.ARCHER, 1, c1 - 15f, artY, scale = 1.30f)
+        drawRenderedEnemy(sr, EnemyType.GOBLIN, c1 + 42f, artY - 22f, scale = 1.15f)
         sr.color = OUTLINE
-        sr.rectLine(c1 + 5f, artY + 35f, c1 + 28f, artY + 15f, 2f)
-        sr.rectLine(c1 + 22f, artY + 8f, c1 + 35f, artY - 12f, 2f)
-        sr.rectLine(c1 + 48f, artY + 5f, c1 + 52f, artY - 10f, 2f)
+        sr.rectLine(c1 + 6f, artY + 36f, c1 + 26f, artY + 18f, 2f)
+        sr.rectLine(c1 + 22f, artY + 10f, c1 + 35f, artY - 8f, 2f)
+        sr.rectLine(c1 + 48f, artY + 8f, c1 + 52f, artY - 8f, 2f)
 
         val c2 = colCenters[1]
-        drawMiniBarracksTower(sr, c2 - 5f, artY + 12f, 1.10f)
-        drawMiniSoldier(sr, c2 - 32f, artY - 32f)
-        drawMiniSoldier(sr, c2 - 8f, artY - 18f)
-        drawMiniSoldier(sr, c2 + 16f, artY - 34f)
-        drawMiniGoblin(sr, c2 + 36f, artY - 34f, 0.95f)
+        drawRenderedTower(sr, TowerType.BARRACKS, 1, c2 - 5f, artY + 12f, scale = 1.25f)
+        drawRenderedSoldier(sr, "Militia", c2 - 34f, artY - 32f, scale = 1.20f)
+        drawRenderedSoldier(sr, "Militia", c2 - 10f, artY - 18f, scale = 1.20f)
+        drawRenderedSoldier(sr, "Militia", c2 + 15f, artY - 34f, scale = 1.20f)
+        drawRenderedEnemy(sr, EnemyType.GOBLIN, c2 + 38f, artY - 34f, scale = 1.15f)
 
         val c3 = colCenters[2]
-        drawMiniMageTower(sr, c3 - 10f, artY, 1.12f)
-        drawMiniGoblin(sr, c3 + 42f, artY - 18f, 0.95f)
-        sr.color = Color(0.25f, 0.85f, 1f, 0.9f)
-        sr.circle(c3 - 10f, artY + 34f, 7f)
-        sr.circle(c3 + 18f, artY + 6f, 6f)
-        sr.color = Color.WHITE
-        sr.circle(c3 + 18f, artY + 6f, 3f)
+        drawRenderedTower(sr, TowerType.MAGE, 1, c3 - 10f, artY, scale = 1.30f)
+        drawRenderedEnemy(sr, EnemyType.GOBLIN, c3 + 42f, artY - 18f, scale = 1.15f)
+        sr.color = Color(0.25f, 0.85f, 1f, 0.9f); sr.circle(c3 + 18f, artY + 6f, 6.5f)
+        sr.color = Color.WHITE; sr.circle(c3 + 18f, artY + 6f, 3.2f)
 
         val c4 = colCenters[3]
-        drawMiniArtilleryTower(sr, c4 - 22f, artY + 2f, 1.10f)
-        sr.color = Color(0.42f, 0.38f, 0.34f, 0.9f)
-        sr.circle(c4 + 28f, artY - 2f, 24f)
-        sr.circle(c4 + 36f, artY + 14f, 18f)
-        sr.color = Color(1f, 0.78f, 0.15f, 1f)
-        sr.circle(c4 + 26f, artY - 12f, 12f)
-        sr.circle(c4 + 38f, artY - 4f, 9f)
-        drawMiniGoblin(sr, c4 + 2f, artY - 24f, 0.88f)
-        drawMiniGoblin(sr, c4 + 54f, artY - 18f, 0.88f)
+        drawRenderedTower(sr, TowerType.ARTILLERY, 1, c4 - 22f, artY + 2f, scale = 1.25f)
+        sr.color = Color(0.42f, 0.38f, 0.34f, 0.9f); sr.circle(c4 + 28f, artY - 2f, 24f); sr.circle(c4 + 36f, artY + 14f, 18f)
+        sr.color = Color(1f, 0.78f, 0.15f, 1f); sr.circle(c4 + 26f, artY - 12f, 12f); sr.circle(c4 + 38f, artY - 4f, 9f)
+        drawRenderedEnemy(sr, EnemyType.GOBLIN, c4 + 2f, artY - 24f, scale = 1.05f)
+        drawRenderedEnemy(sr, EnemyType.GOBLIN, c4 + 54f, artY - 18f, scale = 1.05f)
     }
 
     private fun renderSpecialUnlockPopup(
@@ -1954,6 +2273,12 @@ object TutorialRenderer {
 
         drawJaggedParchment(sr, scrollX, scrollY, scrollW, scrollH)
 
+        ComicFontRenderer.drawPlaqueText(sr, "NEW SPECIAL AVAILABLE!", tabX + tabW / 2f, tabY + tabH / 2f + 2f, 20f, Color(0.96f, 0.92f, 0.72f, 1f))
+        ComicFontRenderer.drawPlaqueText(sr, "OK!", okBtnX + okBtnW / 2f, okBtnY + okBtnH / 2f, 22f, Color.WHITE)
+
+        val spellTitle = if (popupType == SpecialUnlockPopupType.REINFORCEMENTS) "CALL REINFORCEMENTS" else "RAIN OF FIRE"
+        ComicFontRenderer.drawRibbonBannerText(sr, spellTitle, scrollX + 455f, scrollY + scrollH - 42f, 20f)
+
         val picX = scrollX + 26f
         val picY = scrollY + 25f
         val picW = 225f
@@ -1976,9 +2301,9 @@ object TutorialRenderer {
 
         if (popupType == SpecialUnlockPopupType.REINFORCEMENTS) {
             GameUIRenderer.drawSpellCardPreview(sr, innerX + 58f, innerY + 118f, isFireSpell = false)
-            drawMiniSoldier(sr, innerX + 95f, innerY + 42f)
-            drawMiniSoldier(sr, innerX + 125f, innerY + 62f)
-            drawMiniGoblin(sr, innerX + 158f, innerY + 65f, 1.15f)
+            drawRenderedSoldier(sr, "Farmer", innerX + 95f, innerY + 42f, scale = 1.40f)
+            drawRenderedSoldier(sr, "Farmer", innerX + 125f, innerY + 62f, scale = 1.40f)
+            drawRenderedEnemy(sr, EnemyType.ORC, innerX + 162f, innerY + 65f, scale = 1.40f)
         } else {
             GameUIRenderer.drawSpellCardPreview(sr, innerX + 58f, innerY + 118f, isFireSpell = true)
             sr.color = Color(1f, 0.45f, 0.08f, 1f)
@@ -1993,6 +2318,8 @@ object TutorialRenderer {
             sr.circle(innerX + 135f, innerY + 52f, 24f)
             sr.color = Color(1f, 0.92f, 0.28f, 1f)
             sr.circle(innerX + 135f, innerY + 52f, 15f)
+            drawRenderedEnemy(sr, EnemyType.GOBLIN, innerX + 102f, innerY + 42f, scale = 1.25f)
+            drawRenderedEnemy(sr, EnemyType.ORC, innerX + 172f, innerY + 48f, scale = 1.25f)
         }
 
         sr.color = Color(0f, 0f, 0f, 0.32f)
@@ -2014,27 +2341,11 @@ object TutorialRenderer {
         sr.end()
 
         batch.begin()
-        val oldFontScaleX = font.data.scaleX
-        val oldFontScaleY = font.data.scaleY
         val oldSmallScaleX = smallFont.data.scaleX
         val oldSmallScaleY = smallFont.data.scaleY
 
-        font.data.setScale(1.85f)
-        GameUIRenderer.drawBadgeCenteredText(
-            batch, font, "NEW SPECIAL AVAILABLE!",
-            tabX, tabY + 6f, tabW, tabH,
-            Color(0.96f, 0.92f, 0.72f, 1f)
-        )
-
-        font.data.setScale(1.60f)
-        GameUIRenderer.drawBadgeCenteredText(batch, font, "OK!", okBtnX, okBtnY, okBtnW, okBtnH - 4f, Color.WHITE)
-
         val textX = scrollX + 275f
         if (popupType == SpecialUnlockPopupType.REINFORCEMENTS) {
-            font.data.setScale(1.50f)
-            font.color = OUTLINE
-            font.draw(batch, "CALL REINFORCEMENTS", textX, scrollY + scrollH - 42f)
-
             smallFont.data.setScale(0.95f)
             smallFont.color = OUTLINE
             smallFont.draw(batch, "YOU CAN SUMMON TROOPS TO HELP", textX, scrollY + scrollH - 82f)
@@ -2048,10 +2359,6 @@ object TutorialRenderer {
             smallFont.draw(batch, "REINFORCEMENTS ARE VERY", bannerX + 74f, bannerY + 42f)
             smallFont.draw(batch, "VERSATILE, USE THEM OFTEN.", bannerX + 74f, bannerY + 22f)
         } else {
-            font.data.setScale(1.55f)
-            font.color = OUTLINE
-            font.draw(batch, "RAIN OF FIRE", textX, scrollY + scrollH - 38f)
-
             smallFont.data.setScale(0.95f)
             smallFont.color = OUTLINE
             smallFont.draw(batch, "BLAST YOUR ENEMIES WITH FIRE", textX, scrollY + scrollH - 76f)
@@ -2068,21 +2375,21 @@ object TutorialRenderer {
             smallFont.draw(batch, "OF YOUR TARGET.", bannerX + 74f, bannerY + 22f)
         }
 
-        font.data.setScale(oldFontScaleX, oldFontScaleY)
         smallFont.data.setScale(oldSmallScaleX, oldSmallScaleY)
         batch.end()
     }
 
-    // =========================================================================
-    // CÁC HÀM VẼ BIỂU TƯỢNG PHỤ TRỢ CHO CUỘN GIẤY, KHIÊN GIÁP, CỜ RALLY & THÁP LV 1/2/3
-    // =========================================================================
-    private fun drawDummyEnemyEntity(sr: ShapeRenderer, type: EnemyType, cx: Float, cy: Float, scale: Float = 1f) {
-        val dummy = Entity().apply {
-            add(TransformComponent(position = Vector2(cx, cy)))
-            add(HealthComponent(maxHealth = 100f, currentHealth = 100f))
-            add(EnemyComponent(enemyType = type))
-        }
-        EnemyRenderer.render(sr, dummy, showHpBar = false)
+    private fun drawHeavyHelmetBadgeIcon(sr: ShapeRenderer, cx: Float, cy: Float, scale: Float) {
+        val s = scale
+        sr.color = OUTLINE
+        sr.circle(cx, cy + 4f * s, 14f * s)
+        sr.rect(cx - 14f * s, cy - 11f * s, 28f * s, 15f * s)
+        sr.color = Color(0.75f, 0.80f, 0.86f, 1f)
+        sr.circle(cx, cy + 4f * s, 11.5f * s)
+        sr.rect(cx - 11.5f * s, cy - 9f * s, 23f * s, 13f * s)
+        sr.color = OUTLINE
+        sr.rect(cx - 8f * s, cy + 1f * s, 16f * s, 3.5f * s)
+        sr.rect(cx - 2f * s, cy - 7f * s, 4f * s, 10f * s)
     }
 
     private fun drawArmorShieldIcon(sr: ShapeRenderer, cx: Float, cy: Float, scale: Float, isMagic: Boolean = false) {
@@ -2108,14 +2415,12 @@ object TutorialRenderer {
 
     private fun drawSwordAndShieldIcon(sr: ShapeRenderer, cx: Float, cy: Float, scale: Float) {
         val s = scale
-        // Thanh kiếm bên trái
         sr.color = OUTLINE
         sr.rect(cx - 14f * s, cy - 12f * s, 6f * s, 26f * s)
         sr.color = Color(0.92f, 0.76f, 0.18f, 1f)
         sr.rect(cx - 16f * s, cy - 6f * s, 10f * s, 3.5f * s)
         sr.color = Color.WHITE
         sr.rect(cx - 12.5f * s, cy - 2f * s, 3f * s, 15f * s)
-        // Khiên bạc bên phải
         drawArmorShieldIcon(sr, cx + 4f * s, cy - 1f * s, scale * 0.72f, isMagic = false)
     }
 
@@ -2167,153 +2472,6 @@ object TutorialRenderer {
         sr.color = Color(0.80f, 0.22f, 0.14f, 1f)
         sr.rect(cx - 18f, cy - 8f, 20f, 16f)
         sr.triangle(cx + 2f, cy + 18f, cx + 2f, cy - 18f, cx + 22f, cy)
-    }
-
-    private fun drawMiniStrategicPoint(sr: ShapeRenderer, cx: Float, cy: Float, scale: Float) {
-        val s = scale
-        sr.color = Color(0.45f, 0.62f, 0.20f, 1f)
-        sr.ellipse(cx - 34f * s, cy - 16f * s, 68f * s, 32f * s)
-        sr.color = Color(0.80f, 0.72f, 0.46f, 1f)
-        sr.ellipse(cx - 28f * s, cy - 13f * s, 56f * s, 26f * s)
-
-        sr.color = OUTLINE
-        sr.rect(cx - 2f * s, cy - 2f * s, 4f * s, 14f * s)
-        sr.rect(cx - 9f * s, cy + 9f * s, 18f * s, 12f * s)
-        sr.color = Color(0.95f, 0.92f, 0.80f, 1f)
-        sr.rect(cx - 7.5f * s, cy + 10.5f * s, 15f * s, 9f * s)
-    }
-
-    private fun drawMiniArcherTower(sr: ShapeRenderer, cx: Float, cy: Float, scale: Float, tier: Int = 1) {
-        val s = scale
-        sr.color = Color(0.45f, 0.60f, 0.22f, 1f)
-        sr.ellipse(cx - 32f * s, cy - 22f * s, 64f * s, 24f * s)
-
-        // Gai nhọn ở 2 bên mép tháp nếu là Cấp 3 (Sharpshooter)
-        if (tier >= 3) {
-            sr.color = OUTLINE
-            sr.triangle(cx - 22f * s, cy + 16f * s, cx - 32f * s, cy + 22f * s, cx - 22f * s, cy + 8f * s)
-            sr.triangle(cx + 22f * s, cy + 16f * s, cx + 32f * s, cy + 22f * s, cx + 22f * s, cy + 8f * s)
-        }
-
-        sr.color = OUTLINE
-        sr.rect(cx - 24f * s, cy - 16f * s, 48f * s, 36f * s)
-        sr.color = if (tier >= 2) Color(0.58f, 0.60f, 0.64f, 1f) else Color(0.68f, 0.66f, 0.62f, 1f)
-        sr.rect(cx - 21f * s, cy - 14f * s, 42f * s, 32f * s)
-
-        sr.color = OUTLINE
-        sr.rect(cx - 7f * s, cy - 14f * s, 14f * s, 14f * s)
-        sr.color = Color(0.48f, 0.32f, 0.16f, 1f)
-        sr.rect(cx - 5f * s, cy - 14f * s, 10f * s, 12f * s)
-
-        sr.color = Color(0.85f, 0.22f, 0.16f, 1f)
-        sr.circle(cx, cy + 8f * s, 5.5f * s)
-        sr.color = Color.WHITE
-        sr.circle(cx, cy + 8f * s, 3.2f * s)
-        sr.color = Color(0.85f, 0.22f, 0.16f, 1f)
-        sr.circle(cx, cy + 8f * s, 1.4f * s)
-
-        sr.color = OUTLINE
-        sr.rect(cx - 26f * s, cy + 18f * s, 52f * s, 8f * s)
-        sr.color = if (tier >= 2) Color(0.28f, 0.30f, 0.34f, 1f) else Color(0.55f, 0.36f, 0.18f, 1f)
-        sr.rect(cx - 24f * s, cy + 19.5f * s, 48f * s, 5f * s)
-
-        for (ax in listOf(-8f * s, 8f * s)) {
-            sr.color = OUTLINE
-            sr.circle(cx + ax, cy + 29f * s, 5.5f * s)
-            sr.color = if (tier == 2) Color(0.95f, 0.78f, 0.20f, 1f) else if (tier >= 3) Color(0.25f, 0.28f, 0.32f, 1f) else Color(0.95f, 0.78f, 0.56f, 1f)
-            sr.circle(cx + ax, cy + 29f * s, 4f * s)
-        }
-    }
-
-    private fun drawMiniBarracksTower(sr: ShapeRenderer, cx: Float, cy: Float, scale: Float, tier: Int = 1) {
-        val s = scale
-        sr.color = OUTLINE
-        sr.rect(cx - 26f * s, cy - 16f * s, 52f * s, 38f * s)
-        sr.color = if (tier >= 3) Color(0.62f, 0.65f, 0.70f, 1f) else Color(0.72f, 0.70f, 0.65f, 1f)
-        sr.rect(cx - 23f * s, cy - 14f * s, 46f * s, 34f * s)
-
-        if (tier >= 3) {
-            // Chóp pháo đài Knights Barracks
-            sr.color = OUTLINE
-            sr.rect(cx - 27f * s, cy + 20f * s, 12f * s, 7f * s)
-            sr.rect(cx + 15f * s, cy + 20f * s, 12f * s, 7f * s)
-        }
-
-        sr.color = OUTLINE
-        sr.rect(cx - 7f * s, cy + 4f * s, 14f * s, 12f * s)
-        sr.color = Color(0.22f, 0.56f, 0.90f, 1f)
-        sr.rect(cx - 5f * s, cy + 6f * s, 10f * s, 8f * s)
-        sr.color = OUTLINE
-        sr.rect(cx - 7f * s, cy - 14f * s, 14f * s, 12f * s)
-    }
-
-    private fun drawMiniMageTower(sr: ShapeRenderer, cx: Float, cy: Float, scale: Float, tier: Int = 1) {
-        val s = scale
-        sr.color = OUTLINE
-        sr.rect(cx - 22f * s, cy - 16f * s, 44f * s, 32f * s)
-        sr.color = Color(0.76f, 0.72f, 0.62f, 1f)
-        sr.rect(cx - 19f * s, cy - 14f * s, 38f * s, 28f * s)
-
-        // Trụ đá phát sáng xanh băng ở Cấp 2 & Cấp 3
-        sr.color = Color(0.20f, 0.82f, 1f, 1f)
-        if (tier >= 2) {
-            sr.rect(cx - 18f * s, cy - 10f * s, 5f * s, 20f * s)
-            sr.rect(cx + 13f * s, cy - 10f * s, 5f * s, 20f * s)
-        }
-        sr.circle(cx, cy, 6f * s)
-        sr.circle(cx - 18f * s, cy + 8f * s, 5f * s)
-        sr.circle(cx + 18f * s, cy + 2f * s, 5f * s)
-
-        sr.color = OUTLINE
-        sr.triangle(cx - 8f * s, cy + 16f * s, cx + 8f * s, cy + 16f * s, cx, cy + 34f * s)
-        sr.color = Color(0.22f, 0.55f, 0.92f, 1f)
-        sr.triangle(cx - 6f * s, cy + 16f * s, cx + 6f * s, cy + 16f * s, cx, cy + 31f * s)
-
-        if (tier >= 2) {
-            sr.color = Color(0.45f, 0.92f, 1f, 0.85f)
-            sr.circle(cx - 8f * s, cy + 32f * s, 7f * s)
-            sr.color = Color.WHITE
-            sr.circle(cx - 8f * s, cy + 32f * s, 3.5f * s)
-        }
-    }
-
-    private fun drawMiniArtilleryTower(sr: ShapeRenderer, cx: Float, cy: Float, scale: Float, tier: Int = 1) {
-        val s = scale
-        sr.color = OUTLINE
-        sr.rect(cx - 24f * s, cy - 16f * s, 48f * s, 26f * s)
-        sr.color = if (tier >= 3) Color(0.52f, 0.55f, 0.60f, 1f) else Color(0.55f, 0.36f, 0.20f, 1f)
-        sr.rect(cx - 21f * s, cy - 14f * s, 42f * s, 22f * s)
-        sr.color = OUTLINE
-        sr.circle(cx, cy + 12f * s, 15f * s)
-        sr.color = Color(0.38f, 0.40f, 0.44f, 1f)
-        sr.circle(cx, cy + 12f * s, 12f * s)
-        sr.color = OUTLINE
-        sr.ellipse(cx - 8f * s, cy + 14f * s, 16f * s, 8f * s)
-    }
-
-    private fun drawMiniGoblin(sr: ShapeRenderer, cx: Float, cy: Float, scale: Float) {
-        val s = scale
-        sr.color = OUTLINE
-        sr.circle(cx, cy + 3f * s, 6f * s)
-        sr.rect(cx - 4.5f * s, cy - 6f * s, 9f * s, 7f * s)
-        sr.color = Color(0.38f, 0.64f, 0.20f, 1f)
-        sr.circle(cx, cy + 3f * s, 4.5f * s)
-        sr.color = Color(0.45f, 0.28f, 0.14f, 1f)
-        sr.rect(cx - 3.2f * s, cy - 4.5f * s, 6.4f * s, 4.5f * s)
-    }
-
-    private fun drawMiniSoldier(sr: ShapeRenderer, cx: Float, cy: Float, tier: Int = 1) {
-        sr.color = OUTLINE
-        sr.circle(cx, cy + 4f, 5.5f)
-        sr.rect(cx - 4.5f, cy - 6f, 9f, 8f)
-        sr.color = when (tier) {
-            2 -> Color(0.58f, 0.62f, 0.68f, 1f) // Mũ sắt Footman
-            3 -> Color(0.82f, 0.86f, 0.90f, 1f) // Mũ giáp sắt Knight
-            else -> Color(0.95f, 0.80f, 0.22f, 1f) // Tóc vàng Militia
-        }
-        sr.circle(cx, cy + 5f, 4f)
-        sr.color = if (tier >= 3) Color(0.75f, 0.78f, 0.84f, 1f) else Color(0.22f, 0.52f, 0.88f, 1f)
-        sr.rect(cx - 3.2f, cy - 4.5f, 6.4f, 6f)
     }
 
     private fun wrapTextLines(text: String, maxCharsPerLine: Int): List<String> {

@@ -8,7 +8,6 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector2
-import com.badlogic.gdx.utils.Align
 import com.game.td.Config
 import com.game.td.managers.SaveManager
 import com.game.td.managers.SoundManager
@@ -27,60 +26,91 @@ object MainMenuRenderer {
         italicFont: BitmapFont,
         smallFont: BitmapFont,
         isSlotPopupOpen: Boolean,
-        isCreditsPopupOpen: Boolean
+        isCreditsPopupOpen: Boolean,
+        confirmDeleteSlot: Int = -1,
+        pressedButton: String? = null
     ) {
         Gdx.gl.glEnable(GL20.GL_BLEND)
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA)
 
         val cX = Config.WORLD_WIDTH / 2f
         val logoY = 535f
+        val topY = Config.WORLD_HEIGHT - 42f
 
-        // 1. VẼ BỐI CẢNH CHIẾN TRƯỜNG NỀN, KHIÊN LOGO & NÚT TREO DÂY XÍCH
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
         drawSkyAndClouds(shapeRenderer)
         drawDistantMountainsAndRoad(shapeRenderer)
         drawLeftArcaneTowerAndPaladin(shapeRenderer)
         drawRightRangerTreehouseAndMissile(shapeRenderer)
         drawForegroundBarbarianAndOgreBattle(shapeRenderer)
-        drawTopCornerDecorations(shapeRenderer)
+        drawTopCornerDecorations(shapeRenderer, pressedButton)
 
         if (!isSlotPopupOpen && !isCreditsPopupOpen) {
-            drawHangingStartAndCreditsButtons(shapeRenderer, cX)
+            drawHangingStartAndCreditsButtons(shapeRenderer, cX, pressedButton)
         }
 
         drawKingdomRushCrestShield(shapeRenderer, cX, logoY)
+
+        // Vẽ chữ S / M trên nút âm thanh góc trên trái
+        val sText = if (SoundManager.isSoundEnabled) "S" else "X"
+        val mText = if (SoundManager.isMusicEnabled) "M" else "X"
+        ComicFontRenderer.drawPlaqueText(shapeRenderer, sText, 52f, topY, 14f, Color.WHITE)
+        ComicFontRenderer.drawPlaqueText(shapeRenderer, mText, 102f, topY, 14f, Color.WHITE)
+
+        // Vẽ chữ KINGDOM RUSH trên khiên Logo chính
+        ComicFontRenderer.drawPlaqueText(
+            sr = shapeRenderer,
+            text = "KINGDOM",
+            centerX = cX,
+            centerY = logoY + 32f,
+            charHeight = 52f,
+            fillColor = Color(1f, 0.88f, 0.20f, 1f),
+            outlineColor = OUTLINE
+        )
+        ComicFontRenderer.drawPlaqueText(
+            sr = shapeRenderer,
+            text = "RUSH",
+            centerX = cX,
+            centerY = logoY - 52f,
+            charHeight = 34f,
+            fillColor = Color(0.96f, 0.38f, 0.14f, 1f),
+            outlineColor = OUTLINE
+        )
+
+        if (!isSlotPopupOpen && !isCreditsPopupOpen) {
+            val startColor = if (pressedButton == "START") Color(1f, 0.96f, 0.50f, 1f) else Color(1f, 0.86f, 0.18f, 1f)
+            val creditsColor = if (pressedButton == "CREDITS") Color(1f, 0.96f, 0.50f, 1f) else Color(1f, 0.86f, 0.18f, 1f)
+            ComicFontRenderer.drawPlaqueText(shapeRenderer, "START", cX, 256f, 32f, startColor, OUTLINE)
+            ComicFontRenderer.drawPlaqueText(shapeRenderer, "CREDITS", cX, 160f, 20f, creditsColor, OUTLINE)
+        }
         shapeRenderer.end()
 
-        // 2. VẼ CHỮ LOGO 3D, CHỮ TRÊN NÚT START / CREDITS VÀ ICON GÓC
         batch.begin()
-        drawLogoAndMenuTexts(
-            batch = batch,
-            cX = cX,
-            logoY = logoY,
-            logoMainFont = logoMainFont,
-            logoSubFont = logoSubFont,
-            titleFont = titleFont,
-            font = font,
-            smallFont = smallFont,
-            isSlotPopupOpen = isSlotPopupOpen,
-            isCreditsPopupOpen = isCreditsPopupOpen
-        )
+        GameUIRenderer.drawShadowedText(batch, smallFont, "v1.072", Config.WORLD_WIDTH - 68f, 22f, Color(0.90f, 0.86f, 0.74f, 1f))
         batch.end()
 
-        // 3. HIỂN THỊ BẢNG LOCAL SAVE HOẶC CREDITS KHI ĐƯỢC MỞ
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA)
+
         if (isSlotPopupOpen) {
-            renderLocalSavePopup(shapeRenderer, batch, font, italicFont, smallFont)
+            renderLocalSavePopup(
+                shapeRenderer = shapeRenderer,
+                confirmDeleteSlot = confirmDeleteSlot,
+                pressedButton = pressedButton
+            )
         } else if (isCreditsPopupOpen) {
-            renderCreditsPopup(shapeRenderer, batch, titleFont, font, smallFont)
+            renderCreditsPopup(
+                shapeRenderer = shapeRenderer,
+                batch = batch,
+                font = font,
+                smallFont = smallFont,
+                pressedButton = pressedButton
+            )
         }
     }
 
-    // =========================================================================
-    // HÀM DÙNG CHUNG: VẼ BIỂU TƯỢNG HEROIC (KHIÊN CÁNH ĐẠI BÀNG VÀNG) & IRON (GĂNG TAY THÉP)
-    // =========================================================================
     fun drawHeroicEmblem(sr: ShapeRenderer, cx: Float, cy: Float, scale: Float = 1f) {
         val s = scale
-        // Đôi cánh vàng 3 tầng xòe rộng hai bên khiên
         sr.color = OUTLINE
         sr.triangle(cx - 6f * s, cy + 4f * s, cx - 20f * s, cy + 12f * s, cx - 15f * s, cy - 2f * s)
         sr.triangle(cx - 6f * s, cy - 1f * s, cx - 18f * s, cy + 4f * s, cx - 12f * s, cy - 8f * s)
@@ -96,17 +126,14 @@ object MainMenuRenderer {
         sr.triangle(cx + 6f * s, cy, cx + 16.5f * s, cy + 3.5f * s, cx + 11.5f * s, cy - 6.5f * s)
         sr.triangle(cx + 5f * s, cy - 4f * s, cx + 13f * s, cy - 2f * s, cx + 9f * s, cy - 10f * s)
 
-        // Viền đen của khiên trung tâm
         sr.color = OUTLINE
         sr.rect(cx - 8.5f * s, cy - 2f * s, 17f * s, 11.5f * s)
         sr.triangle(cx - 8.5f * s, cy - 2f * s, cx + 8.5f * s, cy - 2f * s, cx, cy - 13f * s)
 
-        // Khung khiên bạc sáng
         sr.color = Color(0.86f, 0.90f, 0.95f, 1f)
         sr.rect(cx - 7f * s, cy - 1f * s, 14f * s, 9.5f * s)
         sr.triangle(cx - 7f * s, cy - 1f * s, cx + 7f * s, cy - 1f * s, cx, cy - 11f * s)
 
-        // Lòng khiên thép xanh đậm chia 2 nửa sáng/tối
         sr.color = Color(0.32f, 0.56f, 0.82f, 1f)
         sr.rect(cx - 5f * s, cy, 5f * s, 7.5f * s)
         sr.triangle(cx - 5f * s, cy, cx, cy, cx, cy - 8.5f * s)
@@ -114,40 +141,31 @@ object MainMenuRenderer {
         sr.rect(cx, cy, 5f * s, 7.5f * s)
         sr.triangle(cx, cy, cx + 5f * s, cy, cx, cy - 8.5f * s)
 
-        // Sống kiếm bạc dọc giữa khiên
         sr.color = Color.WHITE
         sr.rect(cx - 1f * s, cy - 6.5f * s, 2f * s, 13.5f * s)
     }
 
     fun drawIronGauntletEmblem(sr: ShapeRenderer, cx: Float, cy: Float, scale: Float = 1f) {
         val s = scale
-        // 1. Viền đen toàn bộ găng tay thép (Nắm đấm giơ thẳng đứng)
         sr.color = OUTLINE
-        // Cổ tay giáp loe nhẹ ở dưới
         sr.triangle(cx - 9.5f * s, cy - 13f * s, cx + 9.5f * s, cy - 13f * s, cx - 7.5f * s, cy - 3f * s)
         sr.triangle(cx + 9.5f * s, cy - 13f * s, cx - 7.5f * s, cy - 3f * s, cx + 7.5f * s, cy - 3f * s)
-        // Bàn tay nắm chặt ở trên
         sr.rect(cx - 9f * s, cy - 4f * s, 18f * s, 13f * s)
-        // 4 khớp ngón tay gồ lên trên đỉnh nắm đấm
         for (i in 0..3) {
             val kx = cx - 6.3f * s + i * 4.2f * s
             sr.circle(kx, cy + 9f * s, 3.2f * s)
         }
-        // Ngón cái gập ngang phía trước
         sr.rect(cx - 10.5f * s, cy - 1f * s, 12f * s, 6.5f * s)
 
-        // 2. Lớp thép cổ tay giáp (Wrist Cuff)
         sr.color = Color(0.45f, 0.48f, 0.54f, 1f)
         sr.rect(cx - 7.2f * s, cy - 11.5f * s, 14.4f * s, 7.5f * s)
         sr.color = Color(0.68f, 0.72f, 0.78f, 1f)
         sr.rect(cx - 6.5f * s, cy - 6.5f * s, 13f * s, 2.2f * s)
-        // 3 đinh tán cổ tay
         sr.color = OUTLINE
         sr.circle(cx - 4f * s, cy - 9f * s, 1.1f * s)
         sr.circle(cx, cy - 9f * s, 1.1f * s)
         sr.circle(cx + 4f * s, cy - 9f * s, 1.1f * s)
 
-        // 3. Lòng nắm đấm thép & 4 ngón tay gập xuống
         sr.color = Color(0.60f, 0.65f, 0.72f, 1f)
         sr.rect(cx - 7.5f * s, cy - 3f * s, 15f * s, 10.5f * s)
 
@@ -156,21 +174,16 @@ object MainMenuRenderer {
             sr.color = Color(0.78f, 0.82f, 0.88f, 1f)
             sr.rect(fx, cy + 2.5f * s, 3.0f * s, 6.5f * s)
             sr.circle(fx + 1.5f * s, cy + 8.8f * s, 1.8f * s)
-            // Khe đốt ngón tay
             sr.color = OUTLINE
             sr.rect(fx, cy + 5.2f * s, 3.0f * s, 1.2f * s)
         }
 
-        // 4. Ngón cái bọc thép kẹp ngang bên dưới 4 ngón
         sr.color = OUTLINE
-        sr.rect(cx - 9f * s, cy - 1.5f * s, 11f * s, 5.2f * s)
+        sr.rect(cx - 9f * s, cy - 1.5f, 11f * s, 5.2f * s)
         sr.color = Color(0.84f, 0.88f, 0.94f, 1f)
         sr.rect(cx - 7.8f * s, cy - 0.5f * s, 9f * s, 3.4f * s)
     }
 
-    // =========================================================================
-    // LỚP 1: BẦU TRỜI CHUYỂN SẮC, MÂY TRẮNG, MƯA TÊN & ĐÀN GARGOYLE BAY LƯỢN
-    // =========================================================================
     private fun drawSkyAndClouds(sr: ShapeRenderer) {
         val w = Config.WORLD_WIDTH
         sr.color = Color(0.36f, 0.62f, 0.74f, 1f)
@@ -220,9 +233,6 @@ object MainMenuRenderer {
         sr.triangle(x - 4f * s, y - 2f * s, x + 4f * s, y - 2f * s, x, y - 12f * s)
     }
 
-    // =========================================================================
-    // LỚP 2: DÃY NÚI XA, ĐỒI CỎ XANH & CON ĐƯỜNG ĐẤT CHÍNH GIỮA
-    // =========================================================================
     private fun drawDistantMountainsAndRoad(sr: ShapeRenderer) {
         val w = Config.WORLD_WIDTH
         val cX = w / 2f
@@ -277,9 +287,6 @@ object MainMenuRenderer {
         sr.triangle(ax - 10f, ay + 48f, ax - 1f, ay + 41f, ax - 7f, ay + 36f)
     }
 
-    // =========================================================================
-    // LỚP 3: CÁNH TRÁI – THÁP ARCANE WIZARD TÍM, TIA SÉT & PALADIN TỎA HÀO QUANG
-    // =========================================================================
     private fun drawLeftArcaneTowerAndPaladin(sr: ShapeRenderer) {
         val tx = 165f
         val ty = 235f
@@ -353,9 +360,6 @@ object MainMenuRenderer {
         sr.rectLine(px - 16f, py + 18f, px - 36f, py + 76f, 6f)
     }
 
-    // =========================================================================
-    // LỚP 4: CÁNH PHẢI – NHÀ CÂY RANGERS HIDEOUT & TÊN LỬA KHÓI ĐEN
-    // =========================================================================
     private fun drawRightRangerTreehouseAndMissile(sr: ShapeRenderer) {
         val smokePts = listOf(
             Vector2(1070f, 330f), Vector2(1078f, 355f), Vector2(1072f, 380f),
@@ -413,9 +417,6 @@ object MainMenuRenderer {
         }
     }
 
-    // =========================================================================
-    // LỚP 5: TIỀN CẢNH – BARBARIAN VUNG ĐẠI RÌU (TRÁI) & OGRE ĐẤU 2 FOOTMEN (PHẢI)
-    // =========================================================================
     private fun drawForegroundBarbarianAndOgreBattle(sr: ShapeRenderer) {
         val bx = 285f
         val by = 65f
@@ -565,12 +566,15 @@ object MainMenuRenderer {
         sr.circle(fx + 22f, fy - 2f, 6f)
     }
 
-    // =========================================================================
-    // LỚP 6: CHỈ GIỮ LẠI NÚT LOA (SOUND) & NHẠC (MUSIC) Ở GÓC TRÊN TRÁI
-    // =========================================================================
-    private fun drawTopCornerDecorations(sr: ShapeRenderer) {
+    private fun drawTopCornerDecorations(sr: ShapeRenderer, pressedButton: String?) {
         val topY = Config.WORLD_HEIGHT - 42f
         val audioOn = SoundManager.isSoundEnabled
+
+        if (pressedButton == "AUDIO") {
+            sr.color = Color(0.98f, 0.88f, 0.25f, 1f)
+            sr.circle(52f, topY, 21f)
+            sr.circle(102f, topY, 21f)
+        }
 
         sr.color = OUTLINE
         sr.circle(52f, topY, 18f)
@@ -580,11 +584,7 @@ object MainMenuRenderer {
         sr.circle(102f, topY, 14.5f)
     }
 
-    // =========================================================================
-    // LỚP 7: DÂY XÍCH NỐI LIỀN TỪ ĐÁY BIỂN "RUSH" XUỐNG NÚT START & CREDITS
-    // =========================================================================
-    private fun drawHangingStartAndCreditsButtons(sr: ShapeRenderer, cX: Float) {
-        // Hai sợi dây xích nối thẳng từ mặt dưới biển RUSH (y = 460f) xuống nút START (y = 295f)
+    private fun drawHangingStartAndCreditsButtons(sr: ShapeRenderer, cX: Float, pressedButton: String?) {
         for (chainX in listOf(cX - 88f, cX + 80f)) {
             sr.color = OUTLINE
             sr.rect(chainX - 3f, 295f, 14f, 165f)
@@ -594,7 +594,6 @@ object MainMenuRenderer {
             }
         }
 
-        // Hai đoạn xích ngắn nối từ đáy nút START xuống nút CREDITS
         for (chainX in listOf(cX - 66f, cX + 58f)) {
             sr.color = OUTLINE
             sr.rect(chainX - 2f, 182f, 12f, 34f)
@@ -603,17 +602,26 @@ object MainMenuRenderer {
             sr.rect(chainX, 202f, 8f, 10f)
         }
 
-        drawIronWoodPlaqueButton(sr, cX - 115f, 212f, 230f, 88f)
-        drawIronWoodPlaqueButton(sr, cX - 88f, 132f, 176f, 56f)
+        drawIronWoodPlaqueButton(sr, cX - 115f, 212f, 230f, 88f, isHighlighted = (pressedButton == "START"))
+        drawIronWoodPlaqueButton(sr, cX - 88f, 132f, 176f, 56f, isHighlighted = (pressedButton == "CREDITS"))
     }
 
-    fun drawIronWoodPlaqueButton(sr: ShapeRenderer, x: Float, y: Float, w: Float, h: Float) {
-        sr.color = Color(0f, 0f, 0f, 0.45f)
-        sr.rect(x - 6f, y - 8f, w + 12f, h + 10f)
+    fun drawIronWoodPlaqueButton(
+        sr: ShapeRenderer,
+        x: Float,
+        y: Float,
+        w: Float,
+        h: Float,
+        isHighlighted: Boolean = false
+    ) {
+        if (isHighlighted) {
+            sr.color = Color(0.98f, 0.88f, 0.25f, 1f)
+            sr.rect(x - 7f, y - 7f, w + 14f, h + 14f)
+        }
         sr.color = OUTLINE
         sr.rect(x - 4f, y - 4f, w + 8f, h + 8f)
 
-        sr.color = Color(0.58f, 0.60f, 0.64f, 1f)
+        sr.color = if (isHighlighted) Color(0.98f, 0.88f, 0.25f, 1f) else Color(0.58f, 0.60f, 0.64f, 1f)
         sr.rect(x, y, w, h)
 
         sr.color = Color(0.28f, 0.21f, 0.14f, 1f)
@@ -633,7 +641,7 @@ object MainMenuRenderer {
         for (c in corners) {
             sr.color = OUTLINE
             sr.rect(c.x - 1.5f, c.y - 1.5f, bracketSize + 3f, bracketSize + 3f)
-            sr.color = Color(0.72f, 0.75f, 0.78f, 1f)
+            sr.color = if (isHighlighted) Color(1f, 0.92f, 0.35f, 1f) else Color(0.72f, 0.75f, 0.78f, 1f)
             sr.rect(c.x, c.y, bracketSize, bracketSize)
             sr.color = OUTLINE
             sr.circle(c.x + 5f, c.y + 5f, 2f)
@@ -697,76 +705,10 @@ object MainMenuRenderer {
         sr.rect(cX - rushW / 2f, logoY - 83f, rushW, rushH)
     }
 
-    // =========================================================================
-    // LỚP 8: VẼ CHỮ LOGO 3D "KINGDOM RUSH", NÚT START/CREDITS & NHÃN ÂM THANH
-    // =========================================================================
-    private fun drawLogoAndMenuTexts(
-        batch: SpriteBatch,
-        cX: Float,
-        logoY: Float,
-        logoMainFont: BitmapFont,
-        logoSubFont: BitmapFont,
-        titleFont: BitmapFont,
-        font: BitmapFont,
-        smallFont: BitmapFont,
-        isSlotPopupOpen: Boolean,
-        isCreditsPopupOpen: Boolean
-    ) {
-        val w = Config.WORLD_WIDTH
-        val topY = Config.WORLD_HEIGHT - 42f
-
-        val kY = logoY + 62f
-        logoMainFont.color = OUTLINE
-        for (dx in listOf(-4f, 0f, 4f)) {
-            for (dy in listOf(-6f, -2f, 3f)) {
-                logoMainFont.draw(batch, "KINGDOM", dx, kY + dy, w, Align.center, false)
-            }
-        }
-        logoMainFont.color = Color(0.85f, 0.48f, 0.08f, 1f)
-        logoMainFont.draw(batch, "KINGDOM", 0f, kY - 3f, w, Align.center, false)
-        logoMainFont.color = Color(1f, 0.92f, 0.22f, 1f)
-        logoMainFont.draw(batch, "KINGDOM", 0f, kY, w, Align.center, false)
-
-        val rY = logoY - 36f
-        logoSubFont.color = OUTLINE
-        for (dx in listOf(-3f, 0f, 3f)) {
-            for (dy in listOf(-4f, 0f, 3f)) {
-                logoSubFont.draw(batch, "RUSH", dx, rY + dy, w, Align.center, false)
-            }
-        }
-        logoSubFont.color = Color(0.95f, 0.36f, 0.12f, 1f)
-        logoSubFont.draw(batch, "RUSH", 0f, rY, w, Align.center, false)
-
-        val sText = if (SoundManager.isSoundEnabled) "S" else "X"
-        val mText = if (SoundManager.isMusicEnabled) "M" else "X"
-        GameUIRenderer.drawOutlinedText(batch, smallFont, sText, 47f, topY + 6f, Color.WHITE)
-        GameUIRenderer.drawOutlinedText(batch, smallFont, mText, 96f, topY + 6f, Color.WHITE)
-
-        if (!isSlotPopupOpen && !isCreditsPopupOpen) {
-            GameUIRenderer.drawBadgeCenteredText(
-                batch, titleFont, "START",
-                cX - 115f, 212f, 230f, 88f,
-                Color(1f, 0.86f, 0.18f, 1f)
-            )
-            GameUIRenderer.drawBadgeCenteredText(
-                batch, font, "CREDITS",
-                cX - 88f, 132f, 176f, 56f,
-                Color(1f, 0.86f, 0.18f, 1f)
-            )
-        }
-
-        GameUIRenderer.drawShadowedText(batch, smallFont, "v1.072", Config.WORLD_WIDTH - 68f, 22f, Color(0.90f, 0.86f, 0.74f, 1f))
-    }
-
-    // =========================================================================
-    // LỚP 9: BẢNG CHỌN PHẦN LƯU GAME "LOCAL SAVE" VỚI ICON HEROIC & IRON CHUẨN
-    // =========================================================================
     private fun renderLocalSavePopup(
         shapeRenderer: ShapeRenderer,
-        batch: SpriteBatch,
-        font: BitmapFont,
-        italicFont: BitmapFont,
-        smallFont: BitmapFont
+        confirmDeleteSlot: Int,
+        pressedButton: String?
     ) {
         val cX = Config.WORLD_WIDTH / 2f
         val panelW = 410f
@@ -778,9 +720,10 @@ object MainMenuRenderer {
         val cardW = 352f
         val cardH = 92f
 
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA)
+
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        shapeRenderer.color = Color(0f, 0f, 0f, 0.35f)
-        shapeRenderer.rect(panelX - 10f, panelY - 44f, panelW + 20f, panelH + 92f)
 
         val tabW = 240f
         val tabH = 44f
@@ -794,6 +737,11 @@ object MainMenuRenderer {
 
         val qX = cX + tabW / 2f + 26f
         val qY = panelY + panelH + 14f
+        val isQPressed = (pressedButton == "CLOSE_SAVE_Q")
+        if (isQPressed) {
+            shapeRenderer.color = Color(0.98f, 0.88f, 0.25f, 1f)
+            shapeRenderer.circle(qX, qY, 19f)
+        }
         shapeRenderer.color = OUTLINE
         shapeRenderer.circle(qX, qY, 16f)
         shapeRenderer.color = Color(0.42f, 0.35f, 0.28f, 1f)
@@ -801,24 +749,41 @@ object MainMenuRenderer {
 
         val closeW = 170f
         val closeH = 36f
+        val isClosePressed = (pressedButton == "CLOSE_SAVE")
+        if (isClosePressed) {
+            shapeRenderer.color = Color(0.98f, 0.88f, 0.25f, 1f)
+            shapeRenderer.rect(cX - closeW / 2f - 6f, panelY - closeH - 6f, closeW + 12f, closeH + 10f)
+        }
         shapeRenderer.color = OUTLINE
         shapeRenderer.rect(cX - closeW / 2f - 4f, panelY - closeH - 4f, closeW + 8f, closeH + 6f)
-        shapeRenderer.color = Color(0.55f, 0.56f, 0.58f, 1f)
+        shapeRenderer.color = if (isClosePressed) Color(0.98f, 0.88f, 0.25f, 1f) else Color(0.55f, 0.56f, 0.58f, 1f)
         shapeRenderer.rect(cX - closeW / 2f, panelY - closeH, closeW, closeH)
         shapeRenderer.color = Color(0.42f, 0.40f, 0.36f, 1f)
         shapeRenderer.rect(cX - closeW / 2f + 4f, panelY - closeH + 4f, closeW - 8f, closeH - 8f)
 
         drawIronWoodPlaqueButton(shapeRenderer, panelX, panelY, panelW, panelH)
 
+        ComicFontRenderer.drawPlaqueText(shapeRenderer, "LOCAL SAVE", cX, panelY + panelH + 18f, 18f, Color(0.98f, 0.94f, 0.82f, 1f))
+        ComicFontRenderer.drawPlaqueText(shapeRenderer, "?", qX, qY, 15f, Color(0.95f, 0.90f, 0.75f, 1f))
+        val closeColor = if (isClosePressed) Color(1f, 0.92f, 0.28f, 1f) else Color(0.95f, 0.92f, 0.84f, 1f)
+        ComicFontRenderer.drawPlaqueText(shapeRenderer, "CLOSE", cX, panelY - closeH / 2f, 15f, closeColor)
+
         for (i in 1..3) {
             val cardY = startY - (i - 1) * 114f
             val cardX = cX - cardW / 2f
             val bottom = cardY - cardH / 2f
             val hasSave = SaveManager.hasData(i)
+            val isConfirmingDelete = (confirmDeleteSlot == i && hasSave)
+            val isSlotPressed = (pressedButton == "SLOT_$i" && !isConfirmingDelete)
+
+            if (isSlotPressed) {
+                shapeRenderer.color = Color(0.98f, 0.88f, 0.25f, 1f)
+                shapeRenderer.rect(cardX - 6f, bottom - 6f, cardW + 12f, cardH + 12f)
+            }
 
             shapeRenderer.color = OUTLINE
             shapeRenderer.rect(cardX - 3f, bottom - 3f, cardW + 6f, cardH + 6f)
-            shapeRenderer.color = Color(0.68f, 0.66f, 0.60f, 1f)
+            shapeRenderer.color = if (isSlotPressed) Color(0.98f, 0.88f, 0.25f, 1f) else Color(0.68f, 0.66f, 0.60f, 1f)
             shapeRenderer.rect(cardX, bottom, cardW, cardH)
             shapeRenderer.color = if (hasSave) Color(0.24f, 0.18f, 0.13f, 1f) else Color(0.32f, 0.25f, 0.18f, 1f)
             shapeRenderer.rect(cardX + 5f, bottom + 5f, cardW - 10f, cardH - 10f)
@@ -827,23 +792,67 @@ object MainMenuRenderer {
             shapeRenderer.rect(cardX + 12f, cardY + 8f, cardW - 24f, 3f)
             shapeRenderer.rect(cardX + 12f, cardY - 18f, cardW - 24f, 3f)
 
-            if (hasSave) {
+            if (isConfirmingDelete) {
+                ComicFontRenderer.drawPlaqueText(shapeRenderer, "DELETE SLOT?", cX, cardY + 20f, 16f, Color.WHITE)
+
+                val yesX = cX - 38f
+                val noX = cX + 38f
+                val btnY = cardY - 14f
+
+                if (pressedButton == "CONFIRM_YES_$i") {
+                    shapeRenderer.color = Color(0.98f, 0.88f, 0.25f, 0.85f)
+                    shapeRenderer.circle(yesX, btnY, 20f)
+                }
+                if (pressedButton == "CONFIRM_NO_$i") {
+                    shapeRenderer.color = Color(0.98f, 0.88f, 0.25f, 0.85f)
+                    shapeRenderer.circle(noX, btnY, 20f)
+                }
+
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.rectLine(yesX - 10f, btnY + 1f, yesX - 2f, btnY - 9f, 8.5f)
+                shapeRenderer.rectLine(yesX - 2f, btnY - 9f, yesX + 12f, btnY + 11f, 8.5f)
+                shapeRenderer.color = Color(0.55f, 0.92f, 0.16f, 1f)
+                shapeRenderer.rectLine(yesX - 9f, btnY + 1f, yesX - 2f, btnY - 7f, 5f)
+                shapeRenderer.rectLine(yesX - 2f, btnY - 7f, yesX + 10f, btnY + 9f, 5f)
+
+                shapeRenderer.color = OUTLINE
+                shapeRenderer.rectLine(noX - 9f, btnY - 9f, noX + 9f, btnY + 9f, 8.5f)
+                shapeRenderer.rectLine(noX - 9f, btnY + 9f, noX + 9f, btnY - 9f, 8.5f)
+                shapeRenderer.color = Color(0.96f, 0.28f, 0.12f, 1f)
+                shapeRenderer.rectLine(noX - 7f, btnY - 7f, noX + 7f, btnY + 7f, 5f)
+                shapeRenderer.rectLine(noX - 7f, btnY + 7f, noX + 7f, btnY - 7f, 5f)
+            } else if (hasSave) {
                 val delX = cardX + cardW - 30f
                 val delY = cardY + 20f
+                val isDelPressed = (pressedButton == "DEL_$i")
+                if (isDelPressed) {
+                    shapeRenderer.color = Color(0.98f, 0.88f, 0.25f, 1f)
+                    shapeRenderer.circle(delX, delY, 16f)
+                }
                 shapeRenderer.color = OUTLINE
                 shapeRenderer.circle(delX, delY, 13f)
-                shapeRenderer.color = Color(0.75f, 0.78f, 0.82f, 1f)
+                shapeRenderer.color = if (isDelPressed) Color(1f, 0.92f, 0.28f, 1f) else Color(0.75f, 0.78f, 0.82f, 1f)
                 shapeRenderer.rectLine(delX - 6f, delY - 6f, delX + 6f, delY + 6f, 4f)
                 shapeRenderer.rectLine(delX - 6f, delY + 6f, delX + 6f, delY - 6f, 4f)
+
+                val (_, _, totalStars) = SaveManager.getSlotStats(i)
+                val (heroicCount, ironCount) = getSlotHeroicAndIronCounts(i)
+
+                ComicFontRenderer.drawPlaqueText(shapeRenderer, "SLOT $i", cardX + 58f, cardY + 20f, 16f, Color.WHITE)
+                ComicFontRenderer.drawPlaqueText(shapeRenderer, "$totalStars/60", cardX + 82f, cardY - 14f, 16f, Color(1f, 0.90f, 0.25f, 1f))
+                ComicFontRenderer.drawPlaqueText(shapeRenderer, "$heroicCount", cardX + 186f, cardY - 14f, 16f, Color.WHITE)
+                ComicFontRenderer.drawPlaqueText(shapeRenderer, "$ironCount", cardX + 274f, cardY - 14f, 16f, Color.WHITE)
+            } else {
+                val newGameColor = if (isSlotPressed) Color(1f, 0.92f, 0.28f, 1f) else Color(0.98f, 0.95f, 0.86f, 1f)
+                ComicFontRenderer.drawPlaqueText(shapeRenderer, "NEW GAME", cX, cardY, 20f, newGameColor)
             }
         }
         shapeRenderer.end()
 
-        // Vẽ 3 biểu tượng: Ngôi Sao Vàng, Khiên Cánh Đại Bàng (Heroic) và Nắm Đấm Thép (Iron)
         for (i in 1..3) {
             val cardY = startY - (i - 1) * 114f
             val cardX = cX - cardW / 2f
-            if (SaveManager.hasData(i)) {
+            if (SaveManager.hasData(i) && confirmDeleteSlot != i) {
                 GameUIRenderer.drawStar(shapeRenderer, cardX + 32f, cardY - 15f, 11f, true)
 
                 shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
@@ -852,42 +861,6 @@ object MainMenuRenderer {
                 shapeRenderer.end()
             }
         }
-
-        batch.begin()
-        GameUIRenderer.drawBadgeCenteredText(
-            batch, font, "LOCAL SAVE",
-            cX - 120f, panelY + panelH - 2f, 240f, 40f,
-            Color(0.98f, 0.94f, 0.82f, 1f)
-        )
-        GameUIRenderer.drawOutlinedText(batch, smallFont, "?", cX + 141f, panelY + panelH + 20f, Color(0.95f, 0.90f, 0.75f, 1f))
-        GameUIRenderer.drawBadgeCenteredText(
-            batch, smallFont, "CLOSE",
-            cX - 85f, panelY - 36f, 170f, 36f,
-            Color(0.95f, 0.92f, 0.84f, 1f)
-        )
-
-        for (i in 1..3) {
-            val cardY = startY - (i - 1) * 114f
-            val cardX = cX - cardW / 2f
-            val hasSave = SaveManager.hasData(i)
-
-            if (hasSave) {
-                val (_, _, totalStars) = SaveManager.getSlotStats(i)
-                val (heroicCount, ironCount) = getSlotHeroicAndIronCounts(i)
-
-                GameUIRenderer.drawOutlinedText(batch, italicFont, "SLOT $i", cardX + 20f, cardY + 26f, Color.WHITE)
-                GameUIRenderer.drawOutlinedText(batch, font, "$totalStars/60", cardX + 50f, cardY - 8f, Color(1f, 0.90f, 0.25f, 1f))
-                GameUIRenderer.drawOutlinedText(batch, font, "$heroicCount", cardX + 178f, cardY - 8f, Color.WHITE)
-                GameUIRenderer.drawOutlinedText(batch, font, "$ironCount", cardX + 266f, cardY - 8f, Color.WHITE)
-            } else {
-                GameUIRenderer.drawBadgeCenteredText(
-                    batch, font, "NEW GAME",
-                    cardX, cardY - cardH / 2f, cardW, cardH,
-                    Color(0.98f, 0.95f, 0.86f, 1f)
-                )
-            }
-        }
-        batch.end()
     }
 
     private fun getSlotHeroicAndIronCounts(slot: Int): Pair<Int, Int> {
@@ -905,15 +878,12 @@ object MainMenuRenderer {
         }
     }
 
-    // =========================================================================
-    // LỚP 10: BẢNG CREDITS KHI BẤM NÚT "CREDITS"
-    // =========================================================================
     private fun renderCreditsPopup(
         shapeRenderer: ShapeRenderer,
         batch: SpriteBatch,
-        titleFont: BitmapFont,
         font: BitmapFont,
-        smallFont: BitmapFont
+        smallFont: BitmapFont,
+        pressedButton: String?
     ) {
         val cX = Config.WORLD_WIDTH / 2f
         val cY = Config.WORLD_HEIGHT / 2f
@@ -922,19 +892,25 @@ object MainMenuRenderer {
         val boxX = cX - boxW / 2f
         val boxY = cY - boxH / 2f
 
+        Gdx.gl.glEnable(GL20.GL_BLEND)
+        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA)
+
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
         shapeRenderer.color = Color(0f, 0f, 0f, 0.55f)
         shapeRenderer.rect(0f, 0f, Config.WORLD_WIDTH, Config.WORLD_HEIGHT)
         drawIronWoodPlaqueButton(shapeRenderer, boxX, boxY, boxW, boxH)
-        drawIronWoodPlaqueButton(shapeRenderer, cX - 75f, boxY - 26f, 150f, 44f)
+        drawIronWoodPlaqueButton(
+            shapeRenderer, cX - 75f, boxY - 26f, 150f, 44f,
+            isHighlighted = (pressedButton == "CLOSE_CREDITS")
+        )
+        ComicFontRenderer.drawPlaqueText(shapeRenderer, "CREDITS", cX, boxY + boxH - 48f, 28f, Color.GOLD)
+        ComicFontRenderer.drawPlaqueText(shapeRenderer, "CLOSE", cX, boxY - 4f, 18f, Color.YELLOW)
         shapeRenderer.end()
 
         batch.begin()
-        GameUIRenderer.drawBadgeCenteredText(batch, titleFont, "CREDITS", boxX, boxY + boxH - 72f, boxW, 50f, Color.GOLD)
         GameUIRenderer.drawBadgeCenteredText(batch, font, "KINGDOM RUSH - LIBGDX EDITION", boxX, cY + 15f, boxW, 30f, Color.WHITE)
         GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "INSPIRED BY IRONHIDE GAME STUDIO", boxX, cY - 25f, boxW, 25f, Color(0.95f, 0.85f, 0.55f, 1f))
         GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "CUSTOM VECTOR ART & ECS ENGINE", boxX, cY - 58f, boxW, 25f, Color.LIGHT_GRAY)
-        GameUIRenderer.drawBadgeCenteredText(batch, font, "CLOSE", cX - 75f, boxY - 26f, 150f, 44f, Color.YELLOW)
         batch.end()
     }
 }

@@ -6,7 +6,6 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector2
-import com.badlogic.gdx.utils.Align
 import com.game.td.Config
 import com.game.td.ecs.components.GameDifficulty
 import com.game.td.managers.GameMode
@@ -35,14 +34,15 @@ object WorldMapRenderer {
         selectedLevelName: String,
         selectedLevelNumber: Int,
         currentDifficulty: GameDifficulty,
-        currentGameMode: GameMode
+        currentGameMode: GameMode,
+        pressedMapButton: String? = null
     ) {
+        ComicFontRenderer.prepareCrispFont(titleFont, font, smallFont)
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
         // 1. NỀN CUỘN BẢN ĐỒ DA DÊ CỔ ĐIỂN
         shapeRenderer.color = Color(0.84f, 0.73f, 0.52f, 1f)
         shapeRenderer.rect(25f, 25f, Config.WORLD_WIDTH - 50f, Config.WORLD_HEIGHT - 50f)
 
-        // Hai trục cuộn giấy ở 2 mép trái phải
         shapeRenderer.color = Color(0.72f, 0.60f, 0.40f, 1f)
         shapeRenderer.rect(20f, 18f, 24f, Config.WORLD_HEIGHT - 36f)
         shapeRenderer.rect(Config.WORLD_WIDTH - 44f, 18f, 24f, Config.WORLD_HEIGHT - 36f)
@@ -60,7 +60,7 @@ object WorldMapRenderer {
             drawDottedLine(shapeRenderer, campaignNodes[i].second, campaignNodes[i + 1].second, lineColor, 5f)
         }
 
-        // 3. VẼ CỜ KHIÊN CHO TỪNG MỐC MÀN CHƠI (HEROIC = CÁNH VÀNG, IRON = KHIÊN XANH)
+        // 3. VẼ CỜ KHIÊN CHO TỪNG MỐC MÀN CHƠI
         for (i in campaignNodes.indices) {
             val lvlNum = i + 1
             val pos = campaignNodes[i].second
@@ -83,7 +83,7 @@ object WorldMapRenderer {
             }
         }
 
-        // Cổng Sandbox góc dưới phải
+        // Cổng Sandbox bên phải
         shapeRenderer.color = Color(0.25f, 0.15f, 0.35f, 1f)
         shapeRenderer.circle(sandboxNode.x, sandboxNode.y, 26f)
         shapeRenderer.color = Color(0.65f, 0.25f, 0.95f, 1f)
@@ -120,12 +120,50 @@ object WorldMapRenderer {
         shapeRenderer.circle(122f, Config.WORLD_HEIGHT - 58f, 14f)
 
         // 5. NÚT QUAY VỀ MAIN MENU, UPGRADES & ENCYCLOPEDIA
-        drawMainMenuMapButton(shapeRenderer, 55f, 42f, 145f, 38f)
-        drawUpgradesMapButton(shapeRenderer, 615f, 42f, 150f, 38f)
-        drawEncyclopediaMapButton(shapeRenderer, 795f, 42f, 165f, 38f)
+        drawMainMenuMapButton(shapeRenderer, 55f, 42f, 145f, 38f, isPressed = (pressedMapButton == "MAIN_MENU"))
+        drawUpgradesMapButton(shapeRenderer, 615f, 42f, 150f, 38f, isPressed = (pressedMapButton == "UPGRADES"))
+        drawEncyclopediaMapButton(shapeRenderer, 795f, 42f, 165f, 38f, isPressed = (pressedMapButton == "ENCYCLOPEDIA"))
+
+        // 6. VẼ CHỮ COMIC VECTOR KIỂU VICTORY CHO TOÀN BỘ WORLD MAP
+        ComicFontRenderer.drawRibbonBannerText(
+            sr = shapeRenderer,
+            text = "KINGDOM RUSH - LINIREA CAMPAIGN",
+            centerX = Config.WORLD_WIDTH / 2f,
+            centerY = Config.WORLD_HEIGHT - 54f,
+            charHeight = 18f,
+            fillColor = Color(0.32f, 0.18f, 0.08f, 1f),
+            shadowColor = Color(0.96f, 0.88f, 0.65f, 1f)
+        )
+
+        ComicFontRenderer.drawPlaqueText(
+            sr = shapeRenderer,
+            text = "${SaveManager.getTotalStars()}/60",
+            centerX = signX + 72f,
+            centerY = signY + signH / 2f,
+            charHeight = 20f,
+            fillColor = Color(1f, 0.88f, 0.22f, 1f)
+        )
+
+        val soundLabel = if (SoundManager.isSoundEnabled) "S" else "X"
+        val musicLabel = if (SoundManager.isMusicEnabled) "M" else "X"
+        ComicFontRenderer.drawPlaqueText(shapeRenderer, soundLabel, 78f, Config.WORLD_HEIGHT - 58f, 14f, Color.WHITE)
+        ComicFontRenderer.drawPlaqueText(shapeRenderer, musicLabel, 122f, Config.WORLD_HEIGHT - 58f, 14f, Color.WHITE)
+
+        val mainColor = if (pressedMapButton == "MAIN_MENU") Color(1f, 0.92f, 0.28f, 1f) else Color.WHITE
+        val upgColor = if (pressedMapButton == "UPGRADES") Color(1f, 0.92f, 0.28f, 1f) else Color.WHITE
+        val encColor = if (pressedMapButton == "ENCYCLOPEDIA") Color(1f, 0.92f, 0.28f, 1f) else Color.WHITE
+
+        ComicFontRenderer.drawPlaqueText(shapeRenderer, "MAIN MENU", 55f + 72.5f, 42f + 19f, 13f, mainColor)
+        ComicFontRenderer.drawPlaqueText(shapeRenderer, "UPGRADES", 615f + 75f, 42f + 19f, 13f, upgColor)
+        ComicFontRenderer.drawPlaqueText(shapeRenderer, "ENCYCLOPEDIA", 795f + 82.5f, 42f + 19f, 12.5f, encColor)
+        ComicFontRenderer.drawPlaqueText(shapeRenderer, "SANDBOX", sandboxNode.x, sandboxNode.y + 38f, 13f, Color.WHITE)
+
+        val availStars = UpgradeManager.getAvailableStars()
+        if (availStars > 0) {
+            ComicFontRenderer.drawPlaqueText(shapeRenderer, "+$availStars", 734f, 111f, 14f, Color.YELLOW)
+        }
         shapeRenderer.end()
 
-        // Vẽ các ngôi sao nhỏ trên đỉnh cờ của từng màn chơi đã qua
         for (i in campaignNodes.indices) {
             val lvlNum = i + 1
             val pos = campaignNodes[i].second
@@ -135,48 +173,12 @@ object WorldMapRenderer {
             }
         }
 
-        // Vẽ ngôi sao lớn trong bảng sao góc trên phải
         drawStarDirect(shapeRenderer, signX + signW - 30f, signY + signH / 2f, 15f, true)
 
-        // Vẽ ngôi sao Vector cạnh số sao dư ở nút UPGRADES
-        val availStars = UpgradeManager.getAvailableStars()
-        val availText = "+$availStars"
-        layout.setText(smallFont, availText)
-        val badgeTextX = 724f
-        val badgeTextY = 116f
         if (availStars > 0) {
-            drawStarDirect(shapeRenderer, badgeTextX + layout.width + 11f, badgeTextY - 5f, 7.5f, true)
+            drawStarDirect(shapeRenderer, 762f, 111f, 7.5f, true)
         }
 
-        batch.begin()
-        font.color = Color(0.32f, 0.18f, 0.08f, 1f)
-        font.draw(batch, "KINGDOM RUSH - LINIREA CAMPAIGN", 0f, Config.WORLD_HEIGHT - 45f, Config.WORLD_WIDTH, Align.center, false)
-
-        GameUIRenderer.drawOutlinedText(
-            batch, titleFont,
-            "${SaveManager.getTotalStars()}/60",
-            signX + 20f, signY + 36f,
-            Color(1f, 0.88f, 0.22f, 1f)
-        )
-
-        val soundLabel = if (SoundManager.isSoundEnabled) "S" else "X"
-        val musicLabel = if (SoundManager.isMusicEnabled) "M" else "X"
-        GameUIRenderer.drawOutlinedText(batch, smallFont, soundLabel, 73f, Config.WORLD_HEIGHT - 52f, Color.WHITE)
-        GameUIRenderer.drawOutlinedText(batch, smallFont, musicLabel, 116f, Config.WORLD_HEIGHT - 52f, Color.WHITE)
-
-        GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "MAIN MENU", 55f, 42f, 145f, 38f, Color.WHITE)
-        GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "UPGRADES", 615f, 42f, 150f, 38f, Color.WHITE)
-        GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "ENCYCLOPEDIA", 795f, 42f, 165f, 38f, Color.WHITE)
-
-        if (availStars > 0) {
-            GameUIRenderer.drawOutlinedText(batch, smallFont, availText, badgeTextX, badgeTextY, Color.YELLOW)
-        }
-
-        smallFont.color = Color.WHITE
-        smallFont.draw(batch, "SANDBOX", sandboxNode.x - 45f, sandboxNode.y + 44f)
-        batch.end()
-
-        // GỌI FILE RIÊNG MISSIONPOPUPRENDERER ĐỂ VẼ BẢNG CHI TIẾT MÀN CHƠI
         if (isPopupOpen) {
             MissionPopupRenderer.render(
                 sr = shapeRenderer,
@@ -201,9 +203,15 @@ object WorldMapRenderer {
         }
     }
 
-    private fun drawMainMenuMapButton(sr: ShapeRenderer, x: Float, y: Float, w: Float, h: Float) {
+    private fun drawMainMenuMapButton(sr: ShapeRenderer, x: Float, y: Float, w: Float, h: Float, isPressed: Boolean) {
         val cx = x + w / 2f
         val iconY = y + h + 18f
+
+        if (isPressed) {
+            sr.color = Color(0.98f, 0.88f, 0.25f, 1f)
+            sr.circle(cx, iconY, 22f)
+            sr.rect(x - 5f, y - 5f, w + 10f, h + 10f)
+        }
 
         sr.color = Color(0.24f, 0.18f, 0.12f, 1f)
         sr.circle(cx, iconY, 19f)
@@ -215,7 +223,7 @@ object WorldMapRenderer {
         sr.rect(cx - 2f, iconY - 3.5f, 10f, 7f)
         sr.triangle(cx - 10f, iconY, cx - 1f, iconY + 8.5f, cx - 1f, iconY - 8.5f)
 
-        sr.color = Color(0.55f, 0.52f, 0.44f, 1f)
+        sr.color = if (isPressed) Color(0.98f, 0.88f, 0.25f, 1f) else Color(0.55f, 0.52f, 0.44f, 1f)
         sr.rect(x - 3f, y - 3f, w + 6f, h + 6f)
         sr.color = Color(0.24f, 0.20f, 0.16f, 1f)
         sr.rect(x, y, w, h)
@@ -298,8 +306,14 @@ object WorldMapRenderer {
         sr.rectLine(x - 7f, y + 25f, x + 7f, y + 11f, 2.6f)
     }
 
-    private fun drawUpgradesMapButton(sr: ShapeRenderer, x: Float, y: Float, w: Float, h: Float) {
+    private fun drawUpgradesMapButton(sr: ShapeRenderer, x: Float, y: Float, w: Float, h: Float, isPressed: Boolean) {
         val cx = x + w / 2f
+        if (isPressed) {
+            sr.color = Color(0.98f, 0.88f, 0.25f, 1f)
+            sr.rect(x - 5f, y - 5f, w + 10f, h + 10f)
+            sr.rect(cx - 31f, y + h + 21f, 60f, 34f)
+        }
+
         sr.color = Color(0.45f, 0.28f, 0.12f, 1f)
         sr.rectLine(cx - 4f, y + h - 2f, cx + 10f, y + h + 44f, 9f)
         sr.color = Color(0.62f, 0.40f, 0.18f, 1f)
@@ -317,7 +331,7 @@ object WorldMapRenderer {
         sr.color = Color(0.68f, 0.72f, 0.78f, 1f)
         sr.circle(cx + 20f, y + h + 18f, 9f)
 
-        sr.color = Color(0.55f, 0.52f, 0.44f, 1f)
+        sr.color = if (isPressed) Color(0.98f, 0.88f, 0.25f, 1f) else Color(0.55f, 0.52f, 0.44f, 1f)
         sr.rect(x - 3f, y - 3f, w + 6f, h + 6f)
         sr.color = Color(0.24f, 0.20f, 0.16f, 1f)
         sr.rect(x, y, w, h)
@@ -325,9 +339,15 @@ object WorldMapRenderer {
         sr.rect(x + 4f, y + 4f, w - 8f, h - 8f)
     }
 
-    private fun drawEncyclopediaMapButton(sr: ShapeRenderer, x: Float, y: Float, w: Float, h: Float) {
+    private fun drawEncyclopediaMapButton(sr: ShapeRenderer, x: Float, y: Float, w: Float, h: Float, isPressed: Boolean) {
         val cx = x + w / 2f
         val bookY = y + h - 2f
+
+        if (isPressed) {
+            sr.color = Color(0.98f, 0.88f, 0.25f, 1f)
+            sr.rect(x - 5f, y - 5f, w + 10f, h + 10f)
+            sr.rect(cx - 45f, bookY - 3f, 90f, 54f)
+        }
 
         sr.color = Color(0.42f, 0.25f, 0.10f, 1f)
         sr.rect(cx - 42f, bookY, 84f, 48f)
@@ -347,7 +367,7 @@ object WorldMapRenderer {
             sr.rect(cx + 9f, bookY + ly, 22f, 2.5f)
         }
 
-        sr.color = Color(0.55f, 0.52f, 0.44f, 1f)
+        sr.color = if (isPressed) Color(0.98f, 0.88f, 0.25f, 1f) else Color(0.55f, 0.52f, 0.44f, 1f)
         sr.rect(x - 3f, y - 3f, w + 6f, h + 6f)
         sr.color = Color(0.24f, 0.20f, 0.16f, 1f)
         sr.rect(x, y, w, h)

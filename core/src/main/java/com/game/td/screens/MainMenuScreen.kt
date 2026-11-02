@@ -51,62 +51,67 @@ class MainMenuScreen(private val game: Game) : ScreenAdapter() {
 
     private var isSlotPopupOpen = false
     private var isCreditsPopupOpen = false
+    private var confirmDeleteSlot: Int = -1
+    private var pressedButton: String? = null
     private val touchPoint = Vector3()
 
     override fun show() {
         SoundManager.init()
         SoundManager.playMapMusic()
+        confirmDeleteSlot = -1
+        pressedButton = null
 
         Gdx.input.inputProcessor = object : InputAdapter() {
             override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
                 touchPoint.set(screenX.toFloat(), screenY.toFloat(), 0f)
                 viewport.unproject(touchPoint)
-                handleTouch(touchPoint.x, touchPoint.y)
+                pressedButton = detectButtonAt(touchPoint.x, touchPoint.y)
+                return true
+            }
+
+            override fun touchDragged(screenX: Int, screenY: Int, pointer: Int): Boolean {
+                if (pressedButton != null) {
+                    touchPoint.set(screenX.toFloat(), screenY.toFloat(), 0f)
+                    viewport.unproject(touchPoint)
+                    pressedButton = detectButtonAt(touchPoint.x, touchPoint.y)
+                }
+                return true
+            }
+
+            override fun touchUp(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
+                touchPoint.set(screenX.toFloat(), screenY.toFloat(), 0f)
+                viewport.unproject(touchPoint)
+                val activeBtn = pressedButton
+                pressedButton = null
+                handleTouchRelease(touchPoint.x, touchPoint.y, activeBtn)
                 return true
             }
         }
     }
 
-    private fun handleTouch(x: Float, y: Float) {
+    private fun detectButtonAt(x: Float, y: Float): String? {
         val cX = Config.WORLD_WIDTH / 2f
         val cY = Config.WORLD_HEIGHT / 2f
 
-        // 1. Nút bật/tắt Âm thanh & Nhạc ở góc trên trái
         if (Vector2(52f, Config.WORLD_HEIGHT - 42f).dst(x, y) <= 22f ||
             Vector2(102f, Config.WORLD_HEIGHT - 42f).dst(x, y) <= 22f
         ) {
-            SoundManager.toggleAudio()
-            SoundManager.playClick()
-            return
+            return "AUDIO"
         }
 
-        // 2. Nếu đang mở bảng CREDITS
         if (isCreditsPopupOpen) {
-            if (x in (cX - 80f)..(cX + 80f) && y in (cY - 165f)..(cY - 115f) ||
-                x !in (cX - 240f)..(cX + 240f) || y !in (cY - 170f)..(cY + 170f)
-            ) {
-                SoundManager.playClick()
-                isCreditsPopupOpen = false
+            if (x in (cX - 80f)..(cX + 80f) && y in (cY - 185f)..(cY - 125f)) {
+                return "CLOSE_CREDITS"
             }
-            return
+            return null
         }
 
-        // 3. Nếu đang ở màn hình chính (chưa mở bảng Save)
         if (!isSlotPopupOpen) {
-            if (x in (cX - 115f)..(cX + 115f) && y in 210f..302f) {
-                SoundManager.playTowerPreview()
-                isSlotPopupOpen = true
-                return
-            }
-            if (x in (cX - 88f)..(cX + 88f) && y in 132f..188f) {
-                SoundManager.playClick()
-                isCreditsPopupOpen = true
-                return
-            }
-            return
+            if (x in (cX - 115f)..(cX + 115f) && y in 210f..302f) return "START"
+            if (x in (cX - 88f)..(cX + 88f) && y in 132f..188f) return "CREDITS"
+            return null
         }
 
-        // 4. Xử lý tương tác trong bảng LOCAL SAVE
         val panelW = 410f
         val panelH = 420f
         val panelX = cX - panelW / 2f
@@ -114,14 +119,11 @@ class MainMenuScreen(private val game: Game) : ScreenAdapter() {
 
         val closeBtnX = cX - 85f
         val closeBtnY = panelY - 36f
-        if ((x in closeBtnX..(closeBtnX + 170f) && y in closeBtnY..panelY) ||
-            Vector2(panelX + panelW - 18f, panelY + panelH + 14f).dst(x, y) <= 24f ||
-            x !in (panelX - 20f)..(panelX + panelW + 20f) ||
-            y !in (panelY - 42f)..(panelY + panelH + 55f)
-        ) {
-            SoundManager.playClick()
-            isSlotPopupOpen = false
-            return
+        if (x in closeBtnX..(closeBtnX + 170f) && y in closeBtnY..panelY) {
+            return "CLOSE_SAVE"
+        }
+        if (Vector2(cX + 146f, panelY + panelH + 14f).dst(x, y) <= 22f) {
+            return "CLOSE_SAVE_Q"
         }
 
         val startY = panelY + panelH - 82f
@@ -133,24 +135,119 @@ class MainMenuScreen(private val game: Game) : ScreenAdapter() {
             val cardX = cX - cardW / 2f
             val hasSave = SaveManager.hasData(i)
 
+            if (hasSave && confirmDeleteSlot == i) {
+                val yesPos = Vector2(cX - 38f, cardY - 12f)
+                val noPos = Vector2(cX + 38f, cardY - 12f)
+                if (yesPos.dst(x, y) <= 24f) return "CONFIRM_YES_$i"
+                if (noPos.dst(x, y) <= 24f) return "CONFIRM_NO_$i"
+                return null
+            }
+
             if (hasSave) {
                 val delBtnX = cardX + cardW - 30f
                 val delBtnY = cardY + 20f
                 if (Vector2(delBtnX, delBtnY).dst(x, y) <= 20f) {
-                    SoundManager.playClick()
-                    SaveManager.deleteSlot(i)
-                    return
+                    return "DEL_$i"
                 }
             }
 
             if (x in cardX..(cardX + cardW) && y in (cardY - cardH / 2f)..(cardY + cardH / 2f)) {
-                SoundManager.playBattleStart()
-                SaveManager.activeSlot = i
-                if (!hasSave) {
-                    SaveManager.resetSlot(i)
+                return "SLOT_$i"
+            }
+        }
+        return null
+    }
+
+    private fun handleTouchRelease(x: Float, y: Float, activeBtn: String?) {
+        val cX = Config.WORLD_WIDTH / 2f
+        val cY = Config.WORLD_HEIGHT / 2f
+        val releasedBtn = detectButtonAt(x, y)
+
+        if (activeBtn != null && activeBtn == releasedBtn) {
+            when {
+                activeBtn == "AUDIO" -> {
+                    SoundManager.toggleAudio()
+                    SoundManager.playClick()
+                    return
                 }
-                openWorldMap()
-                return
+                activeBtn == "START" -> {
+                    SoundManager.playTowerPreview()
+                    confirmDeleteSlot = -1
+                    isSlotPopupOpen = true
+                    return
+                }
+                activeBtn == "CREDITS" -> {
+                    SoundManager.playClick()
+                    isCreditsPopupOpen = true
+                    return
+                }
+                activeBtn == "CLOSE_CREDITS" -> {
+                    SoundManager.playClick()
+                    isCreditsPopupOpen = false
+                    return
+                }
+                activeBtn == "CLOSE_SAVE" || activeBtn == "CLOSE_SAVE_Q" -> {
+                    SoundManager.playClick()
+                    confirmDeleteSlot = -1
+                    isSlotPopupOpen = false
+                    return
+                }
+                activeBtn.startsWith("DEL_") -> {
+                    val slot = activeBtn.removePrefix("DEL_").toIntOrNull() ?: return
+                    SoundManager.playClick()
+                    confirmDeleteSlot = slot
+                    return
+                }
+                activeBtn.startsWith("CONFIRM_YES_") -> {
+                    val slot = activeBtn.removePrefix("CONFIRM_YES_").toIntOrNull() ?: return
+                    SoundManager.playTowerSell()
+                    SaveManager.deleteSlot(slot)
+                    confirmDeleteSlot = -1
+                    return
+                }
+                activeBtn.startsWith("CONFIRM_NO_") -> {
+                    SoundManager.playClick()
+                    confirmDeleteSlot = -1
+                    return
+                }
+                activeBtn.startsWith("SLOT_") -> {
+                    val slot = activeBtn.removePrefix("SLOT_").toIntOrNull() ?: return
+                    if (confirmDeleteSlot != -1) {
+                        confirmDeleteSlot = -1
+                        return
+                    }
+                    val hasSave = SaveManager.hasData(slot)
+                    SoundManager.playBattleStart()
+                    SaveManager.activeSlot = slot
+                    if (!hasSave) {
+                        SaveManager.resetSlot(slot)
+                    }
+                    openWorldMap()
+                    return
+                }
+            }
+        }
+
+        // Bấm ra ngoài hộp thoại thì đóng bảng
+        if (isCreditsPopupOpen) {
+            if (x !in (cX - 240f)..(cX + 240f) || y !in (cY - 170f)..(cY + 170f)) {
+                SoundManager.playClick()
+                isCreditsPopupOpen = false
+            }
+            return
+        }
+
+        if (isSlotPopupOpen) {
+            val panelW = 410f
+            val panelH = 420f
+            val panelX = cX - panelW / 2f
+            val panelY = 58f
+            if (x !in (panelX - 20f)..(panelX + panelW + 20f) ||
+                y !in (panelY - 42f)..(panelY + panelH + 55f)
+            ) {
+                SoundManager.playClick()
+                confirmDeleteSlot = -1
+                isSlotPopupOpen = false
             }
         }
     }
@@ -203,7 +300,9 @@ class MainMenuScreen(private val game: Game) : ScreenAdapter() {
             italicFont = italicFont,
             smallFont = smallFont,
             isSlotPopupOpen = isSlotPopupOpen,
-            isCreditsPopupOpen = isCreditsPopupOpen
+            isCreditsPopupOpen = isCreditsPopupOpen,
+            confirmDeleteSlot = confirmDeleteSlot,
+            pressedButton = pressedButton
         )
     }
 

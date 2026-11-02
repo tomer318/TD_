@@ -14,10 +14,12 @@ import com.badlogic.gdx.math.Vector3
 import com.badlogic.gdx.utils.viewport.FitViewport
 import com.game.td.Config
 import com.game.td.ecs.components.GameDifficulty
+import com.game.td.managers.AchievementManager
 import com.game.td.managers.GameMode
 import com.game.td.managers.SaveManager
 import com.game.td.managers.SoundManager
 import com.game.td.map.*
+import com.game.td.renderers.AchievementRenderer
 import com.game.td.renderers.EncyclopediaRenderer
 import com.game.td.renderers.MissionPopupRenderer
 import com.game.td.renderers.UpgradeRenderer
@@ -66,7 +68,7 @@ class WorldMapScreen(
         Pair("12. The Dark Tower", Vector2(765f, 480f))
     )
 
-    private val sandboxNode = Vector2(Config.WORLD_WIDTH - 95f, 85f)
+    private val sandboxNode = Vector2(Config.WORLD_WIDTH - 95f, 185f)
 
     private var selectedLevelData: LevelData? = null
     private var selectedLevelName: String = ""
@@ -74,7 +76,10 @@ class WorldMapScreen(
     private var isPopupOpen: Boolean = false
     private var isUpgradesOpen: Boolean = false
     private var isEncyclopediaOpen: Boolean = false
+    private var isAchievementsOpen: Boolean = false
     private var activeFlaggedIndex: Int = -1
+
+    private var pressedMapButton: String? = null
 
     private fun getHighestAccessibleLevel(): Int {
         for (i in 1..12) {
@@ -83,6 +88,17 @@ class WorldMapScreen(
             }
         }
         return 12
+    }
+
+    private fun getMapBottomButtonAt(x: Float, y: Float): String? {
+        if (y !in 36f..132f) return null
+        return when {
+            x in 50f..205f -> "MAIN_MENU"
+            x in 610f..770f -> "UPGRADES"
+            x in 790f..965f -> "ENCYCLOPEDIA"
+            x in 980f..1165f -> "ACHIEVEMENTS"
+            else -> null
+        }
     }
 
     private fun launchSelectedMission() {
@@ -135,10 +151,13 @@ class WorldMapScreen(
     override fun show() {
         SoundManager.init()
         SoundManager.playMapMusic()
+        AchievementManager.syncWithSaveProgress(triggerToast = false)
         activeFlaggedIndex = -1
         isPopupOpen = false
         isUpgradesOpen = false
         isEncyclopediaOpen = false
+        isAchievementsOpen = false
+        pressedMapButton = null
 
         Gdx.input.inputProcessor = object : InputAdapter() {
             override fun touchDown(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
@@ -157,7 +176,11 @@ class WorldMapScreen(
                     return true
                 }
 
-                // GỌI MISSIONPOPUPRENDERER ĐỂ XỬ LÝ TƯƠNG TÁC TRONG BẢNG CHI TIẾT MÀN CHƠI
+                if (isAchievementsOpen) {
+                    AchievementRenderer.handleTouchDown(x, y)
+                    return true
+                }
+
                 if (isPopupOpen) {
                     return MissionPopupRenderer.handleTouch(
                         x = x,
@@ -175,33 +198,16 @@ class WorldMapScreen(
                     )
                 }
 
-                // BẤM NÚT BẬT/TẮT ÂM THANH Ở GÓC TRÊN TRÁI
                 if (x in 55f..150f && y in (Config.WORLD_HEIGHT - 85f)..(Config.WORLD_HEIGHT - 35f)) {
                     SoundManager.toggleAudio()
                     SoundManager.playClick()
                     return true
                 }
 
-                // BẤM NÚT QUAY VỀ MAIN MENU Ở GÓC DƯỚI TRÁI
-                if (x in 50f..205f && y in 36f..120f) {
-                    SoundManager.playClick()
-                    onReturnToMainMenu()
-                    return true
-                }
-
-                // BẤM NÚT UPGRADES
-                if (x in 610f..770f && y in 36f..130f) {
-                    SoundManager.playTowerPreview()
-                    UpgradeRenderer.open()
-                    isUpgradesOpen = true
-                    return true
-                }
-
-                // BẤM NÚT ENCYCLOPEDIA
-                if (x in 790f..965f && y in 36f..130f) {
-                    SoundManager.playTowerPreview()
-                    EncyclopediaRenderer.open()
-                    isEncyclopediaOpen = true
+                // Kiểm tra nhấn giữ vào 1 trong 4 nút dưới đáy bản đồ -> Làm sáng viền vàng
+                val hitBtn = getMapBottomButtonAt(x, y)
+                if (hitBtn != null) {
+                    pressedMapButton = hitBtn
                     return true
                 }
 
@@ -247,6 +253,56 @@ class WorldMapScreen(
 
                 return true
             }
+
+            override fun touchDragged(screenX: Int, screenY: Int, pointer: Int): Boolean {
+                touchPoint.set(screenX.toFloat(), screenY.toFloat(), 0f)
+                viewport.unproject(touchPoint)
+                if (isAchievementsOpen) {
+                    AchievementRenderer.handleTouchDragged(touchPoint.x, touchPoint.y)
+                    return true
+                }
+                if (pressedMapButton != null) {
+                    pressedMapButton = getMapBottomButtonAt(touchPoint.x, touchPoint.y)
+                }
+                return true
+            }
+
+            override fun touchUp(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
+                touchPoint.set(screenX.toFloat(), screenY.toFloat(), 0f)
+                viewport.unproject(touchPoint)
+                if (isAchievementsOpen) {
+                    isAchievementsOpen = AchievementRenderer.handleTouchUp(touchPoint.x, touchPoint.y)
+                    return true
+                }
+                val activeBtn = pressedMapButton ?: return false
+                pressedMapButton = null
+                val releasedBtn = getMapBottomButtonAt(touchPoint.x, touchPoint.y)
+
+                if (releasedBtn == activeBtn) {
+                    when (activeBtn) {
+                        "MAIN_MENU" -> {
+                            SoundManager.playClick()
+                            onReturnToMainMenu()
+                        }
+                        "UPGRADES" -> {
+                            SoundManager.playTowerPreview()
+                            UpgradeRenderer.open()
+                            isUpgradesOpen = true
+                        }
+                        "ENCYCLOPEDIA" -> {
+                            SoundManager.playTowerPreview()
+                            EncyclopediaRenderer.open()
+                            isEncyclopediaOpen = true
+                        }
+                        "ACHIEVEMENTS" -> {
+                            SoundManager.playTowerPreview()
+                            AchievementRenderer.open()
+                            isAchievementsOpen = true
+                        }
+                    }
+                }
+                return true
+            }
         }
     }
 
@@ -274,8 +330,22 @@ class WorldMapScreen(
             selectedLevelName = selectedLevelName,
             selectedLevelNumber = selectedLevelNumber,
             currentDifficulty = currentDifficulty,
-            currentGameMode = currentGameMode
+            currentGameMode = currentGameMode,
+            pressedMapButton = pressedMapButton
         )
+
+        if (!isPopupOpen && !isUpgradesOpen && !isEncyclopediaOpen && !isAchievementsOpen) {
+            AchievementRenderer.renderMapTrophyButton(
+                sr = shapeRenderer,
+                batch = batch,
+                smallFont = smallFont,
+                isPressed = (pressedMapButton == "ACHIEVEMENTS")
+            )
+        }
+
+        if (isAchievementsOpen) {
+            AchievementRenderer.render(shapeRenderer, batch, titleFont, font, smallFont)
+        }
     }
 
     override fun resize(width: Int, height: Int) {

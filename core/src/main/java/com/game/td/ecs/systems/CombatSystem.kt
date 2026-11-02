@@ -8,6 +8,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Vector2
 import com.game.td.ecs.components.*
+import com.game.td.managers.AchievementManager
 import com.game.td.managers.CheatManager
 import com.game.td.managers.EconomyManager
 import com.game.td.managers.SoundManager
@@ -75,7 +76,6 @@ class CombatSystem(
         )
     }
 
-    // TÍNH TIẾN ĐỘ ĐI TRÊN ĐƯỜNG CỦA QUÁI (CÀNG GẦN CỔNG THOÁT GIÁ TRỊ CÀNG CAO)
     private fun getPathProgressScore(enemy: Entity): Float {
         val move = enemy.getComponent(MovementComponent::class.java) ?: return 0f
         val pos = transformMapper.get(enemy)?.position ?: return 0f
@@ -108,6 +108,7 @@ class CombatSystem(
                     state.tickTimer -= 0.5f
                     damageEnemy(enemy, hp, state.dps * 0.5f, DamageType.TRUE)
                     if (hp.isDead || hp.currentHealth <= 0f) {
+                        AchievementManager.onPoisonKill()
                         activePoisons.remove(enemy)
                         wrathTrapCounts.remove(enemy)
                         continue
@@ -160,7 +161,6 @@ class CombatSystem(
             }
         }
 
-        // SẮP XẾP DANH SÁCH TRONG TẦM THEO THỨ TỰ GẦN CỔNG THOÁT NHẤT
         inRangeEnemies.sortByDescending { getPathProgressScore(it) }
 
         var targetEnemy: Entity? = null
@@ -168,9 +168,6 @@ class CombatSystem(
         if (inRangeEnemies.size == 1) {
             targetEnemy = inRangeEnemies[0]
         } else if (inRangeEnemies.size > 1) {
-            // FOCUS FIRE CHUẨN KINGDOM RUSH:
-            // - Nếu là Rangers Hideout có Poison Arrows: Ưu tiên rải độc vào mục tiêu chưa trúng độc trước, sau đó dồn bắn con đi đầu.
-            // - Tất cả các tháp khác: DỒN HỎA LỰC (Focus Fire) vào con đi đầu gần cổng thoát nhất để kết liễu dứt điểm từng con!
             targetEnemy = if (isRangerPoisonActive) {
                 inRangeEnemies.firstOrNull { e ->
                     val ec = e.getComponent(EnemyComponent::class.java)
@@ -207,6 +204,7 @@ class CombatSystem(
                     if (vTrans != null && vHp != null && !vHp.isDead) {
                         val impactPos = Vector2(vTrans.position)
                         SoundManager.playBombExplosion()
+                        AchievementManager.onMissileLaunched()
                         onSniperShotTriggered(Vector2(towerTransform.position), impactPos)
                         val missileDmg = 120f + towerComp.skill1Level * 100f
 
@@ -250,6 +248,7 @@ class CombatSystem(
 
                     val clusterDmg = 55f + towerComp.skill2Level * 35f
                     SoundManager.playArtilleryFire()
+                    AchievementManager.onClusterBombletsDropped(3 + towerComp.skill2Level * 2)
 
                     onClusterBombsLaunched(
                         Vector2(towerTransform.position),
@@ -310,6 +309,9 @@ class CombatSystem(
                             val failedSniperDmg = (instantKillChance * vHp.currentHealth) + regularDmg
                             damageEnemy(victim, vHp, failedSniperDmg, DamageType.PHYSICAL)
                         }
+                        if (vHp.isDead || vHp.currentHealth <= 0f) {
+                            AchievementManager.onSniperKill()
+                        }
                         towerComp.skill1Cooldown = 14.0f
                     }
                 }
@@ -367,7 +369,7 @@ class CombatSystem(
             }
         }
 
-        // 3. KỸ NĂNG ARCANE WIZARD: DEATH RAY & GROUP TELEPORT (DỊCH CHUYỂN CẢ CỤM 4/5/6 QUÁI CHUẨN WIKI)
+        // 3. KỸ NĂNG ARCANE WIZARD: DEATH RAY & GROUP TELEPORT
         if (towerComp.level == 4 && towerComp.specialization == TowerSpecialization.ARCANE_WIZARD) {
             if (towerComp.skill1Level > 0 && towerComp.skill1Cooldown <= 0f) {
                 val candidate = inRangeEnemies.filter {
@@ -392,6 +394,9 @@ class CombatSystem(
                         } else {
                             damageEnemy(victim, vHp, vHp.currentHealth, DamageType.TRUE)
                         }
+                        if (vHp.isDead || vHp.currentHealth <= 0f) {
+                            AchievementManager.onDeathRayKill()
+                        }
                         towerComp.skill1Cooldown = when (towerComp.skill1Level) {
                             1 -> 18f
                             2 -> 15f
@@ -413,16 +418,16 @@ class CombatSystem(
                 if (eligibleForTeleport.isNotEmpty()) {
                     val leadVictim = eligibleForTeleport.first()
                     val leadPos = Vector2(transformMapper.get(leadVictim)?.position ?: Vector2())
-                    val maxTeleportTargets = 3 + towerComp.skill2Level // Cấp 1: 4 con, Cấp 2: 5 con, Cấp 3: 6 con
+                    val maxTeleportTargets = 3 + towerComp.skill2Level
                     val rollBackAmount = 2 + towerComp.skill2Level
 
-                    // Gom các quái đứng gần con đi đầu để dịch chuyển cả cụm lùi lại
                     val groupToTeleport = eligibleForTeleport.filter {
                         val pos = transformMapper.get(it)?.position
                         pos != null && pos.dst(leadPos) <= 75f
                     }.take(maxTeleportTargets)
 
                     SoundManager.playTeleport()
+                    AchievementManager.onEnemiesTeleported(groupToTeleport.size)
                     onTeleportTriggered(leadPos)
 
                     for (victim in groupToTeleport) {
@@ -471,6 +476,8 @@ class CombatSystem(
 
                     SoundManager.playForestWrath()
                     val targetsToTrap = eligibleTargets.take(maxTrapped)
+                    AchievementManager.onWrathOfTheForestTrapped(targetsToTrap.size)
+
                     for (target in targetsToTrap) {
                         val oTrans = transformMapper.get(target)
                         val oHp = healthMapper.get(target)
@@ -507,6 +514,9 @@ class CombatSystem(
                     val m = e.getComponent(MovementComponent::class.java)
                     if (eHp != null && !eHp.isDead && m?.isInsideTunnel != true && ePos != null && ePos.dst(towerTransform.position) <= overchargeRadius) {
                         damageEnemy(e, eHp, MathUtils.random(dMin, dMax), DamageType.EXPLOSIVE)
+                        if (eHp.isDead || eHp.currentHealth <= 0f) {
+                            AchievementManager.onElectricityKill()
+                        }
                         hitAny = true
                     }
                 }
@@ -519,7 +529,7 @@ class CombatSystem(
             }
         }
 
-        // 6. KỸ NĂNG SORCERER MAGE: HÓA CỪU (ƯU TIÊN KẺ ĐỊCH MÁU CAO NHẤT TRONG TẦM BẮN)
+        // 6. KỸ NĂNG SORCERER MAGE: HÓA CỪU
         if (towerComp.level == 4 && towerComp.specialization == TowerSpecialization.SORCERER_MAGE) {
             if (towerComp.skill1Level > 0 && towerComp.skill1Cooldown <= 0f) {
                 val candidate = inRangeEnemies.filter {
@@ -546,6 +556,7 @@ class CombatSystem(
                         ec.isRangedAttacking = false
                         ec.enrageDuration = 0f
                         SoundManager.playPolymorph()
+                        AchievementManager.onEnemyPolymorphed()
                         onTeleportTriggered(Vector2(vTrans.position))
 
                         vHp.maxHealth = 25f
@@ -579,7 +590,7 @@ class CombatSystem(
             }
         }
 
-        // 7. TẤN CÔNG BÌNH THƯỜNG & PHÁT ÂM THANH VŨ KHÍ TƯƠNG ỨNG
+        // 7. TẤN CÔNG BÌNH THƯỜNG
         targetEnemy?.let { enemy ->
             if (towerComp.attackCooldown <= 0f) {
                 val eHp = healthMapper.get(enemy)
@@ -607,6 +618,9 @@ class CombatSystem(
                         SoundManager.playTeslaBolt()
                         onTeslaBoltTriggered(Vector2(towerTransform.position), firstHitPos)
                         damageEnemy(enemy, eHp, calculatedDamage, DamageType.EXPLOSIVE)
+                        if (eHp.isDead || eHp.currentHealth <= 0f) {
+                            AchievementManager.onElectricityKill()
+                        }
 
                         val maxChains = 3 + towerComp.skill1Level
                         var chained = 1
@@ -620,6 +634,9 @@ class CombatSystem(
                                 if (nextPos.dst(lastPos) <= 105f) {
                                     onTeslaBoltTriggered(Vector2(lastPos), nextPos)
                                     damageEnemy(otherE, otherHp, calculatedDamage * 0.85f, DamageType.EXPLOSIVE)
+                                    if (otherHp.isDead || otherHp.currentHealth <= 0f) {
+                                        AchievementManager.onElectricityKill()
+                                    }
                                     lastPos = nextPos
                                     chained++
                                     if (chained >= maxChains) break

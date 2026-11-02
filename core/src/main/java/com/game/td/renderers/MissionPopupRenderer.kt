@@ -23,7 +23,6 @@ object MissionPopupRenderer {
     private const val PANEL_W = 720f
     private const val PANEL_H = 490f
 
-    // XỬ LÝ SỰ KIỆN CHẠM TRONG BẢNG CHI TIẾT MÀN CHƠI
     fun handleTouch(
         x: Float,
         y: Float,
@@ -40,7 +39,6 @@ object MissionPopupRenderer {
         val panelX = cX - PANEL_W / 2f
         val panelY = cY - PANEL_H / 2f
 
-        // 1. Nút X đóng bảng ở góc trên phải
         val closeX = panelX + PANEL_W - 36f
         val closeY = panelY + PANEL_H - 36f
         if (Vector2(closeX, closeY).dst(x, y) <= 26f) {
@@ -49,7 +47,6 @@ object MissionPopupRenderer {
             return true
         }
 
-        // 2. Bấm vào hộp DIFFICULTY để đổi độ khó (EASY / NORMAL / HARD)
         val diffX = panelX + 38f
         val diffY = panelY + 106f
         val diffW = 210f
@@ -65,7 +62,6 @@ object MissionPopupRenderer {
             return true
         }
 
-        // 3. Bấm chọn 1 trong 3 chế độ GAME MODE (CAMPAIGN / HEROIC / IRON)
         val levelStars = SaveManager.getLevelStars(selectedLevelNumber)
         val isChallengeUnlocked = levelStars >= 3 || selectedLevelNumber == 0
         val modeY = panelY + 46f
@@ -99,7 +95,6 @@ object MissionPopupRenderer {
             return true
         }
 
-        // 4. Bấm nút TO BATTLE ở góc dưới phải
         val battleBtnX = panelX + PANEL_W - 205f
         val battleBtnY = panelY + 20f
         val battleBtnW = 168f
@@ -113,7 +108,6 @@ object MissionPopupRenderer {
         return true
     }
 
-    // VẼ TOÀN BỘ BẢNG CHI TIẾT MÀN CHƠI
     fun render(
         sr: ShapeRenderer,
         batch: SpriteBatch,
@@ -126,6 +120,8 @@ object MissionPopupRenderer {
         currentDifficulty: GameDifficulty,
         currentGameMode: GameMode
     ) {
+        ComicFontRenderer.prepareCrispFont(titleFont, font, smallFont)
+
         val cX = Config.WORLD_WIDTH / 2f
         val cY = Config.WORLD_HEIGHT / 2f
         val panelX = cX - PANEL_W / 2f
@@ -161,20 +157,30 @@ object MissionPopupRenderer {
         val isIronDone = SaveManager.isIronCompleted(selectedLevelNumber)
         val isChallengeUnlocked = levelStars >= 3 || selectedLevelNumber == 0
 
-        // Lấy độ khó cao nhất mà người chơi đã hoàn thành ở chế độ đang xem (EASY / NORMAL / HARD)
         val completedDifficultyLabel = SaveManager.getCompletedDifficultyLabel(selectedLevelNumber, currentGameMode)
+        val selectedDiffLabel = when (currentDifficulty) {
+            GameDifficulty.CASUAL -> "EASY"
+            GameDifficulty.NORMAL -> "NORMAL"
+            GameDifficulty.VETERAN -> "HARD"
+        }
 
         Gdx.gl.glEnable(GL20.GL_BLEND)
         Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA)
 
-        // 1. VẼ KHUNG GỖ BỌC THÉP, BĂNG RÔN VÀ BẢN ĐỒ THU NHỎ
         sr.begin(ShapeRenderer.ShapeType.Filled)
         sr.color = Color(0f, 0f, 0f, 0.55f)
         sr.rect(0f, 0f, Config.WORLD_WIDTH, Config.WORLD_HEIGHT)
 
         drawWoodenBoardWithIronTrim(sr, panelX, panelY, PANEL_W, PANEL_H)
 
-        // Vẽ huy hiệu Heroic & Iron nhỏ ở hàng tiến độ góc trên trái (cạnh 3 ngôi sao)
+        ComicFontRenderer.drawRibbonBannerText(
+            sr = sr,
+            text = selectedLevelName,
+            centerX = cX,
+            centerY = panelY + PANEL_H - 1f,
+            charHeight = 24f
+        )
+
         val badgeRowY = mapBoxY + mapBoxH + 24f
         if (isHeroicDone) {
             MainMenuRenderer.drawHeroicEmblem(sr, mapBoxX + 135f, badgeRowY + 1f, 0.85f)
@@ -187,10 +193,8 @@ object MissionPopupRenderer {
             drawSilhouetteEmblem(sr, mapBoxX + 174f, badgeRowY, isHeroic = false)
         }
 
-        // Vẽ bản đồ thu nhỏ (Map Thumbnail)
         drawRichMapPreview(sr, selectedLevelData, selectedLevelNumber, mapBoxX, mapBoxY, mapBoxW, mapBoxH)
 
-        // Vẽ hộp chọn DIFFICULTY kiểu Dropdown
         sr.color = OUTLINE
         sr.rect(diffX - 2f, diffY - 2f, diffW + 4f, diffH + 4f)
         sr.color = Color(0.20f, 0.15f, 0.11f, 1f)
@@ -204,12 +208,10 @@ object MissionPopupRenderer {
             diffX + diffW - 17f, diffY + 12f
         )
 
-        // Vẽ 3 nút chọn GAME MODE
         drawModeOptionButton(sr, campBtnX, modeY, currentGameMode == GameMode.CAMPAIGN, isUnlocked = true, mode = GameMode.CAMPAIGN)
         drawModeOptionButton(sr, heroicBtnX, modeY, currentGameMode == GameMode.HEROIC, isUnlocked = isChallengeUnlocked, mode = GameMode.HEROIC)
         drawModeOptionButton(sr, ironBtnX, modeY, currentGameMode == GameMode.IRON, isUnlocked = isChallengeUnlocked, mode = GameMode.IRON)
 
-        // Nếu đang ở chế độ HEROIC hoặc IRON -> Vẽ khung CHALLENGE RULES
         if (currentGameMode != GameMode.CAMPAIGN) {
             sr.color = Color(0.36f, 0.28f, 0.20f, 1f)
             sr.rect(rulesBoxX - 2f, rulesBoxY - 2f, rulesBoxW + 4f, rulesBoxH + 4f)
@@ -229,10 +231,29 @@ object MissionPopupRenderer {
             }
         }
 
-        // Vẽ nút TO BATTLE kèm biểu tượng của chế độ đang chọn
         drawToBattleButton(sr, battleBtnX, battleBtnY, battleBtnW, battleBtnH, currentGameMode)
 
-        // Vẽ dấu tích xanh lá (✔) nếu chế độ đang xem đã hoàn thành
+        val rightColX = panelX + 275f
+        val headerTextY = mapBoxY + mapBoxH + 20f
+        val modeHeaderTitle = when (currentGameMode) {
+            GameMode.CAMPAIGN -> "CAMPAIGN"
+            GameMode.HEROIC -> "HEROIC CHALLENGE"
+            GameMode.IRON -> "IRON CHALLENGE"
+        }
+        val modeHeaderCenterX = when (currentGameMode) {
+            GameMode.CAMPAIGN -> rightColX + 62f
+            GameMode.HEROIC -> rightColX + 115f
+            GameMode.IRON -> rightColX + 102f
+        }
+        ComicFontRenderer.drawPlaqueText(sr, modeHeaderTitle, modeHeaderCenterX, headerTextY, 17f, Color(0.98f, 0.88f, 0.52f, 1f))
+
+        ComicFontRenderer.drawPlaqueText(sr, "DIFFICULTY", diffX + 52f, diffY + diffH + 13f, 12.5f, Color(0.92f, 0.86f, 0.72f, 1f))
+        ComicFontRenderer.drawPlaqueText(sr, selectedDiffLabel, diffX + 48f, diffY + diffH / 2f, 14f, Color.WHITE)
+        ComicFontRenderer.drawPlaqueText(sr, "GAME MODE", diffX + 52f, modeY + 41f, 12.5f, Color(0.92f, 0.86f, 0.72f, 1f))
+
+        ComicFontRenderer.drawPlaqueText(sr, "TO", battleBtnX + 106f, battleBtnY + 42f, 13f, Color.WHITE)
+        ComicFontRenderer.drawPlaqueText(sr, "BATTLE", battleBtnX + 106f, battleBtnY + 20f, 18f, Color(1f, 0.90f, 0.28f, 1f))
+
         if (completedDifficultyLabel != null) {
             val checkX = panelX + PANEL_W - 46f
             val checkY = mapBoxY + mapBoxH + 17f
@@ -245,133 +266,88 @@ object MissionPopupRenderer {
         }
         sr.end()
 
-        // 2. VẼ 3 NGÔI SAO CAMPAIGN Ở GÓC TRÊN TRÁI
         for (s in 0 until 3) {
             val starX = mapBoxX + 22f + s * 34f
             GameUIRenderer.drawStar(sr, starX, badgeRowY, 12f, s < levelStars)
         }
 
-        // 3. VẼ TOÀN BỘ CHỮ, CỐT TRUYỆN & LUẬT CHƠI (CHALLENGE RULES)
         batch.begin()
-        val oldTitleScaleX = titleFont.data.scaleX
-        val oldTitleScaleY = titleFont.data.scaleY
-        titleFont.data.setScale(1.85f)
-
-        // CĂN GIỮA TUYỆT ĐỐI TÊN MÀN CHƠI VÀO TÂM BĂNG RÔN VÀNG
-        val ribbonBoxX = cX - 168f
-        val ribbonBoxY = panelY + PANEL_H - 20f
-        val ribbonBoxW = 336f
-        val ribbonBoxH = 38f
-        GameUIRenderer.drawBadgeCenteredText(
-            batch, titleFont, selectedLevelName,
-            ribbonBoxX, ribbonBoxY, ribbonBoxW, ribbonBoxH,
-            Color(0.26f, 0.16f, 0.08f, 1f)
-        )
-        titleFont.data.setScale(oldTitleScaleX, oldTitleScaleY)
-
-        // Tiêu đề chế độ (CAMPAIGN / HEROIC CHALLENGE / IRON CHALLENGE)
-        val rightColX = panelX + 275f
-        val headerTextY = mapBoxY + mapBoxH + 26f
-        val modeHeaderTitle = when (currentGameMode) {
-            GameMode.CAMPAIGN -> "CAMPAIGN"
-            GameMode.HEROIC -> "HEROIC CHALLENGE"
-            GameMode.IRON -> "IRON CHALLENGE"
-        }
-        GameUIRenderer.drawOutlinedText(batch, font, modeHeaderTitle, rightColX, headerTextY, Color(0.98f, 0.88f, 0.52f, 1f))
-
-        // Hiển thị độ khó cao nhất đã hoàn thành (COMPLETED EASY / COMPLETED NORMAL / COMPLETED HARD)
-        val selectedDiffLabel = when (currentDifficulty) {
-            GameDifficulty.CASUAL -> "EASY"
-            GameDifficulty.NORMAL -> "NORMAL"
-            GameDifficulty.VETERAN -> "HARD"
-        }
         val oldSmallScaleX = smallFont.data.scaleX
         val oldSmallScaleY = smallFont.data.scaleY
-        smallFont.data.setScale(0.92f)
+        smallFont.data.setScale(0.95f)
 
         if (completedDifficultyLabel != null) {
             val statusText = "COMPLETED $completedDifficultyLabel"
             val statusBoxW = 200f
             val statusRightX = panelX + PANEL_W - 60f - statusBoxW
-            font.color = Color.WHITE
-            smallFont.color = Color(0f, 0f, 0f, 0.88f)
-            smallFont.draw(batch, statusText, statusRightX + 1f, headerTextY - 3f, statusBoxW, Align.right, false)
-            smallFont.color = Color(0.52f, 0.92f, 0.25f, 1f)
-            smallFont.draw(batch, statusText, statusRightX, headerTextY - 2f, statusBoxW, Align.right, false)
+            smallFont.color = Color(0f, 0f, 0f, 0.75f)
+            smallFont.draw(batch, statusText, statusRightX + 1.1f, headerTextY + 4.9f, statusBoxW, Align.right, false)
+            smallFont.color = Color(0.55f, 0.95f, 0.28f, 1f)
+            smallFont.draw(batch, statusText, statusRightX, headerTextY + 6f, statusBoxW, Align.right, false)
         }
 
-        // Nhãn DIFFICULTY & GAME MODE bên cột trái
-        GameUIRenderer.drawShadowedText(batch, smallFont, "DIFFICULTY", diffX, diffY + diffH + 18f, Color(0.92f, 0.86f, 0.72f, 1f))
-        GameUIRenderer.drawOutlinedText(batch, smallFont, selectedDiffLabel, diffX + 12f, diffY + 23f, Color.WHITE)
-        GameUIRenderer.drawShadowedText(batch, smallFont, "GAME MODE", diffX, modeY + 45f, Color(0.92f, 0.86f, 0.72f, 1f))
-
-        // Nội dung văn bản và CHALLENGE RULES bên cột phải
         when (currentGameMode) {
             GameMode.CAMPAIGN -> {
-                smallFont.data.setScale(0.88f)
+                smallFont.data.setScale(0.95f)
                 val storyParagraphs = getCampaignStoryParagraphs(selectedLevelNumber)
                 var textY = mapBoxY + mapBoxH - 8f
                 for (paragraph in storyParagraphs) {
-                    val lines = wrapTextLines(paragraph, 43)
+                    val lines = wrapTextLines(paragraph, 42)
                     for (line in lines) {
-                        GameUIRenderer.drawShadowedText(batch, smallFont, line.uppercase(), rightColX, textY, Color(0.92f, 0.88f, 0.78f, 1f))
+                        ComicFontRenderer.drawReadableText(batch, smallFont, line.uppercase(), rightColX, textY, Color(0.95f, 0.91f, 0.82f, 1f))
                         textY -= 17.5f
                     }
                     textY -= 10f
                 }
-                GameUIRenderer.drawShadowedText(batch, smallFont, "GOOD LUCK, GENERAL!", rightColX, textY - 2f, Color(0.98f, 0.90f, 0.65f, 1f))
+                ComicFontRenderer.drawReadableText(batch, smallFont, "GOOD LUCK, GENERAL!", rightColX, textY - 2f, Color(1f, 0.92f, 0.65f, 1f))
             }
 
             GameMode.HEROIC -> {
-                smallFont.data.setScale(0.90f)
+                smallFont.data.setScale(0.95f)
                 val heroicDesc = "Test your tactical skills against an elite enemy force in this challenge meant for the most heroic defenders!"
                 val lines = wrapTextLines(heroicDesc, 42)
                 var textY = mapBoxY + mapBoxH - 10f
                 for (line in lines) {
-                    GameUIRenderer.drawShadowedText(batch, smallFont, line.uppercase(), rightColX, textY, Color(0.92f, 0.88f, 0.78f, 1f))
+                    ComicFontRenderer.drawReadableText(batch, smallFont, line.uppercase(), rightColX, textY, Color(0.95f, 0.91f, 0.82f, 1f))
                     textY -= 18f
                 }
 
-                GameUIRenderer.drawShadowedText(batch, smallFont, "CHALLENGE RULES", rulesBoxX + 14f, rulesBoxY + rulesBoxH - 14f, Color(0.95f, 0.85f, 0.55f, 1f))
+                ComicFontRenderer.drawReadableText(batch, smallFont, "CHALLENGE RULES", rulesBoxX + 14f, rulesBoxY + rulesBoxH - 14f, Color(0.98f, 0.88f, 0.55f, 1f))
 
-                smallFont.data.setScale(0.82f)
+                smallFont.data.setScale(0.92f)
                 val maxCap = getChallengeMaxUpgradeLevel(selectedLevelNumber)
                 val (capLine1, capLine2) = if (maxCap < 5) Pair("LVL $maxCap", "MAX") else Pair("NO", "LIMIT")
 
-                drawCenteredTwoLineRule(batch, smallFont, "6 ELITE", "WAVES", rulesBoxX + 95f, rulesBoxY + 32f, Color(0.92f, 0.88f, 0.78f, 1f))
-                drawCenteredTwoLineRule(batch, smallFont, "1 LIFE", "TOTAL", rulesBoxX + 205f, rulesBoxY + 32f, Color(0.92f, 0.88f, 0.78f, 1f))
-                drawCenteredTwoLineRule(batch, smallFont, capLine1, capLine2, rulesBoxX + 315f, rulesBoxY + 32f, Color(0.95f, 0.35f, 0.25f, 1f))
+                drawCenteredTwoLineRule(batch, smallFont, "6 ELITE", "WAVES", rulesBoxX + 95f, rulesBoxY + 32f, Color(0.96f, 0.92f, 0.82f, 1f))
+                drawCenteredTwoLineRule(batch, smallFont, "1 LIFE", "TOTAL", rulesBoxX + 205f, rulesBoxY + 32f, Color(0.96f, 0.92f, 0.82f, 1f))
+                drawCenteredTwoLineRule(batch, smallFont, capLine1, capLine2, rulesBoxX + 315f, rulesBoxY + 32f, Color(1f, 0.42f, 0.32f, 1f))
             }
 
             GameMode.IRON -> {
-                smallFont.data.setScale(0.90f)
+                smallFont.data.setScale(0.95f)
                 val ironDesc = "A test for the ultimate defender, the iron challenge will take your tactical skills to the limit."
                 val lines = wrapTextLines(ironDesc, 42)
                 var textY = mapBoxY + mapBoxH - 10f
                 for (line in lines) {
-                    GameUIRenderer.drawShadowedText(batch, smallFont, line.uppercase(), rightColX, textY, Color(0.92f, 0.88f, 0.78f, 1f))
+                    ComicFontRenderer.drawReadableText(batch, smallFont, line.uppercase(), rightColX, textY, Color(0.95f, 0.91f, 0.82f, 1f))
                     textY -= 18f
                 }
 
-                GameUIRenderer.drawShadowedText(batch, smallFont, "CHALLENGE RULES", rulesBoxX + 14f, rulesBoxY + rulesBoxH - 14f, Color(0.95f, 0.85f, 0.55f, 1f))
+                ComicFontRenderer.drawReadableText(batch, smallFont, "CHALLENGE RULES", rulesBoxX + 14f, rulesBoxY + rulesBoxH - 14f, Color(0.98f, 0.88f, 0.55f, 1f))
 
-                smallFont.data.setScale(0.80f)
+                smallFont.data.setScale(0.90f)
                 val maxCap = getChallengeMaxUpgradeLevel(selectedLevelNumber)
                 val (capLine1, capLine2) = if (maxCap < 5) Pair("LVL $maxCap", "MAX") else Pair("NO", "LIMIT")
                 val (towerRule1, towerRule2) = getIronTowerRestrictionText(selectedLevelNumber)
 
-                drawCenteredTwoLineRule(batch, smallFont, "1 SUPER", "WAVE", rulesBoxX + 58f, rulesBoxY + 32f, Color(0.92f, 0.88f, 0.78f, 1f))
-                drawCenteredTwoLineRule(batch, smallFont, "1 LIFE", "TOTAL", rulesBoxX + 148f, rulesBoxY + 32f, Color(0.92f, 0.88f, 0.78f, 1f))
-                drawCenteredTwoLineRule(batch, smallFont, capLine1, capLine2, rulesBoxX + 245f, rulesBoxY + 32f, Color(0.95f, 0.35f, 0.25f, 1f))
-                drawCenteredTwoLineRule(batch, smallFont, towerRule1, towerRule2, rulesBoxX + 345f, rulesBoxY + 32f, Color(0.52f, 0.94f, 0.22f, 1f))
+                drawCenteredTwoLineRule(batch, smallFont, "1 SUPER", "WAVE", rulesBoxX + 58f, rulesBoxY + 32f, Color(0.96f, 0.92f, 0.82f, 1f))
+                drawCenteredTwoLineRule(batch, smallFont, "1 LIFE", "TOTAL", rulesBoxX + 148f, rulesBoxY + 32f, Color(0.96f, 0.92f, 0.82f, 1f))
+                drawCenteredTwoLineRule(batch, smallFont, capLine1, capLine2, rulesBoxX + 245f, rulesBoxY + 32f, Color(1f, 0.42f, 0.32f, 1f))
+                drawCenteredTwoLineRule(batch, smallFont, towerRule1, towerRule2, rulesBoxX + 345f, rulesBoxY + 32f, Color(0.55f, 0.96f, 0.28f, 1f))
             }
         }
 
         smallFont.data.setScale(oldSmallScaleX, oldSmallScaleY)
-
-        // Chữ TO BATTLE trong nút góc dưới phải
-        GameUIRenderer.drawBadgeCenteredText(batch, smallFont, "TO", battleBtnX + 52f, battleBtnY + 28f, battleBtnW - 56f, 28f, Color.WHITE)
-        GameUIRenderer.drawBadgeCenteredText(batch, font, "BATTLE", battleBtnX + 52f, battleBtnY + 4f, battleBtnW - 56f, 30f, Color.WHITE)
         batch.end()
     }
 
@@ -656,11 +632,9 @@ object MissionPopupRenderer {
         }
     }
 
-    // VẼ CỜ HIỆU CHIẾN DỊCH MÀU XANH DƯƠNG CÂN ĐỐI, THẲNG TRỤC CHUẨN KINGDOM RUSH
     private fun drawBlueCampaignBannerEmblem(sr: ShapeRenderer, cx: Float, cy: Float, scale: Float) {
         val s = scale
 
-        // 1. Trục cán cờ dọc ở chính giữa (nhô lên trên đỉnh và nhô xuống dưới đáy cờ)
         sr.color = OUTLINE
         sr.rect(cx - 2.2f * s, cy - 17f * s, 4.4f * s, 33f * s)
         sr.circle(cx, cy + 15.5f * s, 3.2f * s)
@@ -669,7 +643,6 @@ object MissionPopupRenderer {
         sr.color = Color(0.96f, 0.78f, 0.20f, 1f)
         sr.circle(cx, cy + 15.5f * s, 2.0f * s)
 
-        // 2. Thanh ngang treo cờ nằm ngang cân đối + 2 đầu tròn vàng
         val barY = cy + 10.5f * s
         sr.color = OUTLINE
         sr.rect(cx - 13f * s, barY - 2f * s, 26f * s, 4.2f * s)
@@ -682,12 +655,10 @@ object MissionPopupRenderer {
         sr.circle(cx - 13f * s, barY, 1.7f * s)
         sr.circle(cx + 13f * s, barY, 1.7f * s)
 
-        // 3. Viền đen của thân lá cờ xanh dương (đuôi cờ nhọn cân xứng)
         sr.color = OUTLINE
         sr.rect(cx - 10.5f * s, cy - 5.5f * s, 21f * s, 15.5f * s)
         sr.triangle(cx - 10.5f * s, cy - 5.5f * s, cx + 10.5f * s, cy - 5.5f * s, cx, cy - 15.5f * s)
 
-        // 4. Nền vải cờ xanh dương đậm & mảng sáng trung tâm
         sr.color = Color(0.18f, 0.50f, 0.86f, 1f)
         sr.rect(cx - 9f * s, cy - 4.8f * s, 18f * s, 13.5f * s)
         sr.triangle(cx - 9f * s, cy - 4.8f * s, cx + 9f * s, cy - 4.8f * s, cx, cy - 13.2f * s)
@@ -696,12 +667,10 @@ object MissionPopupRenderer {
         sr.rect(cx - 6.5f * s, cy - 3.5f * s, 13f * s, 10.5f * s)
         sr.triangle(cx - 6.5f * s, cy - 3.5f * s, cx + 6.5f * s, cy - 3.5f * s, cx, cy - 10f * s)
 
-        // Huy hiệu sọc sáng giữa lá cờ
         sr.color = Color(0.68f, 0.88f, 1f, 1f)
         sr.rect(cx - 2f * s, cy - 5f * s, 4f * s, 10f * s)
         sr.triangle(cx - 2f * s, cy - 5f * s, cx + 2f * s, cy - 5f * s, cx, cy - 8f * s)
 
-        // 5. Ba khuyên vải treo cờ nối lên thanh ngang
         sr.color = OUTLINE
         for (lx in listOf(-6.5f, 0f, 6.5f)) {
             sr.rect(cx + (lx - 1.2f) * s, barY - 2.5f * s, 2.4f * s, 4.5f * s)
@@ -821,14 +790,14 @@ object MissionPopupRenderer {
     ) {
         val boxW = 110f
         val startX = centerX - boxW / 2f
-        font.color = Color(0f, 0f, 0f, 0.85f)
-        font.draw(batch, line1, startX + 1f, topY - 1f, boxW, Align.center, false)
+        font.color = Color(0f, 0f, 0f, 0.75f)
+        font.draw(batch, line1, startX + 1.1f, topY - 1.1f, boxW, Align.center, false)
         font.color = color
         font.draw(batch, line1, startX, topY, boxW, Align.center, false)
 
         if (line2.isNotEmpty()) {
-            font.color = Color(0f, 0f, 0f, 0.85f)
-            font.draw(batch, line2, startX + 1f, topY - 15f, boxW, Align.center, false)
+            font.color = Color(0f, 0f, 0f, 0.75f)
+            font.draw(batch, line2, startX + 1.1f, topY - 15.1f, boxW, Align.center, false)
             font.color = color
             font.draw(batch, line2, startX, topY - 14f, boxW, Align.center, false)
         }

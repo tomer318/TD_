@@ -255,12 +255,21 @@ object EncyclopediaRenderer {
         sr.color = Color(0.36f, 0.31f, 0.24f, 1f)
         sr.rect(closeX + 4f, closeY + 4f, 117f, 38f)
 
+        val bannerTitle = when (currentTab) {
+            EncyclopediaTab.HOME -> "ENCYCLOPEDIA"
+            EncyclopediaTab.TOWERS -> "TOWERS"
+            EncyclopediaTab.ENEMIES -> "ENEMIES"
+        }
+        ComicFontRenderer.drawRibbonBannerText(sr, bannerTitle, cx, topY - 4f, 28f)
+        ComicFontRenderer.drawPlaqueText(sr, "CLOSE", closeX + 62.5f, closeY + 23f, 18f, Color.WHITE)
+
         if (currentTab != EncyclopediaTab.HOME) {
             val backX = x + 48f
             val backY = y + h - 82f
             sr.color = Color(0.68f, 0.66f, 0.60f, 1f)
             sr.rect(backX + 18f, backY + 18f, 34f, 18f)
             sr.triangle(backX, backY + 27f, backX + 22f, backY + 42f, backX + 22f, backY + 12f)
+            ComicFontRenderer.drawPlaqueText(sr, "BACK", x + 74f, y + h - 78f, 14f, Color.LIGHT_GRAY)
         }
         sr.end()
     }
@@ -275,9 +284,6 @@ object EncyclopediaRenderer {
         boardW: Float,
         boardH: Float
     ) {
-        val cx = boardX + boardW / 2f
-        val topY = boardY + boardH
-
         val leftCardX = 460f
         val rightCardX = 820f
         val cardY = 325f
@@ -336,25 +342,10 @@ object EncyclopediaRenderer {
         sr.color = Color.WHITE
         sr.triangle(gx - 22f, gy - 2f, gx - 12f, gy - 2f, gx - 17f, gy - 12f)
         sr.triangle(gx + 2f, gy - 2f, gx + 12f, gy - 2f, gx + 7f, gy - 12f)
+
+        ComicFontRenderer.drawPlaqueText(sr, "TOWERS", leftCardX, cardY - 122f, 26f, Color(1f, 0.86f, 0.12f, 1f))
+        ComicFontRenderer.drawPlaqueText(sr, "ENEMIES", rightCardX, cardY - 122f, 26f, Color(1f, 0.86f, 0.12f, 1f))
         sr.end()
-
-        batch.begin()
-        val oldScaleX = titleFont.data.scaleX
-        val oldScaleY = titleFont.data.scaleY
-        titleFont.data.setScale(2.0f)
-
-        GameUIRenderer.drawOutlinedText(batch, titleFont, "ENCYCLOPEDIA", cx - 115f, topY + 6f, Color(0.28f, 0.18f, 0.08f, 1f))
-
-        titleFont.data.setScale(2.3f)
-        GameUIRenderer.drawOutlinedText(batch, titleFont, "TOWERS", leftCardX - 78f, cardY - 102f, Color(1f, 0.86f, 0.12f, 1f))
-        GameUIRenderer.drawOutlinedText(batch, titleFont, "ENEMIES", rightCardX - 86f, cardY - 102f, Color(1f, 0.86f, 0.12f, 1f))
-
-        titleFont.data.setScale(oldScaleX, oldScaleY)
-
-        val closeX = boardX + boardW - 155f
-        val closeY = boardY + 24f
-        GameUIRenderer.drawBadgeCenteredText(batch, font, "CLOSE", closeX, closeY, 125f, 46f, Color.WHITE)
-        batch.end()
     }
 
     private fun renderTowersTab(
@@ -368,9 +359,6 @@ object EncyclopediaRenderer {
         boardW: Float,
         boardH: Float
     ) {
-        val cx = boardX + boardW / 2f
-        val topY = boardY + boardH
-
         val gridStartX = 205f
         val basicTopY = 455f
         val advTopY = 175f
@@ -412,7 +400,6 @@ object EncyclopediaRenderer {
         sr.color = Color(0.34f, 0.58f, 0.20f, 1f)
         sr.rect(previewX, previewY, previewW, previewH)
 
-        // Nếu là tháp Barracks -> Vẽ thêm con đường đất phía trước trại lính để 3 người lính đứng dàn hàng như ảnh gốc!
         if (isBarracksSelected) {
             sr.color = Color(0.84f, 0.74f, 0.46f, 1f)
             sr.rect(previewX, previewY, previewW, 64f)
@@ -450,6 +437,9 @@ object EncyclopediaRenderer {
         sr.circle(previewX + 156f, 178f, 6.5f)
         sr.color = Color.WHITE
         sr.circle(previewX + 156f, 178f, 3.2f)
+
+        ComicFontRenderer.drawPlaqueText(sr, "BASIC TOWERS", gridStartX + 128f, basicTopY + 68f, 15f, Color(0.95f, 0.85f, 0.55f, 1f))
+        ComicFontRenderer.drawPlaqueText(sr, "ADVANCED TOWERS", gridStartX + 128f, advTopY + 68f, 15f, Color(0.95f, 0.85f, 0.55f, 1f))
         sr.end()
 
         for (i in EncyclopediaManager.basicTowers.indices) {
@@ -474,7 +464,6 @@ object EncyclopediaRenderer {
             }
         }
 
-        // Vẽ tòa tháp trong khung tranh lớn
         drawScaledTower(
             sr,
             selectedTower,
@@ -483,7 +472,6 @@ object EncyclopediaRenderer {
             if (isBarracksSelected) 1.75f else 2.0f
         )
 
-        // Nếu đang chọn tháp Barracks -> Vẽ thêm 3 người lính đứng dàn hàng trước cửa trại lính!
         if (isBarracksSelected) {
             val rankName = when (selectedTower) {
                 EncyclopediaTowerId.BARRACKS_1 -> "Militia"
@@ -504,16 +492,6 @@ object EncyclopediaRenderer {
         }
 
         batch.begin()
-        val oldScaleX = titleFont.data.scaleX
-        val oldScaleY = titleFont.data.scaleY
-        titleFont.data.setScale(2.0f)
-        GameUIRenderer.drawOutlinedText(batch, titleFont, "TOWERS", cx - 72f, topY + 6f, Color(0.28f, 0.18f, 0.08f, 1f))
-        titleFont.data.setScale(oldScaleX, oldScaleY)
-
-        GameUIRenderer.drawOutlinedText(batch, font, "BACK", boardX + 46f, topY - 68f, Color.LIGHT_GRAY)
-        GameUIRenderer.drawOutlinedText(batch, smallFont, "BASIC TOWERS", gridStartX + 68f, basicTopY + 74f, Color(0.95f, 0.85f, 0.55f, 1f))
-        GameUIRenderer.drawOutlinedText(batch, smallFont, "ADVANCED TOWERS", gridStartX + 52f, advTopY + 74f, Color(0.95f, 0.85f, 0.55f, 1f))
-
         GameUIRenderer.drawOutlinedText(batch, font, selectedTower.title, previewX, 322f, Color(0.98f, 0.94f, 0.76f, 1f))
 
         val oldSmallScaleX = smallFont.data.scaleX
@@ -538,10 +516,6 @@ object EncyclopediaRenderer {
             specY -= 15f
         }
         smallFont.data.setScale(oldSmallScaleX, oldSmallScaleY)
-
-        val closeX = boardX + boardW - 155f
-        val closeY = boardY + 24f
-        GameUIRenderer.drawBadgeCenteredText(batch, font, "CLOSE", closeX, closeY, 125f, 46f, Color.WHITE)
         batch.end()
     }
 
@@ -556,9 +530,6 @@ object EncyclopediaRenderer {
         boardW: Float,
         boardH: Float
     ) {
-        val cx = boardX + boardW / 2f
-        val topY = boardY + boardH
-
         val gridStartX = 165f
         val gridTopY = 462f
         val cellW = 62f
@@ -656,6 +627,8 @@ object EncyclopediaRenderer {
         sr.rect(col1X + 5f, statY3 + 6f, 12f, 9f)
         sr.color = Color(0.90f, 0.90f, 0.92f, 1f)
         sr.circle(col2X + 11f, statY3 + 13f, 6f)
+
+        ComicFontRenderer.drawPlaqueText(sr, "ENEMIES", gridStartX + 180f, gridTopY + 64f, 15f, Color(0.95f, 0.85f, 0.55f, 1f))
         sr.end()
 
         for (i in enemies.indices) {
@@ -694,15 +667,6 @@ object EncyclopediaRenderer {
 
         val info = EncyclopediaManager.getEnemyInfo(selectedEnemy)
         batch.begin()
-        val oldScaleX = titleFont.data.scaleX
-        val oldScaleY = titleFont.data.scaleY
-        titleFont.data.setScale(2.0f)
-        GameUIRenderer.drawOutlinedText(batch, titleFont, "ENEMIES", cx - 78f, topY + 6f, Color(0.28f, 0.18f, 0.08f, 1f))
-        titleFont.data.setScale(oldScaleX, oldScaleY)
-
-        GameUIRenderer.drawOutlinedText(batch, font, "BACK", boardX + 46f, topY - 68f, Color.LIGHT_GRAY)
-        GameUIRenderer.drawOutlinedText(batch, smallFont, "ENEMIES", gridStartX + 138f, gridTopY + 68f, Color(0.95f, 0.85f, 0.55f, 1f))
-
         val oldSmallScaleX = smallFont.data.scaleX
         val oldSmallScaleY = smallFont.data.scaleY
         smallFont.data.setScale(0.90f)
@@ -737,10 +701,6 @@ object EncyclopediaRenderer {
         }
 
         smallFont.data.setScale(oldSmallScaleX, oldSmallScaleY)
-
-        val closeX = boardX + boardW - 155f
-        val closeY = boardY + 24f
-        GameUIRenderer.drawBadgeCenteredText(batch, font, "CLOSE", closeX, closeY, 125f, 46f, Color.WHITE)
         batch.end()
     }
 

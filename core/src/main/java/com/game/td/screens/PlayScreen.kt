@@ -21,6 +21,7 @@ import com.game.td.Config
 import com.game.td.ecs.components.*
 import com.game.td.ecs.systems.*
 import com.game.td.effects.*
+import com.game.td.managers.AchievementManager
 import com.game.td.managers.CheatManager
 import com.game.td.managers.EconomyManager
 import com.game.td.managers.EncyclopediaManager
@@ -121,6 +122,8 @@ class PlayScreen(
 
     private var veznanBossSteppedDown = false
 
+    private val barbarianKillCounts = mutableMapOf<Entity, Int>()
+
     private val maxRallyRadius: Float
         get() = if (UpgradeManager.getEffectiveBarracksLevel() >= 3) 138f else 115f
 
@@ -202,6 +205,8 @@ class PlayScreen(
         hasPlayedVictorySound = false
         hasPlayedDefeatSound = false
         SoundManager.setMusicPaused(false)
+        barbarianKillCounts.clear()
+        AchievementManager.onStageStart()
 
         EconomyManager.gold = currentLevel.startingGold
         EconomyManager.lives = currentLevel.startingLives
@@ -247,10 +252,12 @@ class PlayScreen(
         engine.addSystem(BarracksSystem(
             onAxeThrown = { from, to ->
                 SoundManager.playWhirlwind()
+                AchievementManager.onAxeThrown()
                 effectRenderer.axeProjectiles.add(ThrownAxeEffect(Vector2(from), Vector2(to)))
             },
             onHealingLight = { pos ->
                 SoundManager.playHealingLight()
+                AchievementManager.onPaladinHeal(120)
                 effectRenderer.healingAuras.add(HealingAuraEffect(Vector2(pos)))
             },
             onWhirlwindTriggered = { pos ->
@@ -259,6 +266,7 @@ class PlayScreen(
             },
             onHolyStrikeTriggered = { pos ->
                 SoundManager.playHolyStrike()
+                AchievementManager.onHolyStrike()
                 effectRenderer.holyStrikeBeams.add(HolyStrikeEffect(Vector2(pos)))
             }
         ))
@@ -318,6 +326,24 @@ class PlayScreen(
                 }
                 if (hp != null && (hp.currentHealth <= 0f || hp.isDead)) {
                     SoundManager.playEnemyDeath()
+                    if (eComp != null) {
+                        AchievementManager.onEnemyKilled(eComp.enemyType)
+                    }
+                    val ePos = entity.getComponent(TransformComponent::class.java)?.position
+                    if (ePos != null) {
+                        val allSoldiers = engine.getEntitiesFor(Family.all(SoldierComponent::class.java, TransformComponent::class.java).get())
+                        for (sIdx in 0 until allSoldiers.size()) {
+                            val sol = allSoldiers.get(sIdx)
+                            val sComp = sol.getComponent(SoldierComponent::class.java)
+                            val sPos = sol.getComponent(TransformComponent::class.java)?.position
+                            if (sComp?.soldierRankName == "Barbarian" && (sComp.engagedEnemy == entity || (sPos != null && sPos.dst(ePos) <= 45f))) {
+                                val newKills = (barbarianKillCounts[sol] ?: 0) + 1
+                                barbarianKillCounts[sol] = newKills
+                                AchievementManager.onBarbarianKillCountUpdated(newKills)
+                                break
+                            }
+                        }
+                    }
                     if (gameMode == GameMode.IRON && eComp != null && !eComp.isSummonedMinion) {
                         val ironBonusGold = (eComp.enemyType.rewardGold * 0.55f).toInt().coerceAtLeast(2)
                         EconomyManager.addGold(ironBonusGold)
@@ -326,6 +352,26 @@ class PlayScreen(
                     checkVeznanTransformation(entity)
                 }
                 waveManager.onEnemyDefeated()
+            }
+        })
+
+        engine.addEntityListener(Family.all(SoldierComponent::class.java, HealthComponent::class.java).get(), object : EntityListener {
+            override fun entityAdded(entity: Entity) {
+                val rank = entity.getComponent(SoldierComponent::class.java)?.soldierRankName ?: return
+                if (rank != "Earth Elemental" && rank != "Imperial Guard") {
+                    AchievementManager.onSoldierTrained()
+                }
+            }
+
+            override fun entityRemoved(entity: Entity) {
+                barbarianKillCounts.remove(entity)
+                val hp = entity.getComponent(HealthComponent::class.java)
+                val reinf = entity.getComponent(ReinforcementComponent::class.java)
+                val rank = entity.getComponent(SoldierComponent::class.java)?.soldierRankName ?: return
+                val diedInCombat = (hp == null || hp.currentHealth <= 0f || hp.isDead) && (reinf == null || reinf.lifeTime > 0f)
+                if (rank != "Earth Elemental" && diedInCombat) {
+                    AchievementManager.onSoldierDied()
+                }
             }
         })
 
@@ -801,6 +847,7 @@ class PlayScreen(
                     CheatManager.isCheatMenuOpen = false
                     EconomyManager.lives = 20
                     SaveManager.recordVictory(currentLevel.levelNumber, 20, gameMode, difficulty)
+                    AchievementManager.syncWithSaveProgress()
                     UpgradeManager.maxUpgradeCap = 5
                     onLevelVictory()
                     onReturnToMap()
@@ -841,10 +888,26 @@ class PlayScreen(
         }
 
         if (EconomyManager.isGameOver) {
-            val replayBtn = Vector2(Config.WORLD_WIDTH / 2f, Config.WORLD_HEIGHT / 2f - 70f)
-            if (replayBtn.dst(x, y) <= 60f) {
+            val boardY = (Config.WORLD_HEIGHT / 2f - 10f) - 210f / 2f
+            val btnY = boardY + 42f
+            val btnW = 212f
+            val btnH = 64f
+            val tryAgainX = cX - 224f
+            val quitX = cX + 12f
+
+            // Bấm nút TRY AGAIN (Bên trái) -> Chơi lại màn hiện tại
+            if (x in tryAgainX..(tryAgainX + btnW) && y in btnY..(btnY + btnH)) {
                 SoundManager.playClick()
                 startNewGame()
+                return
+            }
+
+            // Bấm nút QUIT (Bên phải) -> Thoát ra World Map
+            if (x in quitX..(quitX + btnW) && y in btnY..(btnY + btnH)) {
+                SoundManager.playClick()
+                UpgradeManager.maxUpgradeCap = 5
+                onReturnToMap()
+                return
             }
             return
         }
@@ -852,20 +915,20 @@ class PlayScreen(
         if (waveManager.isLevelCompleted && (!veznanBossSteppedDown || engine.getEntitiesFor(Family.all(EnemyComponent::class.java).get()).size() == 0)) {
             val recordedLives = if (CheatManager.isCheatEnabled) 20 else EconomyManager.lives
 
-            // 1. Bấm nút CONTINUE (y = 140..208) -> Lưu kết quả và quay về World Map
             if (x in (cX - 130f)..(cX + 130f) && y in 138f..212f) {
                 SoundManager.playClick()
                 SaveManager.recordVictory(currentLevel.levelNumber, recordedLives, gameMode, difficulty)
+                AchievementManager.syncWithSaveProgress()
                 UpgradeManager.maxUpgradeCap = 5
                 onLevelVictory()
                 onReturnToMap()
                 return
             }
 
-            // 2. Bấm nút RESTART (y = 46..108) -> Lưu kết quả chiến thắng và chơi lại màn hiện tại
             if (x in (cX - 120f)..(cX + 120f) && y in 42f..112f) {
                 SoundManager.playClick()
                 SaveManager.recordVictory(currentLevel.levelNumber, recordedLives, gameMode, difficulty)
+                AchievementManager.syncWithSaveProgress()
                 startNewGame()
                 return
             }
@@ -918,6 +981,7 @@ class PlayScreen(
                     if (eTrans != null && eHp != null) {
                         val impactCenter = Vector2(eTrans.position)
                         SoundManager.playSunrayLaser()
+                        AchievementManager.onSunrayFired()
                         effectRenderer.sunrayBeams.add(SunrayBeamEffect(Vector2(sPos.x, sPos.y + 44f), impactCenter))
                         effectRenderer.shrapnelExplosions.add(ShrapnelExplosionEffect(Vector2(impactCenter)))
 
@@ -1040,8 +1104,12 @@ class PlayScreen(
 
             val clickedAnyBtn = candidatePositions.any { it.dst(x, y) <= 45f }
             if (clickedAnyBtn) {
+                val wasCountdownActive = waveManager.isCountdownActive
                 SoundManager.playWaveStart()
                 val (goldBonus, secondsSaved) = waveManager.callEarlyWave()
+                if (wasCountdownActive) {
+                    AchievementManager.onEarlyWaveCalled(secondsSaved, 15f, waveManager.totalWaves)
+                }
                 if (goldBonus > 0) EconomyManager.addGold(goldBonus)
                 if (secondsSaved > 0f) {
                     rainOfFireCooldown = (rainOfFireCooldown - secondsSaved).coerceAtLeast(0f)
@@ -1061,6 +1129,7 @@ class PlayScreen(
 
             if (tPos != null && tComp != null && tPos.dst(x, y) <= maxRallyRadius && isPointOnRoad(clickPos, 55f)) {
                 SoundManager.playRallyPoint()
+                AchievementManager.onRallyPointChanged()
                 val bComp = selectedTower!!.getComponent(BarracksComponent::class.java)
                 if (bComp != null) {
                     bComp.rallyPoint.set(x, y)
@@ -1124,6 +1193,7 @@ class PlayScreen(
                     if (previewBuildType == clickedType) {
                         if (EconomyManager.spendGold(finalCost)) {
                             SoundManager.playTowerBuild()
+                            AchievementManager.onTowerBuilt()
                             spot.getComponent(TowerSpotComponent::class.java).isOccupied = true
                             if (clickedType == TowerType.BARRACKS) {
                                 val rally = getNearestRoadPoint(spotPos)
@@ -1233,6 +1303,7 @@ class PlayScreen(
                                 }
                                 bComp?.soldiers?.add(elf)
                                 engine.addEntity(elf)
+                                AchievementManager.onSylvanElfCountChanged(bComp?.soldiers?.size ?: 0)
                                 clearSelections()
                             } else {
                                 SoundManager.playClick()
@@ -1523,6 +1594,7 @@ class PlayScreen(
 
                 if (previewTowerAction == "SELL") {
                     SoundManager.playTowerSell()
+                    AchievementManager.onTowerSold()
                     EconomyManager.addGold(refundAmount)
                     freeSpotAt(tPos)
                     val bComp = tower.getComponent(BarracksComponent::class.java)
@@ -1614,6 +1686,7 @@ class PlayScreen(
     }
 
     private fun triggerRainOfFire(targetX: Float, targetY: Float) {
+        AchievementManager.onRainOfFireUsed()
         val lvl = UpgradeManager.getEffectiveRainLevel()
         val meteorCount = when (lvl) {
             0 -> 3
@@ -1660,6 +1733,7 @@ class PlayScreen(
                         if (hp.currentHealth <= 0f || hp.isDead) {
                             hp.currentHealth = 0f
                             SoundManager.playEnemyDeath()
+                            AchievementManager.onMeteorKill()
                             if (eComp != null && !eComp.isSummonedMinion) EconomyManager.addGold(eComp.enemyType.rewardGold)
                             e.getComponent(MovementComponent::class.java)?.isBlocked = false
                             engine.removeEntity(e)
@@ -1876,6 +1950,11 @@ class PlayScreen(
                 }
             }
         }
+
+        val teslaCount = engine.getEntitiesFor(Family.all(TowerComponent::class.java).get()).count {
+            it.getComponent(TowerComponent::class.java)?.specialization == TowerSpecialization.TESLA_X104
+        }
+        AchievementManager.onTowerUpgraded(tComp.towerType, tComp.level, tComp.specialization, teslaCount)
     }
 
     private fun applySkillUpgrade(tower: Entity, skillNum: Int) {
@@ -1943,6 +2022,7 @@ class PlayScreen(
                 }
                 tComp.summonedGolem = golem
                 engine.addEntity(golem)
+                AchievementManager.onRockElementalSummoned()
             } else {
                 val gSol = existingGolem.getComponent(SoldierComponent::class.java)
                 existingHp.maxHealth = golemHp
@@ -2123,6 +2203,8 @@ class PlayScreen(
         shapeRenderer.projectionMatrix = camera.combined
         batch.projectionMatrix = camera.combined
 
+        AchievementManager.updateToast(delta)
+
         if (EconomyManager.lives < lastRecordedLives) {
             SoundManager.playLifeLost()
             lastRecordedLives = EconomyManager.lives
@@ -2193,6 +2275,7 @@ class PlayScreen(
                         if (hp.currentHealth <= 0f) {
                             hp.currentHealth = 0f
                             SoundManager.playEnemyDeath()
+                            AchievementManager.onMeteorKill()
                             if (eComp != null && !eComp.isSummonedMinion) EconomyManager.addGold(eComp.enemyType.rewardGold)
                             e.getComponent(MovementComponent::class.java)?.isBlocked = false
                             engine.removeEntity(e)
@@ -2214,6 +2297,17 @@ class PlayScreen(
             }
 
             if (!EconomyManager.isGameOver && !waveManager.isLevelCompleted) {
+                val allSoldiersForRegen = engine.getEntitiesFor(Family.all(SoldierComponent::class.java, HealthComponent::class.java).get())
+                for (sIdx in 0 until allSoldiersForRegen.size()) {
+                    val sol = allSoldiersForRegen.get(sIdx)
+                    val sComp = sol.getComponent(SoldierComponent::class.java)
+                    val sHp = sol.getComponent(HealthComponent::class.java)
+                    if (sComp != null && sHp != null && !sHp.isDead && sComp.engagedEnemy == null && sHp.currentHealth < sHp.maxHealth) {
+                        val regRate = if (sComp.soldierRankName == "Imperial Guard") 25f else sComp.regenPerSec
+                        AchievementManager.onSoldierRegenerated(regRate * delta)
+                    }
+                }
+
                 waveManager.update(delta)
                 engine.update(delta)
 
@@ -2604,6 +2698,7 @@ class PlayScreen(
                                 tComp.summonedGolem = newGolem
                                 tComp.skill2Cooldown = 8f
                                 engine.addEntity(newGolem)
+                                AchievementManager.onRockElementalSummoned()
                             }
                         }
                     }
@@ -2617,6 +2712,14 @@ class PlayScreen(
         if (isVictoryReady && !hasPlayedVictorySound) {
             hasPlayedVictorySound = true
             SoundManager.playVictory()
+            if (currentLevel.levelNumber == 6) {
+                val survivingGuards = engine.getEntitiesFor(Family.all(SoldierComponent::class.java, HealthComponent::class.java).get()).count {
+                    val sc = it.getComponent(SoldierComponent::class.java)
+                    val sh = it.getComponent(HealthComponent::class.java)
+                    sc?.soldierRankName == "Imperial Guard" && sh != null && !sh.isDead && sh.currentHealth > 0f
+                }
+                AchievementManager.onCitadelCompleted(survivingGuards)
+            }
         }
 
         PlayScreenRenderer.render(
